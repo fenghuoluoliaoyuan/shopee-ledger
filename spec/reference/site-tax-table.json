@@ -1,0 +1,25 @@
+{
+  "note": "官方 #25770 附录1「商品税」表（2026-09-22）。只列了部分站点。",
+  "source": "https://shopee.cn/edu/article/25770",
+  "captured_at": "2026-09-22",
+  "sites": {
+    "MX": {
+      "footwear_antidumping": 0.1799,
+      "import_duty": 0.335
+    },
+    "MY": {
+      "low_value_goods_tax": 0.1,
+      "note": "另有高价值商品税（税率随税率表）"
+    },
+    "VN": {
+      "personal_income_tax": 0.01,
+      "import_vat": 0.1
+    },
+    "BR": {
+      "icms": 0.2,
+      "import_duty_le_50usd": 0.2,
+      "import_duty_gt_50usd": 0.6
+    }
+  },
+  "platform_position": "官方仓及三方仓卖家如需了解商品税相关信息，请咨询对应头程服务，Shopee 不提供代缴服务。"
+}
