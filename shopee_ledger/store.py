@@ -124,8 +124,22 @@ class ActualView:
 
 
 class Ledger:
-    def __init__(self, path: Path | str = DEFAULT_DB):
+    def __init__(self, path: Path | str = DEFAULT_DB,
+                 verified_path: Path | str | None = "default"):
+        """``verified_path`` 控制是否叠加 spec/verified.json 这一层。
+
+        为什么默认加载：那是**核实成果随 git 走的载体**——不带它，换台机器
+        clone 下来就只能看到 spec 里的 E 级原值。
+        为什么允许关掉：断言"未核实时系统怎么表现"的测试需要一个干净起点，
+        否则仓库里的核实数据会渗进测试前提（实测踩过：一次改动让 16 个测试失败，
+        全都是"默认未核实"这个前提不再成立）。
+        """
         self.path = Path(path)
+        if verified_path == "default":
+            from shopee_ledger.verified import DEFAULT_PATH
+
+            verified_path = DEFAULT_PATH
+        self.verified_path = Path(verified_path) if verified_path else None
         self.storage = Storage(self.path)
         self.conn = None  # 兼容旧调用方对属名的探测
         self._spec: Spec | None = None
@@ -139,7 +153,8 @@ class Ledger:
             base = default_spec()
             # 先应用 spec/verified.json（随 git 走的真值），再应用库里的覆盖（运行时更新）。
             # 顺序很重要：库里的是"后来改的"，应当覆盖文件里的。
-            rows = as_override_rows(read_verified())
+            rows = (as_override_rows(read_verified(self.verified_path))
+                    if self.verified_path else [])
             if self._table_exists():
                 rows = rows + self._overrides()
             self._spec = base.with_overrides(rows)

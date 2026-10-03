@@ -112,7 +112,7 @@ class DiffTest(unittest.TestCase):
 class RecordListingTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
 
     def tearDown(self):
@@ -335,7 +335,7 @@ class ListingHtmlParserTest(unittest.TestCase):
     def test_importing_page_two_does_not_mark_page_one_read(self):
         """分页场景：导入第 2 页时第 1 页的条目都不在"本页"，不能因此标成已读。"""
         tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        ledger = Ledger(Path(tmp.name) / "l.sqlite")
+        ledger = Ledger(Path(tmp.name) / "l.sqlite", verified_path=None)
         ledger.init()
         try:
             ledger.record_listing("W", parse_listing_html(
@@ -353,7 +353,7 @@ class ListingHtmlParserTest(unittest.TestCase):
 
     def test_importing_page_two_after_page_one_reports_all_new(self):
         tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        ledger = Ledger(Path(tmp.name) / "l.sqlite")
+        ledger = Ledger(Path(tmp.name) / "l.sqlite", verified_path=None)
         ledger.init()
         try:
             one = ledger.record_listing("W", parse_listing_html(
@@ -410,7 +410,7 @@ class ApiDiscoveryTest(unittest.TestCase):
 
     def test_records_and_surfaces_discovered_apis(self):
         tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        ledger = Ledger(Path(tmp.name) / "l.sqlite")
+        ledger = Ledger(Path(tmp.name) / "l.sqlite", verified_path=None)
         ledger.init()
         try:
             ledger.record_listing("WATCH-TEST", entries_from_links(LISTING_LINKS),
@@ -441,7 +441,7 @@ class ConflictTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
         self.snaps = Path(self.tmp.name) / "snapshots"
         self.url = "https://shopee.cn/edu/article/26620"

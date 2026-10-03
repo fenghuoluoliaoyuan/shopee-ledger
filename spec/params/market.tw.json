@@ -443,7 +443,24 @@
       "task_ref": "VT-042",
       "access_gate": "seller_center_login",
       "access_note": "结算汇率只在卖家中心账单内，公开渠道没有。",
-      "accessible_via": "卖家中心结算/账单页"
+      "accessible_via": "卖家中心结算/账单页",
+      "rate_note": "官方「多履约渠道利润计算器」用于成本换算的**参考汇率**，不是卖家中心的实际结算汇率。给 B 而不是 A 就是为此：来源官方，但用途不同。结算汇率仍以卖家中心账单为准。",
+      "rate_caveat": {
+        "kind": "cost_calculator_reference_rate",
+        "what_it_is_NOT": "不是卖家中心结算汇率",
+        "why_only_B": "来源官方，但回答的是成本建模用哪个汇率，不是参数要的结算汇率",
+        "all_sites": {
+          "BR": "0.78",
+          "MX": "2.51",
+          "MY": "0.65",
+          "PH": "8.09",
+          "SG": "0.19",
+          "TH": "5.07",
+          "TW": "4.49",
+          "VN": "3498.85"
+        },
+        "reference_file": "spec/reference/lff-site-and-channel.json"
+      }
     }
   ]
 }

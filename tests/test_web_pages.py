@@ -19,7 +19,7 @@ from shopee_ledger.web import orders_page, products_page
 class OrdersPageTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
         self.ledger.set_param("TW", "local_per_cny", "4.5", "C")
         self.candidate = self.ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)
@@ -130,7 +130,7 @@ class OrdersPageTest(unittest.TestCase):
 class ProductsPageTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
         self.ledger.set_param("TW", "local_per_cny", "4.5", "C")
         self.candidate = self.ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)

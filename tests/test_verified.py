@@ -93,6 +93,43 @@ class RoundTripTest(unittest.TestCase):
         self.assertLess(text.index("P-M"), text.index("P-Z"))
 
 
+class PrecedenceTest(unittest.TestCase):
+    """文件层与数据库层的优先级：**库里的后写覆盖要赢**。
+
+    这曾经是个真 bug：两边 id 出自不同序列，撞车后文件反而赢了，
+    页面上看到的还是旧值（被 test_pages_and_param_save 抓到）。
+    """
+
+    def test_file_rows_get_negative_ids(self):
+        rows = as_override_rows({"params": {"P-A": {"value": 1}, "P-B": {"value": 2}}})
+        self.assertTrue(all(row["id"] < 0 for row in rows), "文件行必须是负数 id")
+
+    def test_database_row_wins_over_file_row(self):
+        from shopee_ledger.spec import Spec
+
+        spec = Spec.load(Path(__file__).resolve().parents[1] / "spec")
+        file_rows = as_override_rows({"params": {"P-TW-COMMISSION": {
+            "value": 0.14, "evidence_level": "A", "checked_at": "2026-01-01"}}})
+        # 模拟库里后写的一条：id 是 autoincrement 的正数
+        db_row = {"id": 7, "param_id": "P-TW-COMMISSION", "value": 0.20,
+                  "evidence_level": "B", "checked_at": "2026-10-03"}
+        merged = spec.with_overrides(file_rows + [db_row])
+        self.assertAlmostEqual(merged.params["P-TW-COMMISSION"].value, 0.20, places=6,
+                               msg="库里后写的覆盖必须赢")
+
+    def test_file_row_applies_when_no_database_row(self):
+        spec = default_spec()
+        rows = as_override_rows({"params": {"P-TW-COMMISSION": {
+            "value": 0.14, "evidence_level": "A"}}})
+        merged = spec.with_overrides(rows)
+        self.assertAlmostEqual(merged.params["P-TW-COMMISSION"].value, 0.14, places=6)
+
+    def test_file_internal_order_is_preserved(self):
+        rows = as_override_rows({"params": {"P-A": {"value": 1}, "P-B": {"value": 2}}})
+        ids = [row["id"] for row in rows]
+        self.assertEqual(ids, sorted(ids), "文件内部也要按升序，否则应用顺序会被打乱")
+
+
 class ApplyTest(unittest.TestCase):
     def test_rows_apply_onto_the_base_spec(self):
         payload = build_verified([override(1, "P-TW-COMMISSION", 0.14, "A")], [])

@@ -28,7 +28,7 @@ ESCROW = {"order_income": {
 class ActualTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
         self.ledger.set_param("TW", "local_per_cny", "4.5", "C")
         self.candidate = self.ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)
@@ -102,10 +102,16 @@ class AlertCommandTest(unittest.TestCase):
             cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8")
 
     def test_alert_lists_blocking_tasks(self):
+        """告警要列出挡着第一单的核实项。
+
+        断言的是**长期登录门禁**那几项（入驻政策 / 当单页字段），不是某个可能被核实掉的
+        具体参数——DTS、禁运清单、运费档、保证金都已被核实完成，拿它们当锚会随核实进展失效。
+        """
         self._run("init")
         proc = self._run("alert")
         self.assertIn("阻塞第一单的核实", proc.stdout)
-        self.assertIn("P-TW-DTS", proc.stdout)
+        self.assertRegex(proc.stdout, r"\[VT-\d+\]")
+        self.assertIn("个体户", proc.stdout, "入驻政策是登录门禁，应当仍在阻塞清单里")
 
     def test_alert_returns_nonzero_when_p1_present(self):
         """有计划任务依赖这个返回码：没有 P1 才算正常退出。"""
@@ -127,7 +133,7 @@ class AlertCommandTest(unittest.TestCase):
         # 把"进入 ship_arranged"的时间戳补录成 30 小时前
         from datetime import datetime, timedelta, timezone
 
-        ledger = Ledger(self.db)
+        ledger = Ledger(self.db, verified_path=None)
         ledger.init()
         stamp = (datetime.now(timezone.utc) - timedelta(hours=30)).isoformat(timespec="seconds")
         ledger.storage.record_audit("order.transition", "order", 1, at=stamp)

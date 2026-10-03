@@ -300,7 +300,7 @@ class IngestTest(unittest.TestCase):
 class CandidateStoreTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
         self.snaps = Path(self.tmp.name) / "snapshots"
 

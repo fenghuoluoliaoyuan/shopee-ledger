@@ -366,30 +366,13 @@
     },
     "P-TW-FX": {
       "checked_at": "2026-10-03",
-      "created_at": "2026-10-03T09:24:39+00:00",
+      "created_at": "2026-10-03T09:33:33+00:00",
       "evidence_level": "B",
-      "operator": "cli",
+      "operator": "agent",
       "param_id": "P-TW-FX",
+      "snapshot_ref": "spec/reference/lff-site-and-channel.json",
       "source_url": "https://solutions.shopee.cn/sellers/lff-cost-calculator/",
-      "value": {
-        "all_sites": {
-          "BR": "0.78",
-          "MX": "2.51",
-          "MY": "0.65",
-          "PH": "8.09",
-          "SG": "0.19",
-          "TH": "5.07",
-          "TW": "4.49",
-          "VN": "3498.85"
-        },
-        "kind": "cost_calculator_reference_rate",
-        "reference_file": "spec/reference/lff-site-and-channel.json",
-        "reference_rate_display": "1 CNY ≈ 4.49 TWD",
-        "reference_rate_twd_per_cny": 4.49,
-        "what_it_is": "Shopee 官方「多履约渠道利润计算器」用于成本换算的参考汇率",
-        "what_it_is_NOT": "**不是**卖家中心的实际结算汇率；结算汇率只在卖家中心账单里",
-        "why_only_B": "来源是官方的，但它回答的是「成本建模用哪个汇率」，不是参数要的「结算汇率」。给 B 而不是 A，避免把建模汇率当成结算汇率用。"
-      }
+      "value": 4.49
     },
     "P-TW-LIQUID-ML": {
       "checked_at": "2025-01-09",

@@ -22,6 +22,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PATH = ROOT / "spec" / "verified.json"
 
+# 文件行的 id 基准。用负数是为了永远排在数据库行（autoincrement ≥ 1）之前，
+# 因为 Spec.with_overrides 是"后应用者生效"。见 as_override_rows 的说明。
+FILE_ID_BASE = 100000
+
 # 导出时保留的字段。少了出处就等于没导出。
 OVERRIDE_FIELDS = ("param_id", "value", "evidence_level", "source_url", "snapshot_ref",
                    "checked_at", "grade", "operator", "created_at")
@@ -81,11 +85,18 @@ def read_verified(path: Path | str = DEFAULT_PATH) -> dict[str, Any]:
 
 
 def as_override_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """转成 Spec.with_overrides 认的行格式（补上 id 以便排序：文件里的顺序即优先级）。"""
+    """转成 Spec.with_overrides 认的行格式。
+
+    ``Spec.with_overrides`` 按 ``id`` 升序应用，**后应用的生效**（历史覆盖只增不改）。
+    文件行与库行的 id 出自两个不同的序列，直接混用会撞车——实测踩过：
+    库里的新覆盖 id=1，文件里 P-TW-FX 的 id 排在后面，于是**文件反而赢了**，
+    页面上看到的还是旧值。
+    所以文件行一律用**负数 id**：既保证文件内部顺序不变，又保证永远排在库行之前。
+    """
     rows = []
     for index, (param_id, item) in enumerate(sorted(payload.get("params", {}).items()), start=1):
         row = dict(item)
         row["param_id"] = param_id
-        row.setdefault("id", index)
+        row["id"] = index - FILE_ID_BASE     # 负数，永远排在库行前面
         rows.append(row)
     return rows

@@ -147,7 +147,7 @@ class StoreTest(unittest.TestCase):
     def test_my_quote_incomplete_when_spec_has_no_rates(self):
         """MY 在 spec 里没有佣金/手续费参数 → 必须 INCOMPLETE，绝不把缺失费率当 0。"""
         with tempfile.TemporaryDirectory() as folder:
-            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
             ledger.init()
             candidate = ledger.add_candidate("MY", "杯垫", 80, 10, 2, 20, 5, True)
             ledger.set_return_rate(candidate, 0.05)
@@ -159,7 +159,7 @@ class StoreTest(unittest.TestCase):
     def test_tw_quote_go_with_measured_overrides(self):
         """台湾站制度性费率来自 spec，本机只覆盖实测值（汇率 C 级）。"""
         with tempfile.TemporaryDirectory() as folder:
-            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
             ledger.init()
             ledger.set_param("TW", "local_per_cny", "4.5", "C")
             candidate = ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)
@@ -196,7 +196,7 @@ class StoreTest(unittest.TestCase):
     def test_override_layer_rejects_unverified_grade(self):
         """覆盖层只接受 A/B/C；D/E 必须走核实任务升级路径，不能直接写进覆盖值。"""
         with tempfile.TemporaryDirectory() as folder:
-            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
             ledger.init()
             with self.assertRaises(ValueError):
                 ledger.set_param("TW", "local_per_cny", "4.5", "E")
@@ -204,10 +204,10 @@ class StoreTest(unittest.TestCase):
 
     def test_override_is_append_only(self):
         with tempfile.TemporaryDirectory() as folder:
-            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
             ledger.init()
             ledger.set_param("TW", "local_per_cny", "4.5", "C")
-            second = Ledger(Path(folder) / "ledger.sqlite")
+            second = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
             second.storage.connect()
             with self.assertRaises(sqlite3.IntegrityError):
                 second.storage.connect().execute(

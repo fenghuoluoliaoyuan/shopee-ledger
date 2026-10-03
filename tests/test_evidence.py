@@ -19,7 +19,7 @@ from shopee_ledger.web import _checklist_post, checklist_page, spec_page
 class EvidenceTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
         self.ledger.init()
         self.dts = next(row for row in self.ledger.checklist_rows()
                         if row["target_param_id"] == "P-TW-DTS")
