@@ -158,9 +158,8 @@ def _order_post(ledger: Ledger, form: dict) -> str:
                 ledger.apply_arrange(order_id)
             elif to_state == "po_created":
                 ledger.apply_purchase(order_id)
-            elif to_state == "warehouse_scanned":
-                ledger.apply_inbound(order_id)  # 交仓＝供应商发货 + 到仓扫描
             else:
+                # warehouse_scanned 及之后都不需要额外簿记，直接推进
                 ledger.advance_order(order_id, to_state)
         elif action == "deadline":
             ledger.set_deadline(order_id, _need(form, "deadline"))

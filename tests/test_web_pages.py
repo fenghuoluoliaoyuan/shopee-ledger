@@ -89,6 +89,37 @@ class OrdersPageTest(unittest.TestCase):
         self.assertIn("已到终态", html)
         self.assertEqual(self._exposed(), set())
 
+    def _post(self, data: dict) -> str:
+        from shopee_ledger.web import _order_post
+
+        return _order_post(self.ledger, {key: [value] for key, value in data.items()})
+
+    def test_post_handler_walks_the_whole_main_path(self):
+        """走 HTTP 处理函数本身，而不是绕开它直接调 advance_order。
+
+        这里漏过一个真 bug：从 supplier_shipped 点「到仓扫描」会调到 apply_inbound，
+        而它内部先走 supplier_shipped，于是点完原地不动。
+        """
+        self._post({"action": "open", "candidate": str(self.candidate)})
+        order = self.ledger.list_orders()[0]["id"]
+        self._post({"action": "advance", "order": str(order), "to": "stock_checked",
+                    "supplier": str(self.supplier), "in_stock": "yes"})
+        self._post({"action": "advance", "order": str(order), "to": "ship_arranged"})
+        self._post({"action": "advance", "order": str(order), "to": "address_captured",
+                    "address": "当单中转仓 订单号SN1"})
+        self._post({"action": "advance", "order": str(order), "to": "po_created"})
+        for target in ("supplier_shipped", "warehouse_scanned", "in_transit", "delivered",
+                       "completed", "payable", "paid"):
+            self._post({"action": "advance", "order": str(order), "to": target})
+            current = [item for item in self.ledger.list_orders() if item["id"] == order][0]["status"]
+            self.assertEqual(current, target, "点「%s」之后状态应当就是 %s" % (target, target))
+
+    def test_post_error_comes_back_as_a_message(self):
+        self._post({"action": "open", "candidate": str(self.candidate)})
+        order = self.ledger.list_orders()[0]["id"]
+        result = self._post({"action": "advance", "order": str(order), "to": "paid"})
+        self.assertIn("error=", result, "跳步应回成页面提示，而不是 500")
+
     def test_cancelled_order_shows_cancel_marker(self):
         self.ledger.apply_stock(self.order, self.supplier, False, True)
         html = orders_page(self.ledger)

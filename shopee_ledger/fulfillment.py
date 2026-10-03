@@ -172,6 +172,12 @@ def mark_warehouse_scanned(state: Fulfillment) -> None:
 
 
 def mark_inbound(state: Fulfillment) -> None:
-    """交仓 = 供应商发货 + 到仓扫描，两步依次走（保留旧命令语义）。"""
-    mark_supplier_shipped(state)
-    mark_warehouse_scanned(state)
+    """交仓 = 供应商发货 + 到仓扫描，两步依次走（保留旧命令语义）。
+
+    必须容忍"已经在 supplier_shipped"：CLI 的 order-inbound 和网页的
+    「到仓扫描」都可能从该状态调用，否则会撞出"已经在 supplier_shipped"。
+    """
+    if state.state == "po_created":
+        mark_supplier_shipped(state)
+    if state.state == "supplier_shipped":
+        mark_warehouse_scanned(state)
