@@ -53,7 +53,14 @@ Invoke-Step 'harvest' @('-m', 'shopee_ledger', 'harvest', '--limit', '12')
 # 3) Fetch public parameter sources defined in spec/sources.json.
 Invoke-Step 'fetch' @('-m', 'shopee_ledger', 'fetch')
 
-# 4) Alerts. Exit code 1 means a P1 alert is open.
+# 4) Pull the SLS freight rate table and report any change.
+#    Rates do change, so the point is detection: which channel, which tier, from what to what.
+Invoke-Step 'freight --check' @('-m', 'shopee_ledger', 'freight', '--check')
+
+# 5) Link new documents to the parameters they may answer (locates, never values).
+Invoke-Step 'associate' @('-m', 'shopee_ledger', 'associate')
+
+# 6) Alerts. Exit code 1 means a P1 alert is open.
 Invoke-Step 'alert' @('-m', 'shopee_ledger', 'alert')
 
 Write-Log '=== end ==='

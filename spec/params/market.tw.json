@@ -1,7 +1,9 @@
 {
   "schema_version": "4.0.0",
   "layer": "param",
-  "file_scope": { "market": "TW" },
+  "file_scope": {
+    "market": "TW"
+  },
   "market": {
     "code": "TW",
     "name": "台湾",
@@ -16,14 +18,24 @@
     {
       "id": "P-TW-TAX-THRESHOLD",
       "name": "台湾进口关税起征点",
-      "scope": { "platform": "*", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": 2000,
       "unit": "TWD",
       "basis": "订单金额超过新台币 2000 元应征税；纳税义务人为买家",
       "evidence_level": "A",
       "state": "active",
       "gate_eligible": true,
-      "source": { "url": "https://help.shopee.tw/portal/4/article/80088", "checked_at": "2026-10-03", "recheck_status": "blocked", "recheck_note": "2026-10-03 机器复核域名不可达，需换网络环境或人工复核", "snapshot_ref": null },
+      "source": {
+        "url": "https://help.shopee.tw/portal/4/article/80088",
+        "checked_at": "2026-10-03",
+        "recheck_status": "blocked",
+        "recheck_note": "2026-10-03 机器复核域名不可达，需换网络环境或人工复核",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-041"
@@ -31,13 +43,30 @@
     {
       "id": "P-TW-FREQ-IMPORT",
       "name": "频繁进口认定",
-      "scope": { "platform": "*", "market": "TW", "mode": "*" },
-      "value": { "times": 6, "period": "half_year", "periods": ["01-01..06-30", "07-01..12-31"], "amount_independent": true },
+      "scope": {
+        "platform": "*",
+        "market": "TW",
+        "mode": "*"
+      },
+      "value": {
+        "times": 6,
+        "period": "half_year",
+        "periods": [
+          "01-01..06-30",
+          "07-01..12-31"
+        ],
+        "amount_independent": true
+      },
       "basis": "不限金额、半年度进口超过 6 次应征税",
       "evidence_level": "A",
       "state": "active",
       "gate_eligible": true,
-      "source": { "url": "https://help.shopee.tw/portal/4/article/80088", "checked_at": "2026-10-03", "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": "https://help.shopee.tw/portal/4/article/80088",
+        "checked_at": "2026-10-03",
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-041"
@@ -45,13 +74,27 @@
     {
       "id": "P-TW-PRESALE-TAX-COLLECT",
       "name": "虾皮预收关税规则",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
-      "value": { "threshold_twd": 2000, "half_year_times": 5, "include_cancelled_and_refunded": true, "taxpayer": "buyer" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
+      "value": {
+        "threshold_twd": 2000,
+        "half_year_times": 5,
+        "include_cancelled_and_refunded": true,
+        "taxpayer": "buyer"
+      },
       "basis": "按超过 2000 元，或自行统计的半年超过 5 次（含取消和退货退款），加在买家结账总额里",
       "evidence_level": "A",
       "state": "active",
       "gate_eligible": true,
-      "source": { "url": "https://help.shopee.tw/portal/4/article/80088", "checked_at": "2026-10-03", "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": "https://help.shopee.tw/portal/4/article/80088",
+        "checked_at": "2026-10-03",
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-041"
@@ -59,13 +102,27 @@
     {
       "id": "P-TW-EZWAY",
       "name": "EZ WAY 易利委实名认证要求",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
-      "value": { "required": true, "advance_delegation_from": "2026-03-01", "declare_on_arrival": true },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
+      "value": {
+        "required": true,
+        "advance_delegation_from": "2026-03-01",
+        "declare_on_arrival": true
+      },
       "basis": "须完成 EZ WAY 实名认证和街口支付实名认证；2026-03-01 起须完成预先委任；包裹抵达后在 App 点申报相符",
       "evidence_level": "A",
       "state": "active",
       "gate_eligible": true,
-      "source": { "url": "https://help.shopee.tw/portal/4/article/80084", "checked_at": "2026-10-03", "recheck_status": "blocked", "recheck_note": "2026-10-03 机器复核域名不可达", "snapshot_ref": null },
+      "source": {
+        "url": "https://help.shopee.tw/portal/4/article/80084",
+        "checked_at": "2026-10-03",
+        "recheck_status": "blocked",
+        "recheck_note": "2026-10-03 机器复核域名不可达",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-041"
@@ -73,7 +130,11 @@
     {
       "id": "P-TW-SLS-TIERS",
       "name": "台湾站 SLS 运费分档表",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "unit": "TWD by weight tier",
       "basis": "账号下来后从卖家中心抄录；出单后用当单实际值校准",
@@ -83,7 +144,13 @@
       "state": "to_verify",
       "gate_eligible": false,
       "blocks_first_order": true,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "kind": "official_api",
+        "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+        "api": "https://solutions.shopee.cn/sellers/pricing-simulator/api/sls/site-config?date={{date}}",
+        "note": "官方定价模拟器的公开接口，返回 9 站点 × 货类 × 渠道的完整运费费率表，每档带生效日期与失效日期。用 shopee_ledger freight 拉取并比对变化。",
+        "correction": "此前基于 6 篇文档里「请登录企业微信查看」的措辞，误判为公开渠道不可得；定价模拟器接口证伪了该判断（用户提供的线索）。"
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-012",
@@ -92,13 +159,22 @@
     {
       "id": "P-TW-DTS",
       "name": "台湾站备货工作日与迟发判定",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "basis": "有来源称迟发为 DTS+2 自然日未到仓扫描，自动取消为 DTS+2 未点发货或 DTS+4 未到仓；未核对卖家中心原文",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-015",
@@ -107,14 +183,42 @@
     {
       "id": "P-TW-SHOPEE-SHIP-W",
       "name": "台湾站店配重量与尺寸限制",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "source_claims": [{ "claim": "max 10kg", "source": "虾皮物流手册" }, { "claim": "max 5kg", "source": "另有来源" }], "safe_max_g": 5000, "loose_max_g": 10000, "dims_cm": [45, 30, 30], "conflict": true },
+      "unverified_claim": {
+        "source_claims": [
+          {
+            "claim": "max 10kg",
+            "source": "虾皮物流手册"
+          },
+          {
+            "claim": "max 5kg",
+            "source": "另有来源"
+          }
+        ],
+        "safe_max_g": 5000,
+        "loose_max_g": 10000,
+        "dims_cm": [
+          45,
+          30,
+          30
+        ],
+        "conflict": true
+      },
       "basis": "虾皮物流手册称 10kg，另有来源称 5kg，存在冲突；尺寸 45×30×30",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-016",
@@ -123,21 +227,37 @@
     {
       "id": "P-TW-HOME-DELIV-W",
       "name": "台湾站宅配限制",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "max_g": 20000, "sum_dims_max_m": 1.5 },
+      "unverified_claim": {
+        "max_g": 20000,
+        "sum_dims_max_m": 1.5
+      },
       "basis": "有来源称最大 20kg，三边之和 < 1.5m",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03"
     },
     {
       "id": "P-TW-LIQUID-ML",
       "name": "台湾站液体限制",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "unverified_claim": 100,
       "unit": "ml",
@@ -145,7 +265,12 @@
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-017"
@@ -153,7 +278,11 @@
     {
       "id": "P-TW-PARCEL-CAP",
       "name": "台湾站单包裹价值上限",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "unverified_claim": 20000,
       "unit": "TWD",
@@ -161,7 +290,12 @@
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-018"
@@ -169,21 +303,37 @@
     {
       "id": "P-TW-DELIVERY-DAYS",
       "name": "台湾站配送时效",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "min_days": 4, "max_days": 8 },
+      "unverified_claim": {
+        "min_days": 4,
+        "max_days": 8
+      },
       "basis": "有来源称 4-8 天，未找到可打开的官方页面",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03"
     },
     {
       "id": "P-TW-DEPOSIT",
       "name": "台湾站店铺保证金",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "unit": "CNY",
       "approx_hint": 3000,
@@ -191,7 +341,12 @@
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-008"
@@ -199,26 +354,44 @@
     {
       "id": "P-TW-PAYOUT-CYCLE",
       "name": "打款周期规则",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "basis": "有来源称每 7 个工作日 1 次，账单周期完成后 7 个工作日打款；未核对卖家中心原文",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03"
     },
     {
       "id": "P-TW-BUYER-SHIP",
       "name": "买家实付运费规则（免运门槛）",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "basis": "免运活动费记 0，但免运最低消费金额原文没写；决定净运费成本 max(SLS − 买家实付, 0)",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-026"
@@ -226,13 +399,22 @@
     {
       "id": "P-TW-TXN-FEE-BASIS",
       "name": "交易手续费计算基数",
-      "scope": { "platform": "shopee", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "basis": "费率 2.5% 已确认，基数原文没写；上架前暂按商品价并标注，出单后改用账单金额",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-038"
@@ -240,16 +422,28 @@
     {
       "id": "P-TW-FX",
       "name": "人民币/新台币汇率口径",
-      "scope": { "platform": "*", "market": "TW", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TW",
+        "mode": "*"
+      },
       "value": null,
       "basis": "未确定使用平台结算汇率还是银行汇率；全表唯一汇率来源，禁止公式内硬编码",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "on_first_payout",
       "next_review_at": "2026-12-31",
-      "task_ref": "VT-042"
+      "task_ref": "VT-042",
+      "access_gate": "seller_center_login",
+      "access_note": "结算汇率只在卖家中心账单内，公开渠道没有。",
+      "accessible_via": "卖家中心结算/账单页"
     }
   ]
 }

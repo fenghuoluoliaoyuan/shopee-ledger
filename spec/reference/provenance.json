@@ -1,0 +1,20 @@
+{
+  "note": "参考数据出处。这些是官方工具（Shopee跨境卖家自助服务站-定价模拟器）自己的接口返回，带生效日期，可重复拉取比对。",
+  "captured_at": "2026-10-03",
+  "files": [
+    {
+      "file": "sls-site-config-2026-10-03.json",
+      "url": "https://solutions.shopee.cn/sellers/pricing-simulator/api/sls/site-config?date=2026-10-03",
+      "note": "SLS 运费费率表：9 站点 × 货类 × 渠道，每档含生效日期与失效日期",
+      "bytes": 109164,
+      "sha256": "54c6bc6fe2ff1f8fe076184b1ac8acb6f456fa351278d4652b6dd9c07e22fe26"
+    },
+    {
+      "file": "site-fees.json",
+      "url": "https://solutions.shopee.cn/sellers/pricing-simulator/api/site",
+      "note": "各站点平台佣金率与手续费率（定价模拟器口径）",
+      "bytes": 1479,
+      "sha256": "6c093cd0abee8f6d2e2fe8daf46c35ac608c6f0785a7af995972ce679d3a35ed"
+    }
+  ]
+}

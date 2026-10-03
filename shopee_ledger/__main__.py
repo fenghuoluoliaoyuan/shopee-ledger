@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as _date
 import json
 from pathlib import Path
 
@@ -114,6 +115,11 @@ def main(argv: list[str] | None = None) -> int:
                            help="把抓到的文档关联到它可能回答的参数（只定位，不取值）")
     assoc.add_argument("--param", help="只看某个参数")
     assoc.add_argument("--context", action="store_true", help="连命中处的上下文一起打印")
+
+    fr = sub.add_parser("freight", help="拉取 SLS 运费费率表并与仓库里最新快照比对变化")
+    fr.add_argument("--date", help="生效日期 YYYY-MM-DD（默认今天）")
+    fr.add_argument("--check", action="store_true", help="只比对不保存；有变化时返回码 1")
+    fr.add_argument("--list", metavar="CHANNEL", help="列出名字含该关键词的渠道费率档位")
 
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
@@ -434,6 +440,66 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("  " + "、".join(report["without_hits"]))
             print("  提示：可能是关键词没配，或这类信息只在需登录的页面（卖家中心/帮助中心）")
         print("\n只定位不取值——取值要读原文判断适用范围与生效日期。")
+        return 0
+    if args.cmd == "freight":
+        import urllib.request
+
+        from shopee_ledger import freight as fr
+
+        date = args.date or _date.date.today().isoformat()
+        try:
+            config = fr.fetch_site_config(date)
+        except Exception as exc:
+            print("拉取失败（%s）：%s" % (date, exc))
+            return 1
+        cards = fr.rate_cards(config)
+        sites = sorted({key.split("/")[0] for key in cards})
+        print("运费费率表 生效日期 %s ｜ %d 个站点 ｜ %d 条档位" % (config["date"], len(sites), len(cards)))
+
+        if args.list:
+            channel = args.list.lower()
+            for key in sorted(cards):
+                if channel in key.lower():
+                    card = cards[key]
+                    print("  %-58s 首重 %s 终重 %s 费用 %s 增量 %s/%s 生效 %s"
+                          % (key[:58], card["start_weight_g"], card["end_weight_g"],
+                             card["fee"], card["increment_amount"],
+                             card["increment_unit_g"], card["effective_date"]))
+            return 0
+
+        previous_path = fr.latest_reference()
+        if not previous_path:
+            print("仓库里还没有快照——本次将保存为基准")
+            previous = None
+        else:
+            previous = json.loads(previous_path.read_text(encoding="utf-8"))["data"]
+            print("与仓库快照比对：%s" % previous_path.name)
+
+        changes = fr.diff_config(previous, config) if previous else []
+        if previous and not changes:
+            print("没有变化。")
+            if args.check:
+                return 0
+        else:
+            print("发现 %d 处变化：" % len(changes))
+            for item in changes[:25]:
+                print("  " + item)
+            if len(changes) > 25:
+                print("  …共 %d 处" % len(changes))
+
+        if args.check:
+            return 1 if changes else 0
+
+        target = fr.REFERENCE_DIR / ("sls-site-config-%s.json" % config["date"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"code": 0, "data": config}, ensure_ascii=False) + "\n",
+                          encoding="utf-8")
+        print("已保存 %s" % target.name)
+        ledger.init()
+        ledger.storage.record_audit("freight.refresh", "Param", "P-TW-SLS-TIERS",
+                                    result="PASS" if not changes else "WARN",
+                                    detail={"date": config["date"], "cards": len(cards),
+                                            "changes": changes[:20]})
         return 0
     if args.cmd == "check-sources":
         import urllib.error
