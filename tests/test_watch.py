@@ -272,24 +272,26 @@ class ApiDiscoveryTest(unittest.TestCase):
     """列表页是 SPA，接口藏在混淆 JS 里。让浏览器把真实请求报回来。"""
 
     CALLS = [
-        "https://shopee.cn/seh/api/v1/article/list/?cat_id=1066&page=1",
-        "https://deo.shopeesz.com/shopee/edu/app.js",
-        "https://shopee.cn/edu/static/main.css",
-        "https://shopee.cn/seh/api/v1/cat/list/",
-        "https://shopee.cn/seh/api/v1/article/list/?cat_id=1066&page=2",
         "https://shopee.cn/track/report",
+        "https://c-api-bit.shopeemobile.com/shop/edu/v2/notice_page",
+        "https://deo.shopeesz.com/shopee/edu/app.js",
+        "https://shopee.cn/edu/api/v1/notice/list",
     ]
 
-    def test_keeps_only_data_endpoints(self):
+    def test_keeps_every_http_request_not_just_likely_ones(self):
+        """上一版按关键词筛选，把浏览器报回来的 3 个请求全丢了——过滤条件本身是猜测。"""
         kept = parse_api_calls(self.CALLS)
-        self.assertIn("https://shopee.cn/seh/api/v1/article/list/?cat_id=1066&page=1", kept)
-        self.assertIn("https://shopee.cn/seh/api/v1/cat/list/", kept)
-        self.assertNotIn("https://deo.shopeesz.com/shopee/edu/app.js", kept)
-        self.assertNotIn("https://shopee.cn/edu/static/main.css", kept)
+        self.assertEqual(len(kept), 4, "http(s) 请求一律保留，不做关键词过滤")
+        self.assertIn("https://c-api-bit.shopeemobile.com/shop/edu/v2/notice_page", kept)
+
+    def test_likely_endpoints_sort_first(self):
+        kept = parse_api_calls(self.CALLS)
+        self.assertIn("/api/", kept[0], "像接口的排前面，方便先看")
 
     def test_ignores_non_http_and_duplicates(self):
-        kept = parse_api_calls(["javascript:void(0)", "", None] + self.CALLS)
+        kept = parse_api_calls(["javascript:void(0)", "", None] + self.CALLS + self.CALLS)
         self.assertEqual(len(kept), len(set(kept)))
+        self.assertEqual(len(kept), 4)
 
     def test_records_and_surfaces_discovered_apis(self):
         tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -301,9 +303,9 @@ class ApiDiscoveryTest(unittest.TestCase):
             ledger.record_listing("WATCH-TEST", entries_from_links(LISTING_LINKS),
                                   api_calls=self.CALLS)
             apis = ledger.discovered_apis()
-            self.assertTrue(apis)
-            self.assertIn("article/list", apis[0]["url"])
-            self.assertEqual(apis[0]["hits"], 2, "同一接口出现两次要累计")
+            urls = [item["url"] for item in apis]
+            self.assertIn("https://c-api-bit.shopeemobile.com/shop/edu/v2/notice_page", urls)
+            self.assertEqual(max(item["hits"] for item in apis), 2, "同一接口出现两次要累计")
         finally:
             ledger.close()
             tmp.cleanup()
@@ -315,7 +317,7 @@ class ApiDiscoveryTest(unittest.TestCase):
                            "links": LISTING_LINKS, "api_calls": self.CALLS}).encode()
         result = _ingest_payload(body, db, snapshot_dir=Path(tmp.name) / "s")
         self.assertTrue(result["ok"])
-        self.assertTrue(result["api_calls"])
+        self.assertEqual(len(result["api_calls"]), 4)
         tmp.cleanup()
 
 

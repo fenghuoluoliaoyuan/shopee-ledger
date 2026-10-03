@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shopee 台账 · 参数采集
 // @namespace    shopee-ledger
-// @version      0.3.0
+// @version      0.3.1
 // @description  在 Shopee 页面上把渲染后的正文送回本机台账，产出「候选值」等人工确认。本脚本不会直接修改任何参数。
 // @author       shopee-ledger
 // @match        https://shopee.cn/edu/*
@@ -45,7 +45,7 @@
 
   const APP = 'http://127.0.0.1:8765';
   const PANEL_ID = 'shopee-ledger-capture';
-  const VERSION = '0.3.0';   // 改脚本就改这里：console 一眼看出装的是哪版
+  const VERSION = '0.3.1';   // 改脚本就改这里：console 一眼看出装的是哪版
 
   function log(...args) {
     console.log('[台账采集 v' + VERSION + ']', ...args);
@@ -284,6 +284,7 @@
       }
       const calls = discoverApiCalls();
       log('发现 ' + calls.length + ' 个数据请求（点「这是列表页」会一并上报）');
+      if (calls.length) log('数据请求清单：', calls);
       const auto = await autoReportIfWatched();
       if (auto && auto.result && auto.result.ok) {
         const fresh = (auto.result.new || []).length;

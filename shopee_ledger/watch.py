@@ -116,29 +116,26 @@ def diff_entries(previous: dict[str, dict[str, Any]],
     return {"new": new, "changed": changed, "gone": gone, "total": len(current)}
 
 
-# 看起来像数据接口的路径特征
+# 看起来像数据接口的路径特征——只用于**排序**，不用于过滤
 API_HINTS = ("/api/", "/seh/", "article/list", "cat/list", "search", "list?")
 
 
-def parse_api_calls(urls: list[str], limit: int = 20) -> list[str]:
-    """从浏览器报回来的真实请求里挑出数据接口。
+def parse_api_calls(urls: list[str], limit: int = 30) -> list[str]:
+    """保留浏览器报回来的全部 http(s) 请求，只去重并把"像接口的"排前面。
 
-    为什么要这一步：列表页是 SPA，HTML 里没有文章链接，接口地址藏在混淆过的 JS 包里
-    （试过 24 种 base+path 组合，全 404）。但浏览器**已经在调那个接口**了，
-    performance entries 里就有真实 URL。与其继续猜，不如让它自己报出来。
-
-    拿到接口之后，翻页和定时抓取都能放回服务端做——因为那时抓的是 JSON，不是渲染。
+    **不要按关键词过滤**。上一版按 /api/、article/list 之类筛选，结果浏览器报回 3 个请求
+    全被丢掉（真实接口路径和我猜的完全不同），而"过滤条件"本身就是猜测。
+    脚本那边已经只挑 xmlhttprequest / fetch 发出来了，清单本来就很短——
+    宁可全存下来自己看，也不要再用猜的条件筛一遍。
     """
     out: list[str] = []
     for url in urls or []:
         text = str(url or "").strip()
         if not text.startswith(("http://", "https://")):
             continue
-        lowered = text.lower()
-        if not any(hint in lowered for hint in API_HINTS):
-            continue
         if text not in out:
             out.append(text)
         if len(out) >= limit:
             break
-    return out
+    hinted = [url for url in out if any(hint in url.lower() for hint in API_HINTS)]
+    return hinted + [url for url in out if url not in hinted]
