@@ -43,6 +43,7 @@ def serve(db: str, host: str = "127.0.0.1", port: int = 8765) -> None:
 
 class Handler(BaseHTTPRequestHandler):
     db_path = "data/ledger.sqlite"
+    snapshot_dir: str | None = None   # 测试注入用；None 表示落默认目录
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
@@ -55,6 +56,16 @@ class Handler(BaseHTTPRequestHandler):
             from shopee_ledger.sources import sources_payload
 
             self._send_json(sources_payload())
+            return
+
+        if parsed.path == "/watches.json":
+            # 已登记的列表页。脚本用它判断"当前页是不是我要盯的那个"，
+            # 是的话自动报送一次（每天一次），这样不需要任何定时器。
+            from shopee_ledger.watch import load_watches
+
+            self._send_json([{"id": item.id, "url": item.url, "note": item.note,
+                              "access": item.access, "covers": item.covers}
+                             for item in load_watches()])
             return
 
         ledger = Ledger(self.db_path)
@@ -75,7 +86,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed.path == "/ingest":
             # 油猴脚本把浏览器渲染后的文本送到这里；本机用同一份 spec 配方提取
-            self._send_json(_ingest_payload(raw_body, self.db_path))
+            self._send_json(_ingest_payload(raw_body, self.db_path,
+                                            snapshot_dir=self.snapshot_dir))
             return
 
         form = parse_qs(raw_body.decode("utf-8"))

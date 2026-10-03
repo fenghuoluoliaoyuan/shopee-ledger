@@ -125,8 +125,8 @@
   "watch": [
     {
       "id": "WATCH-EDU-POLICY",
-      "url": "请把「政策与物流」列表页的地址填这里",
-      "note": "费率/物流通知都从这里发出；新增一篇通常意味着某项政策变了",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1066",
+      "note": "政策与物流栏目（用户提供）。费率/物流通知都从这里发出，新增一篇通常意味着某项政策变了",
       "access": "public",
       "covers": [
         "P-TW-COMMISSION",

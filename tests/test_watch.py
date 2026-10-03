@@ -7,19 +7,26 @@
 import json
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from shopee_ledger.store import Ledger
-from shopee_ledger.watch import (
+from http.server import ThreadingHTTPServer  # noqa: E402
+
+from shopee_ledger.store import Ledger  # noqa: E402
+from shopee_ledger.watch import (  # noqa: E402
     diff_entries,
     entries_from_links,
     load_watches,
     normalize_date,
 )
-from shopee_ledger.web import _ingest_payload
+from shopee_ledger.web import Handler, _ingest_payload  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_sources import REAL_PAGE  # noqa: E402
 
 # 依据用户实测的「政策与物流」列表页（标题 + 日期）
 LISTING_LINKS = [
@@ -170,11 +177,76 @@ class IngestListingEndpointTest(unittest.TestCase):
         self.assertEqual(len(result["new"]), 4)
         self.assertIn("只做发现", result["hint"])
 
+    def test_listing_url_resolves_to_the_configured_watch(self):
+        """用户给的列表页地址要能对上 watch 配置，否则记录会散在 WATCH-MANUAL 下。"""
+        watches = load_watches()
+        target = [watch for watch in watches if watch.id == "WATCH-EDU-POLICY"][0]
+        self.assertTrue(target.url.startswith("https://"), "watch URL 不能还是占位文字")
+        self.assertIn("sub_cat_id", target.url, "带查询串的列表页必须整串保留")
+
+    def test_ingest_uses_watch_id_matched_by_url(self):
+        target = [watch for watch in load_watches() if watch.id == "WATCH-EDU-POLICY"][0]
+        body = json.dumps({"url": target.url, "links": LISTING_LINKS}).encode()
+        result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["watch_id"], "WATCH-EDU-POLICY")
+        self.assertTrue(result["known_watch"])
+
+    def test_unknown_listing_url_falls_back_to_manual_watch(self):
+        body = json.dumps({"url": "https://shopee.cn/edu/category?sub_cat_id=9999",
+                           "links": LISTING_LINKS}).encode()
+        result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
+        self.assertEqual(result["watch_id"], "WATCH-MANUAL")
+        self.assertFalse(result["known_watch"])
+
     def test_links_payload_without_articles_is_refused(self):
-        body = json.dumps({"url": "https://x.test", "links": [{"href": "/course/1", "text": "课"}]}).encode()
+        body = json.dumps({"url": "https://x.test",
+                           "links": [{"href": "/course/1", "text": "课"}]}).encode()
         result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
         self.assertFalse(result["ok"])
         self.assertIn("没解析出任何条目", result["error"])
+
+
+class WatchHttpTest(unittest.TestCase):
+    """走真实 HTTP 路由：油猴脚本打的就是这两个地址。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        Handler.db_path = str(Path(self.tmp.name) / "ledger.sqlite")
+        # 必须注入：不然跑测试就往真实 data/snapshots 里写固件快照
+        Handler.snapshot_dir = str(Path(self.tmp.name) / "snapshots")
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.base = "http://127.0.0.1:%d" % self.httpd.server_address[1]
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        Handler.snapshot_dir = None
+        self.tmp.cleanup()
+
+    def test_watches_endpoint_lists_the_configured_listing(self):
+        data = json.loads(urlopen(self.base + "/watches.json", timeout=10).read().decode())
+        self.assertEqual(data[0]["id"], "WATCH-EDU-POLICY")
+        self.assertIn("sub_cat_id", data[0]["url"], "查询串要整串给出，脚本据此比对当前页")
+
+    def test_ingest_listing_over_http(self):
+        body = json.dumps({"url": "https://shopee.cn/edu/category?sub_cat_id=1066",
+                           "links": LISTING_LINKS}).encode()
+        response = urlopen(Request(self.base + "/ingest", data=body,
+                                   headers={"Content-Type": "application/json"}), timeout=10)
+        result = json.loads(response.read().decode())
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["watch_id"], "WATCH-EDU-POLICY")
+        self.assertEqual(len(result["new"]), 4)
+
+    def test_ingest_text_still_works_over_http(self):
+        payload = {"param_id": "P-TW-COMMISSION",
+                   "url": "https://shopee.cn/edu/article/26620", "text": REAL_PAGE}
+        response = urlopen(Request(self.base + "/ingest", data=json.dumps(payload).encode(),
+                                   headers={"Content-Type": "application/json"}), timeout=10)
+        result = json.loads(response.read().decode())
+        self.assertTrue(result["ok"])
+        self.assertAlmostEqual(result["value"], 0.14)
 
 
 if __name__ == "__main__":

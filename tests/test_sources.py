@@ -284,6 +284,18 @@ class IngestTest(unittest.TestCase):
         self.assertEqual(page_key("https://www.x.com/a/"), page_key("https://x.com/a"))
         self.assertNotEqual(page_key("https://x.com/a"), page_key("https://x.com/b"))
 
+    def test_page_key_keeps_meaningful_query(self):
+        """policy 列表页 ?sub_cat_id=1066 与 =1077 是两页不同内容。"""
+        self.assertNotEqual(page_key("https://shopee.cn/edu/category?sub_cat_id=1066"),
+                            page_key("https://shopee.cn/edu/category?sub_cat_id=1077"))
+        self.assertEqual(page_key("https://shopee.cn/edu/category?sub_cat_id=1066"),
+                         page_key("https://www.shopee.cn/edu/category/?sub_cat_id=1066&utm_source=x"))
+
+    def test_malformed_recipe_fails_instead_of_crashing(self):
+        """配方里写了 group=1 但正则没有捕获组——报失败，不要抛出去。"""
+        rule = {"kind": "regex", "expr": "佣金[0-9]+", "group": 1, "scale": 0.01}
+        self.assertIsNone(extract_value(rule, "佣金 14"))
+
 
 class CandidateStoreTest(unittest.TestCase):
     def setUp(self):

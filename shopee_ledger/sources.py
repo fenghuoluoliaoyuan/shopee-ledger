@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SOURCES = ROOT / "spec" / "sources.json"
@@ -42,13 +42,25 @@ STATUS_NO_RECIPE = "no_recipe"
 STATUS_URL_MISMATCH = "url_mismatch"
 
 
-def page_key(url: str) -> tuple[str, str]:
-    """把 URL 归一成 (主机, 路径) 用于比对，忽略 www 和结尾斜杠。"""
+# 这些查询参数只跟来源追踪有关，比对页面身份时忽略
+TRACKING_PREFIXES = ("utm_", "from", "share_", "spm", "scm", "ref", "fbclid")
+
+
+def page_key(url: str) -> tuple:
+    """把 URL 归一成 (主机, 路径, 查询) 用于比对页面身份。
+
+    查询串**必须保留**：shopee.cn/edu/category?sub_cat_id=1066 与 ?sub_cat_id=1077
+    是两页不同内容。只忽略来源追踪类参数（utm_* 等）。
+    主机忽略 www、路径忽略结尾斜杠。
+    """
     parsed = urlsplit(url or "")
     host = parsed.netloc.lower()
     if host.startswith("www."):
         host = host[4:]
-    return host, parsed.path.rstrip("/")
+    query = tuple(sorted(
+        (key, value) for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if not key.lower().startswith(TRACKING_PREFIXES)))
+    return host, parsed.path.rstrip("/"), query
 
 
 @dataclass
@@ -154,7 +166,12 @@ def extract_value(rule: dict[str, Any], text: str) -> Any:
         match = re.search(rule["expr"], scoped, re.S)
         if not match:
             return None
-        raw = match.group(rule.get("group", 1)).replace(",", "").strip()
+        try:
+            raw = match.group(rule.get("group", 1))
+        except IndexError:
+            # 配方写错了（正则里没有这个捕获组）。报失败即可，不该把整次抓取炸掉。
+            return None
+        raw = raw.replace(",", "").strip()
         try:
             number = float(raw)
         except ValueError:

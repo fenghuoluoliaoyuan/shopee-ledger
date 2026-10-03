@@ -94,6 +94,37 @@
     return found;
   }
 
+  async function loadWatches() {
+    const res = await request({ url: APP + '/watches.json' });
+    if (res.status !== 200) return [];
+    return JSON.parse(res.responseText);
+  }
+
+  function sameUrl(a, b) {
+    try {
+      const left = new URL(a);
+      const right = new URL(b);
+      const norm = (u) => u.origin.replace('://www.', '://') + u.pathname.replace(/\/$/, '') + u.search;
+      return norm(left) === norm(right);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // 自动报送：打开的就是已登记的列表页时，每天送一次。
+  // 不设定时器——列表页是浏览器渲染的，服务端抓不到；"你打开过"就是最好的触发条件。
+  async function autoReportIfWatched() {
+    const watches = await loadWatches();
+    const hit = watches.find((item) => item.url && sameUrl(item.url, location.href));
+    if (!hit) return null;
+    const key = 'sl-listing-sent:' + hit.id;
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem(key) === today) return null;
+    const result = await sendListing();
+    if (result && result.ok) localStorage.setItem(key, today);
+    return { watch: hit, result: result };
+  }
+
   async function sendListing() {
     const res = await request({
       method: 'POST',
@@ -200,12 +231,20 @@
   (async function main() {
     try {
       const sources = await loadSources();
-      if (!Array.isArray(sources) || sources.length === 0) {
-        log('配方清单为空，跳过');
-        return;
+      if (Array.isArray(sources) && sources.length > 0) {
+        buildPanel(sources);
+        log('已加载 ' + sources.length + ' 条配方');
       }
-      buildPanel(sources);
-      log('已加载 ' + sources.length + ' 条配方');
+      const auto = await autoReportIfWatched();
+      if (auto && auto.result && auto.result.ok) {
+        const fresh = (auto.result.new || []).length;
+        log('已自动报送列表页 ' + auto.watch.id + '：共 ' + auto.result.total +
+            ' 篇，新出现 ' + fresh + ' 篇');
+        if (fresh > 0) {
+          console.log('[台账采集] 🆕 新文档：',
+                      (auto.result.new || []).map((i) => i.published_at + ' ' + i.title));
+        }
+      }
     } catch (err) {
       log('未注入面板：' + err.message);
     }
