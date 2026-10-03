@@ -73,4 +73,9 @@ Invoke-Step 'calibrate' @('-m', 'shopee_ledger', 'calibrate')
 #    is broken for anyone who clones it.
 Invoke-Step 'check-snapshots' @('-m', 'shopee_ledger', 'check-snapshots')
 
+# 9) Static check: no local name is read before its assignment. Two real bugs
+#    (rounds 11 and 12) lived here because the failing branch was never executed
+#    by any test; this catches that shape without running it.
+Invoke-Step 'check-lint' @('-m', 'shopee_ledger', 'check-lint')
+
 Write-Log '=== end ==='

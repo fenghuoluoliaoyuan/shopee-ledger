@@ -172,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("calibrate",
                    help="KPI 校准：拿实测值对照经验值（只报告，不自动改阈值）")
 
+    sub.add_parser("check-lint",
+                   help="静态检查：函数里有没有「赋值前读取」的局部名")
     sub.add_parser("check-snapshots",
                    help="体检 A 级参数的快照：文件在不在、进没进版本库")
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
@@ -780,6 +782,22 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("没有可校准的参数")
             return 0
         print(render(items))
+        return 0
+    if args.cmd == "check-lint":
+        from pathlib import Path as _Path
+
+        from shopee_ledger.unbound import check_package
+
+        found = check_package(_Path(__file__).resolve().parent)
+        print("静态检查「赋值前读取」：%d 处" % len(found))
+        for item in found:
+            print("  " + item.render())
+        if found:
+            print()
+            print("这些分支一旦被走到就会 UnboundLocalError——而且正因测试没走到才活下来。")
+            return 1
+        print("干净。这一条守的是两个真实 bug（第 11 / 12 轮各一个），")
+        print("它们共同的特征是：赋值藏在条件分支里、读取在分支之外且在赋值之前。")
         return 0
     if args.cmd == "check-snapshots":
         from shopee_ledger.snapshots import audit
