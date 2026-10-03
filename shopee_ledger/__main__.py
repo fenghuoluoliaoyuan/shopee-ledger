@@ -157,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
     harvest.add_argument("--redo", action="store_true", help="已有的正文也重抓一遍")
+    harvest.add_argument("--only", action="append", default=[],
+                         help="只抓指定文章号（可重复）——定向抓，不必把整批都拉下来")
     fetch = sub.add_parser("fetch", help="抓公开来源，产出候选值（不直接改参数）")
     fetch.add_argument("--param", help="只抓某个参数")
     fetch.add_argument("--include-login", action="store_true", help="连需登录的来源也走一遍（只会报状态）")
@@ -387,19 +389,28 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
     if args.cmd == "harvest":
         from shopee_ledger.browser import BrowserError, Chrome
         from shopee_ledger.sources import save_snapshot
-        from shopee_ledger.watch import article_text, find_browser
+        from shopee_ledger.watch import (STATUS_PAGE_GATED, article_text, find_browser,
+                                         page_status)
 
         if not find_browser():
             print("找不到 Chrome/Edge，无法渲染正文")
             return 1
         ledger.init()
-        entries = (ledger.all_watch_entries() if args.redo
-                   else ledger.entries_without_content())[: args.limit]
+        if args.only:
+            wanted = set(args.only)
+            entries = [row for row in ledger.all_watch_entries()
+                       if row["article_id"] in wanted]
+            missed = wanted - {row["article_id"] for row in entries}
+            if missed:
+                print("列表里没有这些文章号：%s" % "、".join(sorted(missed)))
+        else:
+            entries = (ledger.all_watch_entries() if args.redo
+                       else ledger.entries_without_content())[: args.limit]
         if not entries:
             print("没有需要抓正文的文档（都已留档；要重抓加 --redo）")
             return 0
         print("要抓 %d 篇（共用一条浏览器会话）…" % len(entries))
-        ok = failed = 0
+        ok = failed = gated = 0
         try:
             with Chrome() as chrome:
                 for index, entry in enumerate(entries, 1):
@@ -416,6 +427,13 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                               % (index, len(entries), entry["article_id"], len(text)))
                         failed += 1
                         continue
+                    # 登录门禁与抓取失败要分开：前者只能等人登录，后者要修抓取
+                    state = page_status(text)
+                    if state == STATUS_PAGE_GATED:
+                        print("  [%d/%d] %s 登录门禁（%d 字，正文区只剩登录提示）"
+                              % (index, len(entries), entry["article_id"], len(text)))
+                        gated += 1
+                        continue
                     ref, _ = save_snapshot(text, "ARTICLE-" + entry["article_id"])
                     ledger.save_article_text(entry["id"], ref, length=len(text))
                     print("  [%d/%d] %s %4d 字  %s"
@@ -425,7 +443,7 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         except BrowserError as exc:
             print("浏览器起不来：%s" % exc)
             return 1
-        print("\n成功 %d 篇，失败 %d 篇" % (ok, failed))
+        print("\n成功 %d 篇，失败 %d 篇，登录门禁 %d 篇" % (ok, failed, gated))
         return 0
     if args.cmd == "associate":
         from pathlib import Path as _Path

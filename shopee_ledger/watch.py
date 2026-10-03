@@ -271,6 +271,36 @@ def render_page(url: str, *, browser: str | None = None, wait_ms: int = 12000,
         return "", "%s: %s" % (type(exc).__name__, exc)
 
 
+# 文章页的三种状态。为什么不能只看「有没有请登录」这句：
+# **页脚导航里就带着它**，内容完整的文章也含这句（实测 4612 有 3448 字正文却也含）。
+# 真被挡住时正文容器里只剩提示，全文约 1200 字。
+GATED_MARKER = "更多内容，请登录Shopee账号了解"
+NOT_FOUND_MARKER = "抱歉！找不到页面"
+# 超过这个字数还含提示句，就是"导航里带的"，不是被挡住
+GATED_MAX_LENGTH = 1600
+
+STATUS_PAGE_OK = "ok"
+STATUS_PAGE_GATED = "gated"
+STATUS_PAGE_MISSING = "not_found"
+STATUS_PAGE_EMPTY = "empty"
+
+
+def page_status(text: str) -> str:
+    """判断渲染回来的正文是哪种情况：ok / gated / not_found / empty。
+
+    用来回答「这篇是登录门禁，还是我抓失败了」——两者的下一步完全不同：
+    前者只能等人登录，后者要修抓取。
+    """
+    body = (text or "").strip()
+    if not body:
+        return STATUS_PAGE_EMPTY
+    if NOT_FOUND_MARKER in body:
+        return STATUS_PAGE_MISSING
+    if GATED_MARKER in body and len(body) < GATED_MAX_LENGTH:
+        return STATUS_PAGE_GATED
+    return STATUS_PAGE_OK
+
+
 def parse_listing_html(html: str, base_url: str = "") -> tuple[list[WatchEntry], dict[str, Any]]:
     """解析**渲染后的 HTML**（无头浏览器 dump、用户 Ctrl+S、或脚本发回的 outerHTML）。
 

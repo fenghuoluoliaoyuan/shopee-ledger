@@ -71,6 +71,15 @@
       "status": "done"
     },
     {
+      "checked_date": "2026-04-23",
+      "conclusion": "平台按季向税务机关报送身份与收入信息（2025-06-23 规定）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26438-d7dde7a434a7.txt",
+      "source_url": "https://shopee.cn/edu/article/26438",
+      "spec_task_id": "VT-022",
+      "status": "done"
+    },
+    {
       "checked_date": "2026-10-03",
       "conclusion": "官方运费表：买家侧为固定值、卖家侧按 500g 档累加",
       "grade": "A",
@@ -312,6 +321,47 @@
         "final_judgement_rule": "查获的禁运品不限于附件所列名称；最终判定依据国家民航总局禁令、航空器安全因素、检验检疫局及海关限制出口物品",
         "official_attachment": "https://mms.file.susercontent.com/api/v4/11195002/mms/cn-11195002-bmlg7-mt6ke0nkbi1091?app_type=shopee",
         "vn_table_note": "越南站点逐类目禁运标记见 vn-highvalue-tax-26632.xlsx（2153 行）"
+      }
+    },
+    "P-TAX-CN": {
+      "checked_at": "2026-04-23",
+      "created_at": "2026-10-03T10:02:08+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TAX-CN",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26438-d7dde7a434a7.txt",
+      "source_url": "https://shopee.cn/edu/article/26438",
+      "value": {
+        "applies_to": "在中国内地注册登记营业执照为企业法人和个体工商户的卖家",
+        "not_included": "本指南只讲报送口径；增值税起征点、所得税、出口退税等具体税务处理不在本文，系统仍不得据此自动算税额",
+        "regulation": "《互联网平台企业涉税信息报送规定》（2025-06-23 国务院颁布）",
+        "reported_identity": [
+          "名称（姓名）",
+          "统一社会信用代码（纳税人识别号）",
+          "地址",
+          "店铺（用户）名称",
+          "店铺唯一标识码",
+          "联系人姓名",
+          "结算（支付）账户信息",
+          "联系电话",
+          "经营开始时间"
+        ],
+        "reported_income": [
+          "收入总额（元）",
+          "退款金额（元）",
+          "支付给平台的佣金、服务费合计金额（元）",
+          "交易（订单）数量（笔）"
+        ],
+        "schedule": {
+          "Q1": "4 月底前",
+          "Q2": "7 月底前",
+          "Q3": "10 月底前",
+          "Q4": "次年 1 月底前"
+        },
+        "seller_duty": "及时核实并更新平台登记的税务信息；执照在季度内发生重要变更（名称、地址等）应及时提交变更材料",
+        "since": "2025-10 起，每季度报送",
+        "where_to_check": "Shopee 跨境卖家自助服务站 >> 涉税信息报送数据查询（需主账户登录）",
+        "who_reports": "互联网平台企业（Shopee）向其主管税务机关报送"
       }
     },
     "P-TH-COMMISSION": {
@@ -564,6 +614,34 @@
           "涉及主管机关规范商品",
           "其他海关查验告知"
         ]
+      }
+    },
+    "P-TW-PAYOUT-CYCLE": {
+      "checked_at": "2026-08-25",
+      "created_at": "2026-10-03T10:02:08+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-PAYOUT-CYCLE",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-4612-0dd5a40e8f22.txt",
+      "source_url": "https://shopee.cn/edu/article/4612",
+      "value": {
+        "account_rule": "未绑定收款账户时货款一直留在 Shopee 履约保证账户中；打款周期内当轮收到拨款后再更换收款账户，避免拨款失败",
+        "billing_cycle": "订单满足结算条件之日所对应的**当周**为账单周期",
+        "binding_cutoff": "上周日 23:59（当地时间）前绑定/修改并通过校验，通常本周生效",
+        "frequency": "每 7 个工作日 1 次（所有站点，KH 除外；KH 为每月 1 次）",
+        "minimum_payout": "每次打款金额不低于 0.02 美金的最低结算门槛",
+        "payout_window": "账单周期完成后的**7 个工作日内**为打款周期",
+        "settlement_conditions": [
+          "买家确认收货或系统自动确认订单完成",
+          "退货退款期限届满后"
+        ],
+        "sip_note": "SIP 附属店铺的结算货币为人民币/美元",
+        "three_currencies": {
+          "打款货币": "实际打给收款账户的币种，可能与结算货币不同",
+          "提现货币": "从收款账户提现时自选",
+          "结算货币": "中国卖家中心结算与账单展示的币种（当地货币，如 MYR）"
+        },
+        "where_to_check": "中国卖家中心 >> 财务 >> 我的收入"
       }
     },
     "P-TW-PRESALE-FEE": {

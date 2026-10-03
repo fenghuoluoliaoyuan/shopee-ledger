@@ -196,6 +196,94 @@
       "covers": [
         "P-TW-LIQUID-ML"
       ]
+    },
+    {
+      "id": "WATCH-AD-SETUP",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1779",
+      "access": "public",
+      "note": "站内广告设置（sub_cat_id=1779）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-AD-CPC",
+        "P-TW-CTR-BASELINE"
+      ]
+    },
+    {
+      "id": "WATCH-AD-TIPS",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1780",
+      "access": "public",
+      "note": "站内广告技巧（sub_cat_id=1780）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-AD-CPC",
+        "P-TW-CTR-BASELINE"
+      ]
+    },
+    {
+      "id": "WATCH-MKT-TOOLS",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1192",
+      "access": "public",
+      "note": "营销工具（sub_cat_id=1192）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-FREESHIP-2026",
+        "P-TW-FREESHIP-FEE"
+      ]
+    },
+    {
+      "id": "WATCH-CAMPAIGN",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1035",
+      "access": "public",
+      "note": "平台活动（sub_cat_id=1035）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-FREESHIP-2026"
+      ]
+    },
+    {
+      "id": "WATCH-PAYOUT",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1023",
+      "access": "public",
+      "note": "款项管理（sub_cat_id=1023）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-PAYOUT-CYCLE",
+        "P-TW-WITHDRAW",
+        "P-CASH-CYCLE"
+      ]
+    },
+    {
+      "id": "WATCH-EARLY-PAY",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=2093",
+      "access": "public",
+      "note": "提前回款（sub_cat_id=2093）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-PAYOUT-CYCLE",
+        "P-CASH-CYCLE"
+      ]
+    },
+    {
+      "id": "WATCH-PROD-OPS",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=2191",
+      "access": "public",
+      "note": "商品运营优化（sub_cat_id=2191）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-CTR-BASELINE",
+        "P-TW-AD-CPC"
+      ]
+    },
+    {
+      "id": "WATCH-BASE-OPS",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1042",
+      "access": "public",
+      "note": "基础运营操作（sub_cat_id=1042）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-CTR-BASELINE"
+      ]
+    },
+    {
+      "id": "WATCH-SHOP-SETUP",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1800",
+      "access": "public",
+      "note": "店铺基础设置（sub_cat_id=1800）—— 对着剩余 E 级参数挑的分类",
+      "covers": [
+        "P-TW-FREESHIP-2026"
+      ]
     }
   ]
 }

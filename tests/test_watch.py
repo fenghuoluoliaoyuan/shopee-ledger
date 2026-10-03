@@ -547,5 +547,67 @@ class UserscriptHeaderTest(unittest.TestCase):
         for opener, closer in (("{", "}"), ("(", ")"), ("[", "]")):
             self.assertEqual(body.count(opener), body.count(closer),
                              "%s%s 不配对——JS 里大概率语法错误" % (opener, closer))
+
+
+class PageStatusTest(unittest.TestCase):
+    """区分「登录门禁」与「抓取失败」——两者的下一步完全不同。
+
+    这曾经是个误报：页脚导航里就带着「请登录／更多内容，请登录Shopee账号了解」这句，
+    内容完整的文章也含它（实测 4612 有 3448 字正文却也被判成门禁，害我以为打款规则
+    那篇读不到）。只看有没有这句话不够，还要看正文是不是短到只剩提示。
+    """
+
+    def test_real_article_that_merely_mentions_the_prompt_is_ok(self):
+        from shopee_ledger.watch import STATUS_PAGE_OK, page_status
+
+        body = "打款周期为每7个工作日1次。" * 200 + "更多内容，请登录Shopee账号了解"
+        self.assertEqual(page_status(body), STATUS_PAGE_OK)
+
+    def test_short_page_with_the_prompt_is_gated(self):
+        from shopee_ledger.watch import STATUS_PAGE_GATED, page_status
+
+        body = "内容 更多内容，请登录Shopee账号了解 使用Shopee帐户登录" + "导航" * 100
+        self.assertEqual(page_status(body), STATUS_PAGE_GATED)
+
+    def test_not_found_page_is_its_own_status(self):
+        from shopee_ledger.watch import STATUS_PAGE_MISSING, page_status
+
+        self.assertEqual(page_status("卖家学习中心 登录查看学习记录！ 404 抱歉！找不到页面"),
+                         STATUS_PAGE_MISSING)
+
+    def test_empty_text(self):
+        from shopee_ledger.watch import STATUS_PAGE_EMPTY, page_status
+
+        self.assertEqual(page_status(""), STATUS_PAGE_EMPTY)
+        self.assertEqual(page_status(None), STATUS_PAGE_EMPTY)
+
+    def test_not_found_wins_over_gated(self):
+        """404 页也可能带导航里的登录提示，但它是「没这页」，不是「要登录」。"""
+        from shopee_ledger.watch import STATUS_PAGE_MISSING, page_status
+
+        body = "抱歉！找不到页面 更多内容，请登录Shopee账号了解"
+        self.assertEqual(page_status(body), STATUS_PAGE_MISSING)
+
+    def test_repo_corpus_splits_into_gated_and_readable(self):
+        """对仓库里已抓的正文跑一遍：两类都应当存在。
+
+        直接读快照文件，不经过数据库——第一次写成用临时库，那里一条记录都没有，
+        测试假失败（空库读不出任何状态）。
+        """
+        from shopee_ledger.watch import STATUS_PAGE_GATED, STATUS_PAGE_OK, page_status
+
+        folder = Path(__file__).resolve().parents[1] / "data" / "snapshots"
+        snapshots = sorted(folder.glob("ARTICLE-*.txt"))
+        if not snapshots:
+            self.skipTest("还没有抓过正文")
+        states = {}
+        for path in snapshots:
+            state = page_status(path.read_text(encoding="utf-8", errors="replace"))
+            states[state] = states.get(state, 0) + 1
+        self.assertGreater(states.get(STATUS_PAGE_OK, 0), 0, "应当有正常正文")
+        self.assertGreater(states.get(STATUS_PAGE_GATED, 0), 0,
+                           "登录门禁的残页也留着——它本身就是「这篇要登录」的证据")
+
+
 if __name__ == "__main__":
     unittest.main()
