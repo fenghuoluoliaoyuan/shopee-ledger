@@ -70,41 +70,82 @@ def load_watches(path: Path | str = DEFAULT_SOURCES) -> list[Watch]:
 
 
 class _TextExtractor(HTMLParser):
-    """把渲染后的页面变成纯文本（丢掉 script/style/导航）。
+    """把渲染后的页面变成纯文本（丢掉 script/style）。
 
-    给"自己去读文档找参数值"用：先拿到正文，再按关键词定位。
+    ``region_only=True`` 时只抓正文容器内的文字。为什么必须这么做：
+    整页文本里含网站导航，而导航里就有「禁售品政策」「商品上架规范」这类分类名——
+    于是**每一篇文档都会命中这些关键词**，关联结果全是噪音（实测踩过）。
     """
 
     SKIP = {"script", "style", "noscript", "svg", "head"}
+    REGION_HINTS = ("article-content", "articlecontent", "article-main-inner")
+    BREAK_TAGS = ("p", "div", "li", "tr", "br", "h1", "h2", "h3", "h4", "section")
 
-    def __init__(self) -> None:
+    def __init__(self, region_only: bool = False) -> None:
         super().__init__(convert_charrefs=True)
         self.chunks: list[str] = []
         self._skip_depth = 0
+        self._depth = 0
+        self._region_depth: int | None = None
+        self._region_only = region_only
+        self.found_region = False
+
+    def _inside_region(self) -> bool:
+        return (not self._region_only) or self._region_depth is not None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in self.SKIP:
             self._skip_depth += 1
+            return
+        self._depth += 1
+        classes = (dict(attrs).get("class") or "").lower()
+        if self._region_depth is None and any(hint in classes for hint in self.REGION_HINTS):
+            self._region_depth = self._depth
+            self.found_region = True
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in self.SKIP and self._skip_depth:
-            self._skip_depth -= 1
-        elif tag in ("p", "div", "li", "tr", "br", "h1", "h2", "h3", "h4"):
+        if tag in self.SKIP:
+            if self._skip_depth:
+                self._skip_depth -= 1
+            return
+        if self._region_depth is not None and self._depth <= self._region_depth:
+            self._region_depth = None
+        self._depth = max(0, self._depth - 1)
+        if tag in self.BREAK_TAGS and self._inside_region():
             self.chunks.append("\n")
 
     def handle_data(self, data: str) -> None:
-        if not self._skip_depth:
-            text = data.strip()
-            if text:
-                self.chunks.append(text + " ")
+        if self._skip_depth or not self._inside_region():
+            return
+        text = data.strip()
+        if text:
+            self.chunks.append(text + " ")
+
+
+def _text_of(html: str, *, region_only: bool) -> tuple[str, bool]:
+    parser = _TextExtractor(region_only=region_only)
+    parser.feed(html or "")
+    text = "".join(parser.chunks)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip(), parser.found_region
+
+
+# 正文短于这个长度就认为容器没抓对，退回整页
+MIN_REGION_LENGTH = 200
 
 
 def article_text(html: str) -> str:
-    """渲染后的文章页 → 纯文本。用于自己读文档找参数值。"""
-    parser = _TextExtractor()
-    parser.feed(html or "")
-    text = "".join(parser.chunks)
-    return re.sub(r"\n{3,}", "\n\n", re.sub(r"[ \t]{2,}", " ", text)).strip()
+    """渲染后的文章页 → 纯文本。优先只取正文容器，避免导航污染关键词关联。
+
+    容器没找对或内容过短时退回整页文本——宁可多带点噪音，也不要返回空。
+    """
+    if not html:
+        return ""
+    region, found = _text_of(html, region_only=True)
+    if found and len(region) >= MIN_REGION_LENGTH:
+        return region
+    full, _ = _text_of(html, region_only=False)
+    return full
 
 
 def article_id_of(url: str) -> str | None:

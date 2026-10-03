@@ -133,6 +133,69 @@
         "P-TW-TXN-FEE",
         "P-TW-PRESALE-FEE"
       ]
+    },
+    {
+      "id": "WATCH-BANNED",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=2120",
+      "access": "public",
+      "note": "禁售品政策（sub_cat_id=2120）—— 对着未核实参数挑的分类",
+      "covers": [
+        "P-SLS-BANNED",
+        "P-TW-LIQUID-ML",
+        "P-TW-PARCEL-CAP"
+      ]
+    },
+    {
+      "id": "WATCH-LOGI-RULES",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1027",
+      "access": "public",
+      "note": "物流规则（sub_cat_id=1027）—— 对着未核实参数挑的分类",
+      "covers": [
+        "P-TW-SHOPEE-SHIP-W",
+        "P-TW-DTS",
+        "P-TW-SLS-TIERS"
+      ]
+    },
+    {
+      "id": "WATCH-LOGI-CHANNEL",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1809",
+      "access": "public",
+      "note": "物流渠道（sub_cat_id=1809）—— 对着未核实参数挑的分类",
+      "covers": [
+        "P-TW-SLS-TIERS",
+        "P-TW-SHIPPING-FEE-RANGE"
+      ]
+    },
+    {
+      "id": "WATCH-ONBOARD-RULES",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1187",
+      "access": "public",
+      "note": "新手须知规则（sub_cat_id=1187）—— 对着未核实参数挑的分类",
+      "covers": [
+        "P-ONB-ENTRY",
+        "P-ONB-FIRST-SITE",
+        "P-ONB-FLOW-REQ",
+        "P-TW-DEPOSIT"
+      ]
+    },
+    {
+      "id": "WATCH-ONBOARD-GUIDE",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1513",
+      "access": "public",
+      "note": "新手导览（sub_cat_id=1513）—— 对着未核实参数挑的分类",
+      "covers": [
+        "P-ONB-ENTRY",
+        "P-ONB-FIRST-SITE"
+      ]
+    },
+    {
+      "id": "WATCH-LISTING-RULES",
+      "url": "https://shopee.cn/edu/category?sub_cat_id=1059",
+      "access": "public",
+      "note": "商品上架规范（sub_cat_id=1059）—— 对着未核实参数挑的分类",
+      "covers": [
+        "P-TW-LIQUID-ML"
+      ]
     }
   ]
 }

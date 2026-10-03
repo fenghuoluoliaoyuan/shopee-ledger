@@ -100,6 +100,38 @@ class FrameTest(unittest.TestCase):
         self.assertEqual(article_text(""), "")
         self.assertEqual(article_text(None), "")
 
+    def test_article_text_prefers_the_content_container_over_the_whole_page(self):
+        """整页文本含网站导航，导航里的分类名会污染参数关联——实测踩过。"""
+        from shopee_ledger.watch import article_text
+
+        body = "跨境直邮店铺佣金费率统一调整为14%（含税率），自2026年1月1日起生效。" * 6
+        html = (
+            '<html><body><nav><a>禁售品政策</a><a>商品上架规范</a>'
+            '<a>新手须知规则</a></nav>'
+            '<div class="article-detail-wrap"><div class="article-main-inner">'
+            '<h1>费率调整通知</h1><div class="article-content ql-container ql-snow">'
+            + body + '</div></div></div>'
+            '<footer>关于Shopee 关注我们</footer></body></html>')
+        text = article_text(html)
+        self.assertIn("跨境直邮店铺佣金费率统一调整为14%", text)
+        self.assertNotIn("禁售品政策", text, "导航分类名不该混进正文")
+        self.assertNotIn("商品上架规范", text)
+        self.assertNotIn("关注我们", text, "页脚也不该混进来")
+
+    def test_article_text_falls_back_to_whole_page_when_region_is_missing(self):
+        from shopee_ledger.watch import article_text
+
+        html = "<html><body><div class='something'>" + "正文内容。" * 60 + "</div></body></html>"
+        self.assertIn("正文内容", article_text(html))
+
+    def test_article_text_falls_back_when_region_is_too_short(self):
+        """容器找对了但里面几乎是空的——宁可用整页，也不要返回空。"""
+        from shopee_ledger.watch import article_text
+
+        html = ('<html><body><div class="article-content">短</div>'
+                '<div class="other">' + "真正的正文在这里。" * 40 + "</div></body></html>")
+        self.assertIn("真正的正文在这里", article_text(html))
+
 
 if __name__ == "__main__":
     unittest.main()

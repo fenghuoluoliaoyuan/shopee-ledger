@@ -236,7 +236,9 @@ class Chrome:
         if not exe:
             raise BrowserError("找不到 Chrome 或 Edge")
         self.port = port
-        self.profile = profile or str(Path(os.environ.get("TEMP", ".")) / "sl-cdp-profile")
+        # profile 目录必须按端口区分：Chrome 会锁住 profile，两个实例共用就起不来。
+        # 实测踩过——后台 harvest 在跑时，另一个端口的实例永远等不到调试端口。
+        self.profile = profile or str(Path(os.environ.get("TEMP", ".")) / ("sl-cdp-%d" % port))
         args = [exe, "--headless=new" if headless else "--new-window",
                 "--disable-gpu", "--no-first-run", "--no-default-browser-check",
                 "--disable-background-networking", "--disable-sync",

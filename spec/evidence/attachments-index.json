@@ -1,0 +1,29 @@
+{
+  "note": "官方附件原件。URL 会失效，所以原件入库并记 sha256。",
+  "files": [
+    {
+      "file": "banned-list-25237.pdf",
+      "article_id": "25237",
+      "url": "https://mms.file.susercontent.com/api/v4/11195002/mms/cn-11195002-bmlg7-mt6ke0nkbi1091?app_type=shopee",
+      "note": "Shopee禁运商品 - 各站点禁运品类清单（B类违禁品标准、空运&陆运清单）",
+      "bytes": 258939,
+      "sha256": "aed1ead661f300cf2de28c9958dddf9215e143528f9231c7dedf0398aa4245e3"
+    },
+    {
+      "file": "bulky-categories-4842.xlsx",
+      "article_id": "4842",
+      "url": "https://mms.file.susercontent.com/api/v4/11195002/mms/sg-11195002-bmlg8-msxzke1s19txec?app_type=shopee",
+      "note": "SLS重货渠道推荐类目清单（MY/TH/SG/VN）",
+      "bytes": 18693,
+      "sha256": "21b1a0160c9c2a5ad691a0fefd53740ba5a7f367bfd3a2392711da31fa1cc379"
+    },
+    {
+      "file": "vn-highvalue-tax-26632.xlsx",
+      "article_id": "26632",
+      "url": "https://mms.file.susercontent.com/api/v4/11195002/mms/sg-11195002-bmlg6-msxzyixyqhacbc?app_type=shopee",
+      "note": "越南站点高货值渠道类目税率表（2153 行，含逐类目禁运标记）",
+      "bytes": 156488,
+      "sha256": "c9686658406c68b08bca0c9e3624c3c838a5df010496c39b56ba2df11a20c239"
+    }
+  ]
+}

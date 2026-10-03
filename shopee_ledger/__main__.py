@@ -110,6 +110,11 @@ def main(argv: list[str] | None = None) -> int:
     q2.add_argument("--free-window", action="store_true", help="处于免佣窗口内")
     q2.add_argument("--grant", type=int, help="不填则只打印；填候选品 id 则留档成本快照")
 
+    assoc = sub.add_parser("associate",
+                           help="把抓到的文档关联到它可能回答的参数（只定位，不取值）")
+    assoc.add_argument("--param", help="只看某个参数")
+    assoc.add_argument("--context", action="store_true", help="连命中处的上下文一起打印")
+
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
@@ -383,6 +388,52 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("浏览器起不来：%s" % exc)
             return 1
         print("\n成功 %d 篇，失败 %d 篇" % (ok, failed))
+        return 0
+    if args.cmd == "associate":
+        from pathlib import Path as _Path
+
+        from shopee_ledger.associate import associate, coverage_report, load_keywords
+
+        keywords = load_keywords()
+        if not keywords:
+            print("spec/keywords.json 是空的——先给参数配关键词")
+            return 1
+        ledger.init()
+        documents = []
+        for row in ledger.all_watch_entries():
+            if not row.get("content_ref"):
+                continue
+            path = _Path(row["content_ref"])
+            if not path.is_absolute():
+                path = _Path(__file__).resolve().parent.parent / row["content_ref"]
+            if not path.exists():
+                continue
+            documents.append({"article_id": row["article_id"], "url": row["url"],
+                              "title": row["title"], "published_at": row["published_at"],
+                              "text": path.read_text(encoding="utf-8", errors="replace")})
+        if not documents:
+            print("还没有文档正文——先跑 harvest")
+            return 1
+        findings = associate(documents, keywords=keywords, only=args.param)
+        report = coverage_report(findings, keywords)
+        print("已读 %d 篇正文；%d 个参数里有 %d 个找到线索\n"
+              % (len(documents), len(keywords), report["with_hits"]))
+        for finding in findings:
+            level = ledger.spec.params[finding.param_id].evidence_level \
+                if finding.param_id in ledger.spec.params else "?"
+            print("=== %s（当前 %s 级，%d 篇候选）" % (finding.param_id, level,
+                                                     finding.document_count))
+            for article_id, hits in finding.by_document().items():
+                hit = hits[0]
+                print("   %s  %-7s %s" % (hit.published_at or "?", article_id, hit.title[:40]))
+                if args.context:
+                    print("       [%s] %s" % (hit.keyword, hit.context[:150]))
+            print()
+        if report["without_hits"]:
+            print("一条线索都没找到的参数（%d 个）：" % len(report["without_hits"]))
+            print("  " + "、".join(report["without_hits"]))
+            print("  提示：可能是关键词没配，或这类信息只在需登录的页面（卖家中心/帮助中心）")
+        print("\n只定位不取值——取值要读原文判断适用范围与生效日期。")
         return 0
     if args.cmd == "check-sources":
         import urllib.error
