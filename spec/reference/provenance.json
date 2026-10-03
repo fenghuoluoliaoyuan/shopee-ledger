@@ -31,5 +31,32 @@
     "known_divergence": "涵盖特货、重货、轻货等多个渠道，相较中国卖家中心售价的计算结果会有差异",
     "official_position": "若运费表与「藏价与运费计算工具」有差异，以藏价工具为准（https://shopee.cn/edu/article/5091）",
     "why_recorded": "这些边界比数字更容易被误用——拿模拟器结果当实收/实付会算错利润。记在参考数据的出处文件里，用它的人先看到限制。"
+  },
+  "references": {
+    "delivery-calculator": {
+      "title": "Shopee发货时间计算器（跨境卖家自助站）",
+      "page": "https://solutions.shopee.cn/sellers/delivery-calculator/#/order-date",
+      "apis": {
+        "get-exempt-days": {
+          "method": "GET",
+          "url": "https://solutions.shopee.cn/sellers/delivery-calculator/api/get-exempt-days"
+        },
+        "get-result": {
+          "method": "POST",
+          "url": "https://solutions.shopee.cn/sellers/delivery-calculator/api/get-result",
+          "body": "{site, order_date: '%Y-%m-%d %H:%M:%S', dts: 备货天数}"
+        }
+      },
+      "success_code": 200000,
+      "login_required": false,
+      "checked_at": "2026-10-03T18:48:48+08:00",
+      "findings": [
+        "9 个站点在相同输入下 DTS 与扫描截止完全一致（官方页面也写着「各站点发货时效一致」）",
+        "DTS = 下单日 + 备货天数，按「发货日」推进；发货日 = 非周日、非节假日（**周六算工作日**）",
+        "扫描截止 = DTS + 3 自然日（TW/MY/PH/SG/VN/MX）；TH/BR/AR 为 DTS + 3 发货日",
+        "自然日站点的扫描截止只看日历，不因节假日顺延",
+        "630/630 样本外验证通过（14 个下单日 × 5 种备货天数 × 9 个站点）"
+      ]
+    }
   }
 }

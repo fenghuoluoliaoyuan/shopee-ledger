@@ -1,0 +1,327 @@
+{
+  "code": 200000,
+  "data": [
+    {
+      "id": 41,
+      "region": "SG, VN, PH, MY, MX, TH, BR, AR, TW",
+      "date_start": "2026-10-01",
+      "date_end": "2026-10-05",
+      "date_name": "2026 国庆",
+      "date_link": "https://shopee.cn/edu/article/28294"
+    },
+    {
+      "id": 40,
+      "region": "SG, VN, PH, MY, MX, TH, BR, AR, TW",
+      "date_start": "2026-09-25",
+      "date_end": "2026-09-25",
+      "date_name": "2026 中秋节",
+      "date_link": "https://shopee.cn/edu/article/28294"
+    },
+    {
+      "id": 39,
+      "region": "SG, VN, PH, MY, MX, TH, BR, AR, TW",
+      "date_start": "2026-06-19",
+      "date_end": "2026-06-19",
+      "date_name": "2026 端午节",
+      "date_link": "https://shopee.cn/edu/article/27725"
+    },
+    {
+      "id": 38,
+      "region": "SG, VN, PH, MY, MX, TH, BR, AR, TW",
+      "date_start": "2026-05-01",
+      "date_end": "2026-05-03",
+      "date_name": "2026 劳动节",
+      "date_link": "https://shopee.cn/edu/article/27448"
+    },
+    {
+      "id": 37,
+      "region": "SG, VN, PH, MY, MX, TH, BR, AR, TW",
+      "date_start": "2026-04-04",
+      "date_end": "2026-04-05",
+      "date_name": "2026 清明节",
+      "date_link": "https://shopee.cn/edu/article/27322"
+    },
+    {
+      "id": 36,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2026-02-15",
+      "date_end": "2026-02-22",
+      "date_name": "2026 春节",
+      "date_link": "https://shopee.cn/edu/article/26834"
+    },
+    {
+      "id": 35,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2026-01-01",
+      "date_end": "2026-01-02",
+      "date_name": "2026 元旦节",
+      "date_link": "https://shopee.cn/edu/article/26629"
+    },
+    {
+      "id": 34,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2025-10-01",
+      "date_end": "2025-10-06",
+      "date_name": "2025 国庆和中秋节",
+      "date_link": "https://shopee.cn/edu/article/26074"
+    },
+    {
+      "id": 33,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2025-05-31",
+      "date_end": "2025-05-31",
+      "date_name": "2025 端午节",
+      "date_link": "https://shopee.cn/edu/article/24951"
+    },
+    {
+      "id": 32,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2025-05-01",
+      "date_end": "2025-05-04",
+      "date_name": "2025 劳动节",
+      "date_link": "https://shopee.cn/edu/article/24736"
+    },
+    {
+      "id": 31,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2025-04-04",
+      "date_end": "2025-04-04",
+      "date_name": "2025 清明节",
+      "date_link": "https://shopee.cn/edu/article/24505"
+    },
+    {
+      "id": 30,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2025-01-28",
+      "date_end": "2025-02-04",
+      "date_name": "2025 春节",
+      "date_link": "https://shopee.cn/edu/article/23913"
+    },
+    {
+      "id": 29,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2025-01-01",
+      "date_end": "2025-01-01",
+      "date_name": "2025 元旦",
+      "date_link": "https://shopee.cn/edu/article/23793"
+    },
+    {
+      "id": 27,
+      "region": "PH,SG,CO,CL,BR,MX",
+      "date_start": "2024-10-01",
+      "date_end": "2024-10-03",
+      "date_name": "2024 国庆节（新加坡/菲律宾/巴西/墨西哥/智利/哥伦比亚）",
+      "date_link": "https://shopee.cn/edu/article/22539"
+    },
+    {
+      "id": 28,
+      "region": "MY,TH,VN,TW",
+      "date_start": "2024-10-01",
+      "date_end": "2024-10-07",
+      "date_name": "2024 国庆节（马来西亚/越南/泰国/台湾虾皮）",
+      "date_link": "https://shopee.cn/edu/article/22539"
+    },
+    {
+      "id": 26,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2024-09-15",
+      "date_end": "2024-09-17",
+      "date_name": "2024 中秋节",
+      "date_link": "https://shopee.cn/edu/article/22274"
+    },
+    {
+      "id": 25,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2024-06-10",
+      "date_end": "2024-06-10",
+      "date_name": "2024 端午节",
+      "date_link": "https://shopee.cn/edu/article/20927"
+    },
+    {
+      "id": 24,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2024-05-01",
+      "date_end": "2024-05-04",
+      "date_name": "2024 劳动节",
+      "date_link": "https://shopee.cn/edu/article/20619"
+    },
+    {
+      "id": 23,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2024-04-04",
+      "date_end": "2024-04-06",
+      "date_name": "2024 清明节",
+      "date_link": "https://shopee.cn/edu/article/20422"
+    },
+    {
+      "id": 22,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2024-02-09",
+      "date_end": "2024-02-17",
+      "date_name": "除夕 & 春节",
+      "date_link": "https://shopee.cn/edu/article/20014"
+    },
+    {
+      "id": 20,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2023-12-30",
+      "date_end": "2024-01-01",
+      "date_name": "元旦",
+      "date_link": "https://shopee.cn/edu/article/19857"
+    },
+    {
+      "id": 19,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2023-09-29",
+      "date_end": "2023-10-06",
+      "date_name": "中秋节&国庆节",
+      "date_link": "https://shopee.cn/edu/article/19359"
+    },
+    {
+      "id": 18,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2023-04-29",
+      "date_end": "2023-05-03",
+      "date_name": "劳动节",
+      "date_link": "https://shopee.cn/edu/article/18387"
+    },
+    {
+      "id": 17,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2023-04-05",
+      "date_end": "2023-04-05",
+      "date_name": "清明节",
+      "date_link": "https://shopee.cn/edu/article/18230"
+    },
+    {
+      "id": 16,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2023-01-21",
+      "date_end": "2023-01-27",
+      "date_name": "春节",
+      "date_link": "https://shopee.cn/edu/article/17300"
+    },
+    {
+      "id": 15,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-12-31",
+      "date_end": "2023-01-02",
+      "date_name": "元旦节",
+      "date_link": "https://shopee.cn/edu/article/17193"
+    },
+    {
+      "id": 14,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-10-01",
+      "date_end": "2022-10-07",
+      "date_name": "国庆节",
+      "date_link": "https://shopee.cn/edu/article/16099"
+    },
+    {
+      "id": 13,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-09-10",
+      "date_end": "2022-09-12",
+      "date_name": "中秋节",
+      "date_link": "https://shopee.cn/edu/article/15732"
+    },
+    {
+      "id": 12,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-06-03",
+      "date_end": "2022-06-05",
+      "date_name": "端午节",
+      "date_link": "https://shopee.cn/edu/article/14031"
+    },
+    {
+      "id": 11,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-04-30",
+      "date_end": "2022-05-01",
+      "date_name": "五一劳动节",
+      "date_link": "https://shopee.cn/edu/article/13314"
+    },
+    {
+      "id": 10,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-04-03",
+      "date_end": "2022-04-05",
+      "date_name": "清明节",
+      "date_link": "https://shopee.cn/edu/article/12955"
+    },
+    {
+      "id": 9,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-01-31",
+      "date_end": "2022-02-06",
+      "date_name": "春节",
+      "date_link": "https://shopee.cn/edu/article/11355"
+    },
+    {
+      "id": 8,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2022-01-01",
+      "date_end": "2022-01-03",
+      "date_name": "元旦节",
+      "date_link": "https://shopee.cn/edu/article/11199"
+    },
+    {
+      "id": 7,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-10-01",
+      "date_end": "2021-10-07",
+      "date_name": "国庆节",
+      "date_link": "https://shopee.cn/edu/article/9859/announcement1"
+    },
+    {
+      "id": 6,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-09-19",
+      "date_end": "2021-09-21",
+      "date_name": "中秋节",
+      "date_link": "https://shopee.cn/edu/article/9577/announcement1"
+    },
+    {
+      "id": 5,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-06-12",
+      "date_end": "2021-06-14",
+      "date_name": "端午节",
+      "date_link": "https://shopee.cn/edu/article/7761"
+    },
+    {
+      "id": 4,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-05-01",
+      "date_end": "2021-05-05",
+      "date_name": "五一劳动节",
+      "date_link": "https://shopee.cn/edu/article/7327"
+    },
+    {
+      "id": 3,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-04-03",
+      "date_end": "2021-04-05",
+      "date_name": "清明节",
+      "date_link": "https://shopee.cn/edu/article/6736"
+    },
+    {
+      "id": 2,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-02-11",
+      "date_end": "2021-02-17",
+      "date_name": "春节",
+      "date_link": "https://shopee.cn/edu/article/5797"
+    },
+    {
+      "id": 1,
+      "region": "PH,MY,SG,TH,VN,CO,CL,BR,MX,ID,TW",
+      "date_start": "2021-01-01",
+      "date_end": "2021-01-03",
+      "date_name": "元旦节",
+      "date_link": "https://shopee.cn/edu/article/5547"
+    }
+  ],
+  "msg": "ok",
+  "request_id": "31acbde3ba9441a5bdd409f36f3fb93e"
+}

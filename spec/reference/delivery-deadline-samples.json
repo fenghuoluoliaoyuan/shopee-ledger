@@ -1,0 +1,742 @@
+{
+  "note": "对着它验 spec 里写下的发货时效规则；规则是从这些样本归纳出来的",
+  "source": "https://solutions.shopee.cn/sellers/delivery-calculator/api/get-result",
+  "checked_at": "2026-10-03T18:48:48+08:00",
+  "samples": [
+    {
+      "site": "TW",
+      "order_date": "2026-09-22",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-23 23:59",
+      "latest_scan_time": "2026-09-26 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-09-22",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-23 23:59",
+      "latest_scan_time": "2026-09-28 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-09-22",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-23 23:59",
+      "latest_scan_time": "2026-09-28 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-09-22",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-23 23:59",
+      "latest_scan_time": "2026-09-26 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-09-22",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-23 23:59",
+      "latest_scan_time": "2026-09-28 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-09-22",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-29 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-09-22",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-30 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-09-22",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-30 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-09-22",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-29 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-09-22",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-30 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-09-22",
+      "dts": 5,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-02 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-09-22",
+      "dts": 5,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-07 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-09-22",
+      "dts": 5,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-07 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-09-22",
+      "dts": 5,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-02 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-09-22",
+      "dts": 5,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-07 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-09-25",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-29 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-09-25",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-30 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-09-25",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-30 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-09-25",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-29 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-09-25",
+      "dts": 1,
+      "latest_delivery_time": "2026-09-26 23:59",
+      "latest_scan_time": "2026-09-30 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-09-25",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-02 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-09-25",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-07 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-09-25",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-07 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-09-25",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-02 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-09-25",
+      "dts": 3,
+      "latest_delivery_time": "2026-09-29 23:59",
+      "latest_scan_time": "2026-10-07 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-09-25",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-09-25",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-09-25",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-09-25",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-09-25",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-01",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-01",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-01",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-01",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-01",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-01",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-11 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-01",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-01",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-01",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-11 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-01",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-01",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-01",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-14 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-01",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-14 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-01",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-01",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-14 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-03",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-03",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-03",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-03",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-03",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-06 23:59",
+      "latest_scan_time": "2026-10-09 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-03",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-11 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-03",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-03",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-03",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-11 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-03",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-08 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-03",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-03",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-14 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-03",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-14 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-03",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-03",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-10 23:59",
+      "latest_scan_time": "2026-10-14 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-06",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-07 23:59",
+      "latest_scan_time": "2026-10-10 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-06",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-07 23:59",
+      "latest_scan_time": "2026-10-10 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-06",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-07 23:59",
+      "latest_scan_time": "2026-10-10 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-06",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-07 23:59",
+      "latest_scan_time": "2026-10-10 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-06",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-07 23:59",
+      "latest_scan_time": "2026-10-10 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-06",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-09 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-06",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-09 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-06",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-09 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-06",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-09 23:59",
+      "latest_scan_time": "2026-10-12 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-06",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-09 23:59",
+      "latest_scan_time": "2026-10-13 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-06",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-12 23:59",
+      "latest_scan_time": "2026-10-15 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-06",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-12 23:59",
+      "latest_scan_time": "2026-10-15 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-06",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-12 23:59",
+      "latest_scan_time": "2026-10-15 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-06",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-12 23:59",
+      "latest_scan_time": "2026-10-15 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-06",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-12 23:59",
+      "latest_scan_time": "2026-10-15 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-15",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-16 23:59",
+      "latest_scan_time": "2026-10-19 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-15",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-16 23:59",
+      "latest_scan_time": "2026-10-20 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-15",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-16 23:59",
+      "latest_scan_time": "2026-10-20 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-15",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-16 23:59",
+      "latest_scan_time": "2026-10-19 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-15",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-16 23:59",
+      "latest_scan_time": "2026-10-20 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-15",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-19 23:59",
+      "latest_scan_time": "2026-10-22 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-15",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-19 23:59",
+      "latest_scan_time": "2026-10-22 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-15",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-19 23:59",
+      "latest_scan_time": "2026-10-22 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-15",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-19 23:59",
+      "latest_scan_time": "2026-10-22 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-15",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-19 23:59",
+      "latest_scan_time": "2026-10-22 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-15",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-21 23:59",
+      "latest_scan_time": "2026-10-24 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-15",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-21 23:59",
+      "latest_scan_time": "2026-10-24 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-15",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-21 23:59",
+      "latest_scan_time": "2026-10-24 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-15",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-21 23:59",
+      "latest_scan_time": "2026-10-24 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-15",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-21 23:59",
+      "latest_scan_time": "2026-10-24 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-24",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-26 23:59",
+      "latest_scan_time": "2026-10-29 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-24",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-26 23:59",
+      "latest_scan_time": "2026-10-29 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-24",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-26 23:59",
+      "latest_scan_time": "2026-10-29 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-24",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-26 23:59",
+      "latest_scan_time": "2026-10-29 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-24",
+      "dts": 1,
+      "latest_delivery_time": "2026-10-26 23:59",
+      "latest_scan_time": "2026-10-29 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-24",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-28 23:59",
+      "latest_scan_time": "2026-10-31 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-24",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-28 23:59",
+      "latest_scan_time": "2026-10-31 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-24",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-28 23:59",
+      "latest_scan_time": "2026-10-31 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-24",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-28 23:59",
+      "latest_scan_time": "2026-10-31 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-24",
+      "dts": 3,
+      "latest_delivery_time": "2026-10-28 23:59",
+      "latest_scan_time": "2026-10-31 23:59"
+    },
+    {
+      "site": "TW",
+      "order_date": "2026-10-24",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-30 23:59",
+      "latest_scan_time": "2026-11-02 23:59"
+    },
+    {
+      "site": "TH",
+      "order_date": "2026-10-24",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-30 23:59",
+      "latest_scan_time": "2026-11-03 23:59"
+    },
+    {
+      "site": "BR",
+      "order_date": "2026-10-24",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-30 23:59",
+      "latest_scan_time": "2026-11-03 23:59"
+    },
+    {
+      "site": "MX",
+      "order_date": "2026-10-24",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-30 23:59",
+      "latest_scan_time": "2026-11-02 23:59"
+    },
+    {
+      "site": "AR",
+      "order_date": "2026-10-24",
+      "dts": 5,
+      "latest_delivery_time": "2026-10-30 23:59",
+      "latest_scan_time": "2026-11-03 23:59"
+    }
+  ]
+}

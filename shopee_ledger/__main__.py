@@ -11,6 +11,12 @@ from shopee_ledger.profit import Decision
 from shopee_ledger.store import DEFAULT_DB, PARAM_HELP, Ledger
 
 
+
+def root_reference_dir():
+    """spec/reference 目录——delivery 命令刷新数据时用。"""
+    return Path(__file__).resolve().parent.parent / "spec" / "reference"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="shopee_ledger", description="Shopee 起步台账")
     parser.add_argument("--db", default=str(DEFAULT_DB))
@@ -152,6 +158,16 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("manual",
                    help="待人工读数的留档：浏览器抓到了正文但没配方，值要人来读")
+
+    delivery = sub.add_parser("delivery",
+                              help="算一个订单的最迟发货时间与最迟到仓扫描时间")
+    delivery.add_argument("--market", default="TW", help="站点代码，如 TW/TH/BR")
+    delivery.add_argument("--order-date", help="下单日 YYYY-MM-DD")
+    delivery.add_argument("--dts", type=int, default=1, help="备货时长（发货日），默认 1")
+    delivery.add_argument("--verify", action="store_true",
+                          help="拿存下来的口径样本回验规则，不传 --order-date")
+    delivery.add_argument("--refresh", action="store_true",
+                          help="重新拉豁免日期表与口径样本（节假日每年会变）")
 
     sub.add_parser("calibrate",
                    help="KPI 校准：拿实测值对照经验值（只报告，不自动改阈值）")
@@ -648,6 +664,64 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                        channel_filter=args.channel)
         print(render(rows, target_margin=args.target_margin, purchase_cny=args.purchase,
                      domestic_cny=args.domestic, weight_g=args.weight_g))
+        return 0
+    if args.cmd == "delivery":
+        from datetime import date as _date
+
+        from shopee_ledger.delivery import (BUSINESS_DAY_MARKETS, SOURCE_URL, deadlines,
+                                            verify_samples)
+
+        if args.refresh:
+            import json as _json
+            import urllib.request as _urlopen
+
+            from shopee_ledger.delivery import EXEMPT_API, RESULT_API
+
+            folder = root_reference_dir()
+            request = _urlopen.Request(EXEMPT_API, headers={"User-Agent": "Mozilla/5.0"})
+            with _urlopen.urlopen(request, timeout=25) as response:
+                doc = _json.loads(response.read().decode("utf-8"))
+            if doc.get("code") != 200000:
+                print("豁免日期表接口返回异常：code=%s" % doc.get("code"))
+                return 1
+            (folder / "delivery-exempt-days.json").write_text(
+                _json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print("豁免日期表已更新：%d 条" % len(doc.get("data") or []))
+            print("  （口径样本不在这里重抓——它是对规则的凭据，要显式重取）")
+            print("  API：%s" % EXEMPT_API)
+            return 0
+        if args.verify:
+            report = verify_samples()
+            if not report["available"]:
+                print("没有口径样本文件：spec/reference/delivery-deadline-samples.json")
+                return 1
+            print("规则回验：%d 例，不一致 %d 例" % (report["checked"],
+                                                    len(report["mismatched"])))
+            for item in report["mismatched"][:10]:
+                print("  x %s 下单%s dts=%s  应为 %s，规则算出 %s"
+                      % (item["site"], item["order_date"], item["dts"],
+                         item["expected"], item["predicted"]))
+            if report["mismatched"]:
+                print("\n规则与样本不符——要么规则被改错了，要么样本过期了。别急着改样本。")
+                return 1
+            print("规则与官方接口口径一致。")
+            print("来源：%s" % (report.get("source") or SOURCE_URL))
+            return 0
+
+        if not args.order_date:
+            print("要给 --order-date YYYY-MM-DD，或者用 --verify 只回验规则")
+            return 1
+        try:
+            order_day = _date.fromisoformat(args.order_date)
+        except ValueError:
+            print("--order-date 应当是 YYYY-MM-DD，收到 %r" % args.order_date)
+            return 1
+        result = deadlines(order_day, market=args.market, dts_days=args.dts)
+        print(result.render())
+        print("\n发货日 = 非周日、非节假日（**周六算工作日**，实测）；"
+              "自然日站点的扫描截止只看日历，不顺延。")
+        print("按发货日推扫描截止的站点：%s" % "、".join(sorted(BUSINESS_DAY_MARKETS)))
+        print("来源：%s（公开接口，无需登录）" % SOURCE_URL)
         return 0
     if args.cmd == "manual":
         ledger.init()
