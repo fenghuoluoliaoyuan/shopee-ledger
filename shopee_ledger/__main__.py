@@ -164,6 +164,8 @@ def main(argv: list[str] | None = None) -> int:
                          help="只抓指定文章号（可重复）——定向抓，不必把整批都拉下来")
     fetch = sub.add_parser("fetch", help="抓公开来源，产出候选值（不直接改参数）")
     fetch.add_argument("--param", help="只抓某个参数")
+    fetch.add_argument("--include-blocked", action="store_true",
+                        help="连已知打不开的来源也重试一遍（默认跳过）")
     fetch.add_argument("--include-login", action="store_true", help="连需登录的来源也走一遍（只会报状态）")
     sub.add_parser("review", help="列出待确认的候选值（改了没有一眼看出）")
     watch = sub.add_parser("watch", help="列表页监控：列出已记录的文档")
@@ -484,7 +486,10 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("还没有文档正文——先跑 harvest")
             return 1
         findings = associate(documents, keywords=keywords, only=args.param)
-        report = coverage_report(findings, keywords)
+        # 传 spec 参数（不是 keywords）：coverage_report 要按「还需要取证吗」分类，
+        # 只给关键词表的话每个参数都会被判成「还需要取证」——实测 6 个 A 级参数
+        # 被报成「一条线索都没找到」，看起来像缺口，其实早就核实了。
+        report = coverage_report(findings, ledger.spec.params)
         print("已读 %d 篇正文；%d 个参数里有 %d 个找到线索\n"
               % (len(documents), len(keywords), report["with_hits"]))
         for finding in findings:
@@ -499,9 +504,13 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                     print("       [%s] %s" % (hit.keyword, hit.context[:150]))
             print()
         if report["without_hits"]:
-            print("一条线索都没找到的参数（%d 个）：" % len(report["without_hits"]))
+            print("**还需要取证**但一条线索都没找到的参数（%d 个）：" % len(report["without_hits"]))
             print("  " + "、".join(report["without_hits"]))
             print("  提示：可能是关键词没配，或这类信息只在需登录的页面（卖家中心/帮助中心）")
+        verified = report.get("verified_without_hits") or []
+        if verified:
+            print("\n另有 %d 个**已核实**的参数没有新线索——不算缺口，不逐个列了：%s%s"
+                  % (len(verified), "、".join(verified[:5]), "…" if len(verified) > 5 else ""))
         print("\n只定位不取值——取值要读原文判断适用范围与生效日期。")
         return 0
     if args.cmd == "freight":
@@ -767,7 +776,21 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         sources = load_sources()
         if args.param:
             sources = [item for item in sources if item.param_id == args.param]
-        todo = [item for item in sources if args.include_login or item.access == "public"]
+        # 已知打不开的来源默认跳过：每天重试只会让每日任务恒返回失败码，
+        # 而"每天都失败"会训练人忽略失败。缺口本身记在 sources.json 的 blocked_reason
+        # 与 spec/evidence/reachability.json 里，不会因为"跳过"而消失。
+        # 注意要从 sources 里挑 blocked，不能从 todo 里挑——todo 的 public 过滤已经把它们排除了。
+        blocked = [item for item in sources if item.access == "blocked"]
+        if blocked and not args.include_blocked:
+            print("跳过 %d 个已知打不开的来源（--include-blocked 可强制重试）：" % len(blocked))
+            for item in blocked:
+                print("  %s ← %s" % (item.param_id, item.url))
+                if item.blocked_reason:
+                    print("     %s" % item.blocked_reason[:200])
+            print()
+        todo = [item for item in sources
+                if args.include_login or item.access == "public"
+                or (args.include_blocked and item.access == "blocked")]
         if not todo:
             print("没有可抓的配方（需登录的来源请用油猴脚本，或加 --include-login 看状态）")
             return 0

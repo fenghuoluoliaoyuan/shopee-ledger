@@ -62,14 +62,15 @@
       "id": "SRC-TW-TAX-THRESHOLD",
       "param_id": "P-TW-TAX-THRESHOLD",
       "url": "https://help.shopee.tw/portal/4/article/80088",
-      "access": "public",
+      "access": "blocked",
       "review_cycle": "quarterly",
       "extract": {
         "kind": "regex",
         "expr": "新台幣\\s*([0-9,]+)\\s*元?以下",
         "group": 1,
         "scale": 1
-      }
+      },
+      "blocked_reason": "help.shopee.tw 打不开：urllib 接连失败，浏览器两次分别是 ERR_CONNECTION_REFUSED 与 ERR_CONNECTION_TIMED_OUT（2026-10-03 实测）。这两条 A 级参数（P-TW-TAX-THRESHOLD 等）的官方原文因此拿不到，缺口记录在 spec/evidence/reachability.json。每天重试只会让每日任务恒返回失败码——改为默认跳过，要试就加 --include-blocked。"
     },
     {
       "id": "SRC-TH-VAT",

@@ -115,9 +115,27 @@ def associate(documents: list[dict[str, Any]], *,
     return findings
 
 
+def needs_evidence(param: Any) -> bool:
+    """这个参数还需要取证吗。
+
+    没有值、或等级是 D/E（经验值/未核实）→ 需要。
+    已核实到 A/B/C 的不需要——把它们报成"没找到线索"会让人以为有缺口
+    （实测 6 个 A 级参数被这么报过，而它们早已核实）。
+    """
+    if getattr(param, "value", None) is None:
+        return True
+    return getattr(param, "evidence_level", "E") in ("D", "E")
+
+
 def coverage_report(findings: list[Finding], params: dict[str, Any]) -> dict[str, Any]:
-    """汇总：哪些参数找到了线索、哪些一条都没有。"""
+    """汇总：哪些参数找到了线索、哪些一条都没有。
+
+    分开两类：**还需要取证的**（可行动）与**已核实的**（只是没有"新"线索，不算缺口）。
+    """
     with_hits = {finding.param_id for finding in findings}
     missing = [param_id for param_id in params if param_id not in with_hits]
-    return {"with_hits": len(with_hits), "without_hits": sorted(missing),
+    unverified = sorted(pid for pid in missing if needs_evidence(params[pid]))
+    verified = sorted(pid for pid in missing if not needs_evidence(params[pid]))
+    return {"with_hits": len(with_hits), "without_hits": unverified,
+            "verified_without_hits": verified,
             "documents": sum(finding.document_count for finding in findings)}

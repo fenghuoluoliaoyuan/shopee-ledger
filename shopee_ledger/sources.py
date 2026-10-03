@@ -68,14 +68,19 @@ class Source:
     id: str
     param_id: str
     url: str
-    access: str = "public"
+    access: str = "public"        # public | login | blocked
     review_cycle: str = "quarterly"
     note: str = ""
     extract: dict[str, Any] = field(default_factory=dict)
+    # access == "blocked" 时说明为什么打不开——缺口要留痕，不能靠"跳过"掩盖
+    blocked_reason: str = ""
 
     def as_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "param_id": self.param_id, "url": self.url,
-                "access": self.access, "review_cycle": self.review_cycle, "note": self.note}
+        out = {"id": self.id, "param_id": self.param_id, "url": self.url,
+               "access": self.access, "review_cycle": self.review_cycle, "note": self.note}
+        if self.blocked_reason:
+            out["blocked_reason"] = self.blocked_reason
+        return out
 
 
 @dataclass
@@ -123,6 +128,7 @@ def load_sources(path: Path | str = DEFAULT_SOURCES) -> list[Source]:
         id=item["id"], param_id=item["param_id"], url=item["url"],
         access=item.get("access", "public"), review_cycle=item.get("review_cycle", "quarterly"),
         note=item.get("note", ""), extract=item.get("extract") or {},
+        blocked_reason=item.get("blocked_reason", ""),
     ) for item in doc.get("sources") or []]
 
 
