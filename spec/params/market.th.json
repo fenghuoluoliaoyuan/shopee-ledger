@@ -1,7 +1,9 @@
 {
   "schema_version": "4.0.0",
   "layer": "param",
-  "file_scope": { "market": "TH" },
+  "file_scope": {
+    "market": "TH"
+  },
   "market": {
     "code": "TH",
     "name": "泰国",
@@ -19,15 +21,33 @@
     {
       "id": "P-TH-IMPORT-THRESHOLD",
       "name": "泰国低值进口免税门槛",
-      "scope": { "platform": "*", "market": "TH", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TH",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "previous_threshold_thb": 1500, "previous_since": "2024-07", "effective_from": "2026-01-01", "current_threshold_thb": 1, "all_imports_taxed": true, "policy_name": "2026年低价值商品进口税收实施细则" },
+      "unverified_claim": {
+        "previous_threshold_thb": 1500,
+        "previous_since": "2024-07",
+        "effective_from": "2026-01-01",
+        "current_threshold_thb": 1,
+        "all_imports_taxed": true,
+        "policy_name": "2026年低价值商品进口税收实施细则"
+      },
       "basis": "国家税务总局全球税讯（2026-01-27）转载泰王国海关署内容：2026-01-01 起取消 2024-07 实施的 1500 泰铢以下免税政策，对所有价值 1 泰铢及以上进口商品征收关税和增值税",
       "evidence_level": "E",
       "intended_level": "A",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html", "published_at": "2026-01-27", "checked_at": "2026-10-03", "recheck_status": "machine_ok", "source_tier": "government_secondary", "snapshot_ref": "SNAP-TH-001" },
+      "source": {
+        "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+        "published_at": "2026-01-27",
+        "checked_at": "2026-10-03",
+        "recheck_status": "machine_ok",
+        "source_tier": "government_secondary",
+        "snapshot_ref": "SNAP-TH-001"
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-045"
@@ -35,15 +55,32 @@
     {
       "id": "P-TH-IMPORT-DUTY",
       "name": "泰国低值进口关税",
-      "scope": { "platform": "*", "market": "TH", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TH",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "low_value_start_rate": 0.10, "basis": "CIF", "apparel_footwear_max": 0.30, "bags_accessories": 0.20, "electronics": 0.10 },
+      "unverified_claim": {
+        "low_value_start_rate": 0.1,
+        "basis": "CIF",
+        "apparel_footwear_max": 0.3,
+        "bags_accessories": 0.2,
+        "electronics": 0.1
+      },
       "basis": "国家税务总局转述：低价值货物统一适用 10% 起始税率，按 CIF 计算；时尚服饰及鞋类最高 30%，包袋及配饰 20%，电器 10%",
       "evidence_level": "E",
       "intended_level": "A",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html", "published_at": "2026-01-27", "checked_at": "2026-10-03", "recheck_status": "machine_ok", "source_tier": "government_secondary", "snapshot_ref": "SNAP-TH-001" },
+      "source": {
+        "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+        "published_at": "2026-01-27",
+        "checked_at": "2026-10-03",
+        "recheck_status": "machine_ok",
+        "source_tier": "government_secondary",
+        "snapshot_ref": "SNAP-TH-001"
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-045"
@@ -51,15 +88,30 @@
     {
       "id": "P-TH-VAT",
       "name": "泰国进口增值税率",
-      "scope": { "platform": "*", "market": "TH", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TH",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "rate": 0.07, "basis": "CIF + duty", "applies_to": "all_imports" },
+      "unverified_claim": {
+        "rate": 0.07,
+        "basis": "CIF + duty",
+        "applies_to": "all_imports"
+      },
       "basis": "国家税务总局转述：统一适用 7% 增值税，按 CIF 价值与关税的合计金额计算",
       "evidence_level": "E",
       "intended_level": "A",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html", "published_at": "2026-01-27", "checked_at": "2026-10-03", "recheck_status": "machine_ok", "source_tier": "government_secondary", "snapshot_ref": "SNAP-TH-001" },
+      "source": {
+        "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+        "published_at": "2026-01-27",
+        "checked_at": "2026-10-03",
+        "recheck_status": "machine_ok",
+        "source_tier": "government_secondary",
+        "snapshot_ref": "SNAP-TH-001"
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-045"
@@ -67,15 +119,28 @@
     {
       "id": "P-TH-MIN-EFFECTIVE-TAX",
       "name": "泰国低值进口最低综合税负",
-      "scope": { "platform": "*", "market": "TH", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TH",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "min_combined": 0.17 },
+      "unverified_claim": {
+        "min_combined": 0.17
+      },
       "basis": "国家税务总局转述：对所有价值 1 泰铢及以上进口商品征收关税和增值税，两项税负合计不低于 17%",
       "evidence_level": "E",
       "intended_level": "A",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html", "published_at": "2026-01-27", "checked_at": "2026-10-03", "recheck_status": "machine_ok", "source_tier": "government_secondary", "snapshot_ref": "SNAP-TH-001" },
+      "source": {
+        "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+        "published_at": "2026-01-27",
+        "checked_at": "2026-10-03",
+        "recheck_status": "machine_ok",
+        "source_tier": "government_secondary",
+        "snapshot_ref": "SNAP-TH-001"
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-045",
@@ -84,19 +149,92 @@
     {
       "id": "P-TH-PLATFORM-WITHHOLD",
       "name": "泰国税负由平台在买家下单时代收",
-      "scope": { "platform": "*", "market": "TH", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "TH",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "platform_collects_at_checkout": true, "agreement_date": "2025-12-22", "platforms": ["Lazada", "Shopee", "TikTok Shop", "Temu", "Shein"], "postal_channel": "海关标注税额，收件人扫码支付", "express_channel": "快递公司先行代缴，再向收件人结算" },
+      "unverified_claim": {
+        "platform_collects_at_checkout": true,
+        "agreement_date": "2025-12-22",
+        "platforms": [
+          "Lazada",
+          "Shopee",
+          "TikTok Shop",
+          "Temu",
+          "Shein"
+        ],
+        "postal_channel": "海关标注税额，收件人扫码支付",
+        "express_channel": "快递公司先行代缴，再向收件人结算"
+      },
       "basis": "国家税务总局转述：泰国海关已于 2025-12-22 与五家主要电商平台签署合作协议，明确平台需在消费者线上下单时直接代收税款",
       "evidence_level": "E",
       "intended_level": "A",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html", "published_at": "2026-01-27", "checked_at": "2026-10-03", "recheck_status": "machine_ok", "source_tier": "government_secondary", "snapshot_ref": "SNAP-TH-001" },
+      "source": {
+        "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+        "published_at": "2026-01-27",
+        "checked_at": "2026-10-03",
+        "recheck_status": "machine_ok",
+        "source_tier": "government_secondary",
+        "snapshot_ref": "SNAP-TH-001"
+      },
       "review_cycle": "on_policy_change",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-045",
       "impact": "决定「税负由谁承担」：平台代收意味着不直接从卖家毛利扣走，模型应把它建模为买家端价格上移（压低转化），而不是卖家成本项"
+    },
+    {
+      "id": "P-TH-COMMISSION",
+      "name": "TH站平台佣金率（定价模拟器口径）",
+      "scope": {
+        "platform": "shopee",
+        "market": "TH",
+        "mode": "*"
+      },
+      "unit": "ratio",
+      "value": 0.2247,
+      "evidence_level": "B",
+      "state": "active",
+      "gate_eligible": true,
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "basis": "官方定价模拟器 /api/site 返回：platform_commission=22.47%, handling_fee=3.21%",
+      "scope_note": "官方定价模拟器口径的平台佣金/交易手续费，用于成本测算。官方 #25770 说明「部分佣金比例依据商品品类和卖家类型（如 Shopee 商城 与非商城卖家）而有所不同」，故实际费率以卖家中心为准。该口径的 TW 值（14% / 2.5%）与官方文章 #26620 完全一致。",
+      "source": {
+        "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "费率随平台调整变动，季度复核；freight 命令可一并核对",
+        "snapshot_ref": "spec/reference/site-fees.json"
+      }
+    },
+    {
+      "id": "P-TH-TXN-FEE",
+      "name": "TH站交易手续费率（定价模拟器口径）",
+      "scope": {
+        "platform": "shopee",
+        "market": "TH",
+        "mode": "*"
+      },
+      "unit": "ratio",
+      "value": 0.0321,
+      "evidence_level": "B",
+      "state": "active",
+      "gate_eligible": true,
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "basis": "官方定价模拟器 /api/site 返回：platform_commission=22.47%, handling_fee=3.21%",
+      "scope_note": "官方定价模拟器口径的平台佣金/交易手续费，用于成本测算。官方 #25770 说明「部分佣金比例依据商品品类和卖家类型（如 Shopee 商城 与非商城卖家）而有所不同」，故实际费率以卖家中心为准。该口径的 TW 值（14% / 2.5%）与官方文章 #26620 完全一致。",
+      "source": {
+        "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "费率随平台调整变动，季度复核；freight 命令可一并核对",
+        "snapshot_ref": "spec/reference/site-fees.json"
+      }
     }
   ]
 }

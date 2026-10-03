@@ -25,9 +25,9 @@ class SpecLoadTest(unittest.TestCase):
         cls.spec = Spec.load(SPEC_ROOT)
 
     def test_counts_match_declared(self):
-        # 54 = 原 52 + 两个曾被漏掉的真实平台费用（P-INFRA-FEE 平台基础设施费、
-        # P-TECH-FEE 技术支持费）。Shopee 自己的定价模拟器都提示要考虑技术支持费。
-        self.assertEqual(len(self.spec.params), 54)
+        # 54 = 原 52 + 两个曾被漏掉的真实平台费用（P-INFRA-FEE、P-TECH-FEE）
+        # 58 = 54 + TH/MY 的佣金与交易手续费（来自官方定价模拟器接口）
+        self.assertEqual(len(self.spec.params), 58)
         self.assertEqual(len(self.spec.rules), 46)
         self.assertEqual(len(self.spec.tasks), 48)
         self.assertEqual(len(self.spec.modes), 3)

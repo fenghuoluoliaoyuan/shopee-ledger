@@ -144,16 +144,38 @@ class EscrowTest(unittest.TestCase):
 
 
 class StoreTest(unittest.TestCase):
-    def test_my_quote_incomplete_when_spec_has_no_rates(self):
-        """MY 在 spec 里没有佣金/手续费参数 → 必须 INCOMPLETE，绝不把缺失费率当 0。"""
+    def test_quote_is_incomplete_when_a_market_has_no_rates(self):
+        """市场没有佣金/手续费参数时 → 必须 INCOMPLETE，绝不把缺失费率当 0。
+
+        刻意用「哪些市场缺费率」这个事实的反面来断言：这里走 BR（registry 里有，
+        但确实没有 P-BR-* 费率参数）。**不写死具体市场**——数据是会补的：
+        MY 原本没有费率，后来从官方定价模拟器接口补上了，写死 MY 的旧断言就失效了。
+        """
         with tempfile.TemporaryDirectory() as folder:
             ledger = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
             ledger.init()
-            candidate = ledger.add_candidate("MY", "杯垫", 80, 10, 2, 20, 5, True)
+            candidate = ledger.add_candidate("BR", "杯垫", 80, 10, 2, 20, 5, True)
             ledger.set_return_rate(candidate, 0.05)
             view = ledger.quote(candidate)
             self.assertEqual(view.decision, Decision.INCOMPLETE)
             self.assertIn("commission_rate", view.missing)
+            ledger.close()
+
+    def test_my_rates_come_from_the_official_simulator(self):
+        """MY 的佣金与手续费来自官方定价模拟器接口。
+
+        给 B 不给 A：来源是官方的，但官方自己说「部分佣金比例依据商品品类和卖家类型
+        而有所不同」，模拟器用的是测算口径。这个差别写在 scope_note 里。
+        """
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Ledger(Path(folder) / "ledger.sqlite", verified_path=None)
+            ledger.init()
+            for param_id in ("P-MY-COMMISSION", "P-MY-TXN-FEE"):
+                param = ledger.spec.params[param_id]
+                self.assertEqual(param.evidence_level, "B", param_id)
+                self.assertIsNotNone(param.value, param_id)
+                self.assertTrue((param.raw or {}).get("scope_note"), param_id)
+            self.assertAlmostEqual(ledger.spec.params["P-MY-COMMISSION"].value, 0.1836, places=6)
             ledger.close()
 
     def test_tw_quote_go_with_measured_overrides(self):

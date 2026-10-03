@@ -1,7 +1,9 @@
 {
   "schema_version": "4.0.0",
   "layer": "param",
-  "file_scope": { "market": "MY" },
+  "file_scope": {
+    "market": "MY"
+  },
   "market": {
     "code": "MY",
     "name": "马来西亚",
@@ -16,15 +18,32 @@
     {
       "id": "P-MY-LVG-TAX",
       "name": "马来西亚低价值商品（LVG）销售税",
-      "scope": { "platform": "*", "market": "MY", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "MY",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "rate": 0.10, "threshold_myr": 500, "registration_threshold_myr": 500000, "filing": "quarterly", "since": "2024-01-01", "enforcement_trend": "tightening" },
+      "unverified_claim": {
+        "rate": 0.1,
+        "threshold_myr": 500,
+        "registration_threshold_myr": 500000,
+        "filing": "quarterly",
+        "since": "2024-01-01",
+        "enforcement_trend": "tightening"
+      },
       "basis": "行业媒体报道：500 令吉及以下低价值商品须严格执行 10% 销售税；过去 12 个月对马销售 LVG 超 50 万令吉须注册代收并按季申报；MRCA 正施压强化执行",
       "evidence_level": "E",
       "intended_level": "A",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.ksher.cn/news/post/wmb2b26091704/", "published_at": "2026-09-17", "checked_at": "2026-10-03", "recheck_status": "manual_only", "snapshot_ref": null },
+      "source": {
+        "url": "https://www.ksher.cn/news/post/wmb2b26091704/",
+        "published_at": "2026-09-17",
+        "checked_at": "2026-10-03",
+        "recheck_status": "manual_only",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-046",
@@ -33,7 +52,11 @@
     {
       "id": "P-MY-SLS-TIERS",
       "name": "马来站 SLS 运费分档表",
-      "scope": { "platform": "shopee", "market": "MY", "mode": "*" },
+      "scope": {
+        "platform": "shopee",
+        "market": "MY",
+        "mode": "*"
+      },
       "value": null,
       "unit": "MYR by weight tier",
       "evidence_level": "E",
@@ -41,7 +64,12 @@
       "level_note": "当前无任何实测值，按 E 级处理；从卖家中心抄到运费档后升级为 B",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "source": {
+        "url": null,
+        "checked_at": null,
+        "recheck_status": "blocked",
+        "snapshot_ref": null
+      },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-013"
@@ -49,18 +77,81 @@
     {
       "id": "P-MY-MARKET-BUDGET-DATE",
       "name": "马来西亚 2027 预算案（LVG 政策可能变动）",
-      "scope": { "platform": "*", "market": "MY", "mode": "*" },
+      "scope": {
+        "platform": "*",
+        "market": "MY",
+        "mode": "*"
+      },
       "value": null,
-      "unverified_claim": { "budget_date": "2026-10-09", "may_change": "LVG 执行细则或税率" },
+      "unverified_claim": {
+        "budget_date": "2026-10-09",
+        "may_change": "LVG 执行细则或税率"
+      },
       "basis": "报道提到 2026-10-09 提交 2027 年预算案，可能公布 LVG 最新执行细则",
       "evidence_level": "E",
       "state": "to_verify",
       "gate_eligible": false,
-      "source": { "url": "https://www.ksher.cn/news/post/wmb2b26091704/", "published_at": "2026-09-17", "checked_at": "2026-10-03", "recheck_status": "manual_only", "snapshot_ref": null },
+      "source": {
+        "url": "https://www.ksher.cn/news/post/wmb2b26091704/",
+        "published_at": "2026-09-17",
+        "checked_at": "2026-10-03",
+        "recheck_status": "manual_only",
+        "snapshot_ref": null
+      },
       "review_cycle": "on_policy_change",
       "next_review_at": "2026-11-15",
       "task_ref": "VT-046",
       "note": "关键时间点，届时需复核该市场可行性"
+    },
+    {
+      "id": "P-MY-COMMISSION",
+      "name": "MY站平台佣金率（定价模拟器口径）",
+      "scope": {
+        "platform": "shopee",
+        "market": "MY",
+        "mode": "*"
+      },
+      "unit": "ratio",
+      "value": 0.1836,
+      "evidence_level": "B",
+      "state": "active",
+      "gate_eligible": true,
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "basis": "官方定价模拟器 /api/site 返回：platform_commission=18.36%, handling_fee=3.78%",
+      "scope_note": "官方定价模拟器口径的平台佣金/交易手续费，用于成本测算。官方 #25770 说明「部分佣金比例依据商品品类和卖家类型（如 Shopee 商城 与非商城卖家）而有所不同」，故实际费率以卖家中心为准。该口径的 TW 值（14% / 2.5%）与官方文章 #26620 完全一致。",
+      "source": {
+        "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "费率随平台调整变动，季度复核；freight 命令可一并核对",
+        "snapshot_ref": "spec/reference/site-fees.json"
+      }
+    },
+    {
+      "id": "P-MY-TXN-FEE",
+      "name": "MY站交易手续费率（定价模拟器口径）",
+      "scope": {
+        "platform": "shopee",
+        "market": "MY",
+        "mode": "*"
+      },
+      "unit": "ratio",
+      "value": 0.0378,
+      "evidence_level": "B",
+      "state": "active",
+      "gate_eligible": true,
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "basis": "官方定价模拟器 /api/site 返回：platform_commission=18.36%, handling_fee=3.78%",
+      "scope_note": "官方定价模拟器口径的平台佣金/交易手续费，用于成本测算。官方 #25770 说明「部分佣金比例依据商品品类和卖家类型（如 Shopee 商城 与非商城卖家）而有所不同」，故实际费率以卖家中心为准。该口径的 TW 值（14% / 2.5%）与官方文章 #26620 完全一致。",
+      "source": {
+        "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "费率随平台调整变动，季度复核；freight 命令可一并核对",
+        "snapshot_ref": "spec/reference/site-fees.json"
+      }
     }
   ]
 }

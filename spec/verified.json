@@ -117,6 +117,16 @@
   ],
   "note": "核实成果的可追溯快照。真值在这里（随 git 走），数据库是派生物。用 export-verified 生成，用 import-verified 回灌。",
   "params": {
+    "P-MY-COMMISSION": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:46:24+00:00",
+      "evidence_level": "B",
+      "operator": "cli",
+      "param_id": "P-MY-COMMISSION",
+      "snapshot_ref": "spec/reference/site-fees.json",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": 0.18359999999999999
+    },
     "P-MY-LVG-TAX": {
       "checked_at": "2026-09-22",
       "created_at": "2026-10-03T09:26:01+00:00",
@@ -235,6 +245,16 @@
         "weight_unit": "g"
       }
     },
+    "P-MY-TXN-FEE": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:46:25+00:00",
+      "evidence_level": "B",
+      "operator": "cli",
+      "param_id": "P-MY-TXN-FEE",
+      "snapshot_ref": "spec/reference/site-fees.json",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": 0.0378
+    },
     "P-PENALTY-RULES": {
       "checked_at": "2025-06-01",
       "created_at": "2026-10-03T09:26:01+00:00",
@@ -284,6 +304,26 @@
         "official_attachment": "https://mms.file.susercontent.com/api/v4/11195002/mms/cn-11195002-bmlg7-mt6ke0nkbi1091?app_type=shopee",
         "vn_table_note": "越南站点逐类目禁运标记见 vn-highvalue-tax-26632.xlsx（2153 行）"
       }
+    },
+    "P-TH-COMMISSION": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:46:24+00:00",
+      "evidence_level": "B",
+      "operator": "cli",
+      "param_id": "P-TH-COMMISSION",
+      "snapshot_ref": "spec/reference/site-fees.json",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": 0.22469999999999998
+    },
+    "P-TH-TXN-FEE": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:46:24+00:00",
+      "evidence_level": "B",
+      "operator": "cli",
+      "param_id": "P-TH-TXN-FEE",
+      "snapshot_ref": "spec/reference/site-fees.json",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": 0.0321
     },
     "P-TH-VAT": {
       "checked_at": "2026-09-16",

@@ -133,6 +133,23 @@ def main(argv: list[str] | None = None) -> int:
                          help="把 spec/verified.json 回灌进库（换机器/重建库后恢复核实成果）")
     imp.add_argument("--dry-run", action="store_true", help="只报将要写入什么")
 
+    land = sub.add_parser("landed",
+                          help="多站点落地成本对比：同一个品在各站点/渠道需要卖多少钱才达标")
+    land.add_argument("--purchase", type=float, required=True, help="采购实付（人民币）")
+    land.add_argument("--domestic", type=float, default=0.0, help="国内段运费（人民币）")
+    land.add_argument("--weight-g", type=float, required=True, help="包裹重量（克）")
+    land.add_argument("--target-margin", type=float, default=0.15, help="目标净利率，如 0.15")
+    land.add_argument("--fx", action="append", default=[],
+                      metavar="MY=0.65", help="各市场汇率（可重复），缺的市场不参与对比")
+    land.add_argument("--market", action="append", default=[], help="只比这几个市场")
+    land.add_argument("--cargo", default="Normal", choices=("Normal", "Special"))
+    land.add_argument("--per-market", type=int, default=4, help="每个市场列几个渠道（按运费从低到高）")
+    land.add_argument("--channel", help="只看名字含该关键词的渠道")
+    land.add_argument("--seller-pays-freight", action="store_true")
+    land.add_argument("--withdraw-rate", type=float, default=0.0)
+    land.add_argument("--fx-loss-rate", type=float, default=0.0)
+    land.add_argument("--return-rate", type=float, default=0.0)
+
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
@@ -562,6 +579,38 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                                  snapshot_ref=item.get("snapshot_ref"))
             restored_tasks += 1
         print("回灌完成：参数覆盖 %d 条、核实结论 %d 条" % (restored_params, restored_tasks))
+        return 0
+    if args.cmd == "landed":
+        from shopee_ledger.landed import compare, render
+
+        fx_by_market: dict[str, float] = {}
+        for item in args.fx:
+            if "=" not in item:
+                print("--fx 格式应为 市场=汇率，例如 MY=0.65；收到 %r" % item)
+                return 1
+            code, _, value = item.partition("=")
+            fx_by_market[code.strip().upper()] = float(value)
+        if not fx_by_market:
+            # 没给就用官方成本计算器的参考汇率（B 级，非结算汇率）
+            from shopee_ledger.spec import DEFAULT_SPEC_ROOT
+
+            raw = json.loads((Path(DEFAULT_SPEC_ROOT) / "reference" / "lff-site-and-channel.json")
+                             .read_text(encoding="utf-8"))["data"]
+            for item in raw:
+                fx_by_market[item["name"]] = float(item["exchange_rate"])
+            print("未指定 --fx，使用官方成本计算器的参考汇率（B 级，非结算汇率）\n")
+
+        rows = compare(ledger.spec, purchase_cny=args.purchase, domestic_cny=args.domestic,
+                       weight_g=args.weight_g, fx_by_market=fx_by_market,
+                       target_margin=args.target_margin,
+                       withdraw_rate=args.withdraw_rate, fx_loss_rate=args.fx_loss_rate,
+                       return_rate=args.return_rate,
+                       seller_pays_freight=args.seller_pays_freight,
+                       markets=[m.upper() for m in args.market] or None,
+                       cargo=args.cargo, channels_per_market=args.per_market,
+                       channel_filter=args.channel)
+        print(render(rows, target_margin=args.target_margin, purchase_cny=args.purchase,
+                     domestic_cny=args.domestic, weight_g=args.weight_g))
         return 0
     if args.cmd == "check-sources":
         import urllib.error
