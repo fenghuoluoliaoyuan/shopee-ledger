@@ -93,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     web.add_argument("--port", type=int, default=8765)
 
     sub.add_parser("spec-info", help="打印 spec 概况、配置指纹与加载期问题")
+    sub.add_parser("alert", help="打印告警、阻塞项与被挡功能；有 P1 告警时返回码 1")
     q2 = sub.add_parser("quote2", help="v4.0 核算引擎：参数来自 spec，只增不改地留档")
     q2.add_argument("--market", required=True, help="市场代码，如 TW / TH / MY")
     q2.add_argument("--price", type=float, required=True, help="商品价（不含买家运费）")
@@ -237,6 +238,32 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         mapped = ledger.apply_escrow(args.candidate, payload)
         print(json.dumps(mapped, ensure_ascii=False))
         return 0
+    if args.cmd == "alert":
+        alerts = ledger.order_alerts()
+        blocking = [row for row in ledger.checklist_rows()
+                    if row.get("blocks_first_order") and not row["conclusion"]]
+        unlocks = ledger.unverified_unlocks()
+        if alerts:
+            print("告警（%d）:" % len(alerts))
+            for item in alerts:
+                stay = ("（已停留 %s 小时）" % item["hours_in_state"]
+                        if item.get("hours_in_state") is not None else "")
+                print("  [%s] 订单 #%s %s：%s%s" % (
+                    item["priority"], item["order_id"], item.get("candidate") or "",
+                    item["message"], stay))
+        else:
+            print("告警：无")
+        if blocking:
+            print("阻塞第一单的核实（%d）:" % len(blocking))
+            for row in blocking:
+                print("  [%s] %s（%s）" % (row.get("spec_task_id") or "", row["item"], row["channel"] or ""))
+        if unlocks:
+            print("未核实参数挡着：")
+            for item in unlocks:
+                print("  %s（%s 级%s）→ %s" % (
+                    item["param_id"], item["level"],
+                    "，任务 " + item["task_ref"] if item.get("task_ref") else "", item["feature"]))
+        return 1 if [item for item in alerts if item.get("priority") == "P1"] else 0
     if args.cmd == "spec-info":
         from shopee_ledger.spec import default_spec
 

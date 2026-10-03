@@ -103,18 +103,23 @@ class QuoteView:
 
 @dataclass
 class ActualView:
-    """托管实绩的映射结果。rate/net 只有在该算的时候才算出来，否则保持 None。"""
+    """托管实绩的映射与重算结果。算不出来时 rate/net 保持 None，不编数字。"""
 
     mapped: dict[str, Any]
     missing: list[str]
     rate: float | None = None
     net: float | None = None
+    cost: CostResult | None = None
 
     def explain(self) -> str:
-        parts = ["%s=%s" % (k, v) for k, v in self.mapped.items() if v is not None]
+        parts = ["%s=%s" % (key, value) for key, value in self.mapped.items() if value is not None]
         text = "账单字段：" + "、".join(parts) if parts else "账单字段：无"
+        if self.net is not None:
+            text += "；实绩净利 %.2f（%.2f%%）" % (self.net, (self.rate or 0) * 100)
+        elif self.cost is not None and self.cost.missing:
+            text += "；实绩还算不出，缺 " + "、".join(self.cost.missing)
         if self.missing:
-            text += "；还缺 " + "、".join(self.missing) + " 才能与估算逐项比对"
+            text += "；service_fee 归属待确认（" + "、".join(self.missing) + "）"
         return text
 
 
@@ -395,10 +400,14 @@ class Ledger:
 
     def open_order(self, candidate_id: int) -> int:
         candidate = self._candidate(candidate_id) or {}
+        view = self.quote(candidate_id)  # 把下单时的估算冻住，之后改参数不影响这一单
+        frozen = view.cost.computed
         return self.storage.insert("Order", {
             "platform": "shopee", "market": candidate.get("market", "TW"),
             "mode": "dropship", "listing_id": str(candidate_id), "candidate_id": str(candidate_id),
             "state": "created", "steps": "", "block_reason": "", "created_at": _now(),
+            "estimate_net": view.net if frozen else None,
+            "estimate_rate": view.rate if frozen else None,
         })
 
     def load_order(self, order_id: int) -> Fulfillment:
@@ -491,11 +500,11 @@ class Ledger:
         self.storage.update("Order", order_id, {"deadline": deadline})
 
     def record_actual(self, order_id: int, payload: dict[str, Any]) -> "ActualView":
-        """记这一单的托管实绩。
+        """用**账单实付**重算这一单，与下单时冻住的估算对照。
 
-        **不在这里重算净利润**——那会把 CostEngine 的算法复制第二份（本模块刚消除过这类重复）。
-        实绩与估算的逐项比对需要先把 service_fee 的归属核实清楚，
-        否则任何"实绩净利"都含一个未核实项，不如不给数字。
+        账单里的佣金/手续费直接作为 CostInputs 的 actual_* 输入覆盖费率估算——
+        所以不会出现第二份公式（这个模块刚消除过这类重复）。
+        service_fee 归属未定时不给"实绩净利"，因为那会含一个未核实项。
         """
         from shopee_ledger.escrow import map_escrow
 
@@ -503,12 +512,34 @@ class Ledger:
         if row is None:
             raise ValueError("找不到订单 %s" % order_id)
         mapped = map_escrow(payload)
+        candidate = self._candidate(int(row["candidate_id"])) if row.get("candidate_id") else {}
+        site = row.get("market") or "TW"
+        params = self.params(site)
+        cost = CostEngine(self.spec).quote(CostInputs(
+            market=site,
+            price_local=candidate.get("price_local"),
+            purchase_cny=candidate.get("purchase_cny"),
+            domestic_cny=candidate.get("domestic_cny"),
+            local_per_cny=_as_float(params.get("local_per_cny")),
+            sls_freight=mapped.get("sls_fee") or candidate.get("sls_fee"),
+            buyer_paid_freight=mapped.get("buyer_shipping"),
+            seller_pays_freight=bool(candidate.get("intends_free_shipping")),
+            ad_spend=_as_float(candidate.get("ads")) or 0.0,
+            return_rate=candidate.get("return_rate"),
+            actual_commission=mapped.get("commission"),
+            actual_txn_fee=mapped.get("transaction_fee"),
+        ))
         missing = []
         if mapped.get("service_fee") is not None and not mapped.get("service_fee_kind"):
             missing.append("service_fee_kind")
-        self.storage.record_audit("order.actual", "order", order_id,
+        if cost.computed:
+            self.storage.update("Order", order_id,
+                                {"actual_net": cost.net, "actual_rate": cost.rate})
+        self.storage.record_audit("order.actual", "order", order_id, result=cost.status,
                                   detail={k: v for k, v in mapped.items() if v is not None})
-        return ActualView(mapped=mapped, missing=missing)
+        return ActualView(mapped=mapped, missing=missing,
+                          rate=cost.rate if cost.computed else None,
+                          net=cost.net if cost.computed else None, cost=cost)
 
     def list_orders(self) -> list[dict[str, Any]]:
         out = []

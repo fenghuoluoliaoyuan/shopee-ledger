@@ -651,13 +651,24 @@ def products_page(ledger: Ledger) -> str:
 def books_page(ledger: Ledger) -> str:
     rows = []
     for row in ledger.list_orders():
-        estimate = "—" if row["estimate_rate"] is None else f"{row['estimate_net']:.2f} / {row['estimate_rate']:.1%}"
-        actual = "—" if row["actual_rate"] is None else f"{row['actual_net']:.2f} / {row['actual_rate']:.1%}"
+        estimate_rate, estimate_net = row["estimate_rate"], row["estimate_net"]
+        actual_rate, actual_net = row["actual_rate"], row["actual_net"]
+        estimate = "—" if estimate_rate is None else f"{estimate_net:.2f} / {estimate_rate:.1%}"
+        actual = "—" if actual_rate is None else f"{actual_net:.2f} / {actual_rate:.1%}"
+        if estimate_rate is not None and actual_rate is not None:
+            delta = actual_rate - estimate_rate
+            gap = "%s %.1f 个百分点" % ("▲" if delta > 0 else ("▼" if delta < 0 else "="), abs(delta) * 100)
+        else:
+            gap = "—"
         rows.append(
-            f"<tr><td>#{row['id']} {escape(row['candidate_name'])}</td><td>{estimate}</td><td>{actual}</td></tr>"
+            f"<tr><td>#{row['id']} {escape(row['candidate_name'])}</td>"
+            f"<td>{estimate}</td><td>{actual}</td><td>{gap}</td></tr>"
         )
-    return f"""<h1>账本</h1><p class="lead">左列是下单时冻住的估算，右列是托管明细算出来的实绩。实绩不改选品上的估算。</p>
-<section class="card"><table><tr><th>订单</th><th>估算</th><th>实绩</th></tr>{''.join(rows)}</table></section>"""
+    return f"""<h1>账本</h1><p class="lead">左列是**下单时冻住**的估算，右列是用账单实付重算的实绩。
+两列都留着，才看得出自己的估算偏了多少。实绩不覆盖估算。</p>
+<section class="card"><table><tr><th>订单</th><th>估算（下单时）</th><th>实绩（账单）</th><th>差</th></tr>
+{''.join(rows) or '<tr><td colspan="4" class="k">还没有订单</td></tr>'}</table></section>
+<p class="k">实绩要填「这一单的托管 JSON」才会算；佣金和手续费直接取账单数字，不再用费率估。</p>"""
 
 
 def _order_forms(row: dict, supplier_options: str) -> str:
