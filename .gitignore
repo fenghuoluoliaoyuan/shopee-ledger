@@ -8,3 +8,5 @@ data/*.sqlite-journal
 
 data/snapshots/
 
+data/*.log
+

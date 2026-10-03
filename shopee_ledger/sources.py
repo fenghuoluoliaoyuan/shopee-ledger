@@ -211,15 +211,25 @@ def fetch_source(
     opener: Callable[[str], Any] | None = None,
     timeout: int = 15,
     snapshot_dir: Path | str = DEFAULT_SNAPSHOT_DIR,
+    renderer: Callable[[str], str] | None = None,
 ) -> Capture:
-    """抓一个公开来源。需登录/纯手工的来源直接返回对应状态，不做任何臆测。"""
-    if source.access == "login":
+    """抓一个公开来源。需登录/纯手工的来源直接返回对应状态，不做任何臆测。
+
+    ``renderer`` 是"把 URL 渲染成 HTML"的函数（无头浏览器）。给了它就会在直取失败后
+    退回浏览器——实测 shopee.cn/edu 是 JS 空壳，直取永远拿不到正文，只有浏览器能渲染。
+    """
+    if source.access == "login" and renderer is None:
         return Capture(source.id, source.param_id, source.url, STATUS_NEEDS_LOGIN,
                        message="需登录：请在浏览器里用油猴脚本抓，或人工抄录")
     if (source.extract or {}).get("kind") == "manual":
         return Capture(source.id, source.param_id, source.url, STATUS_MANUAL,
                        message="配方标为手工：抓取器不处理")
 
+    if source.access == "login":
+        return Capture(source.id, source.param_id, source.url, STATUS_NEEDS_LOGIN,
+                       message="需登录：请在浏览器里用油猴脚本抓，或人工抄录")
+
+    text, via = "", "直取"
     try:
         if opener is None:
             request = urllib.request.Request(source.url, headers={"User-Agent": USER_AGENT})
@@ -227,11 +237,37 @@ def fetch_source(
                 raw = response.read()
         else:
             raw = opener(source.url)
+        text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
-        return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
-                       message="请求失败：%s" % exc)
+        if renderer is None:
+            return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
+                           message="请求失败：%s" % exc)
+        text = ""
 
-    text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+    # 直取失败、或直取到了但提取不出（典型：JS 空壳页），改用浏览器渲染
+    need_render = (not text) or extract_value(source.extract, text) is None
+    if need_render and renderer is not None:
+        try:
+            rendered = renderer(source.url) or ""
+        except Exception as exc:
+            rendered = ""
+            if not text:
+                return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
+                               message="直取与渲染都失败：%s" % exc)
+        if rendered:
+            # 关键：渲染回来的是 HTML，提取正则是在**纯文本**上写的。
+            # 实测 #26620 的 HTML 里标签插在「佣金费率统一调整为」和「16%」之间，
+            # 直接在 HTML 上跑正则永远匹配不上。
+            from shopee_ledger.watch import article_text
+
+            rendered_text = article_text(rendered)
+            if extract_value(source.extract, rendered_text) is not None:
+                text, via = rendered_text, "浏览器渲染"
+
+    if not text:
+        return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
+                       message="直取和浏览器渲染都没拿到内容")
+
     snapshot_ref, digest = save_snapshot(text, source.id, snapshot_dir)
     value = extract_value(source.extract, text)
     if value is None:
@@ -240,7 +276,8 @@ def fetch_source(
                        snapshot_ref=snapshot_ref, raw_sha256=digest, raw_length=len(text),
                        message="页面抓到了但配方没匹配上（可能是 JS 空壳页或规则过期），已存快照待人工核对")
     return Capture(source.id, source.param_id, source.url, STATUS_OK, value=value,
-                   snapshot_ref=snapshot_ref, raw_sha256=digest, raw_length=len(text))
+                   snapshot_ref=snapshot_ref, raw_sha256=digest, raw_length=len(text),
+                   message="来自%s的页面（%d 字）" % (via, len(text)))
 
 
 def fetch_all(

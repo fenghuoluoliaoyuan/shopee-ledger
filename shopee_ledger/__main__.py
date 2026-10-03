@@ -393,6 +393,7 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                 source.id, source.param_id, access, source.review_cycle, source.url))
         return 0
     if args.cmd == "fetch":
+        from shopee_ledger.browser import BrowserError, Chrome
         from shopee_ledger.sources import fetch_source, load_sources
 
         sources = load_sources()
@@ -404,12 +405,18 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             return 0
         ledger.init()
         failed = 0
-        for source in todo:
-            capture = fetch_source(source)
-            ledger.record_capture(capture)
-            print("  " + capture.describe())
-            if not capture.ok:
-                failed += 1
+        # 直取失败的来源退回浏览器渲染——shopee.cn/edu 是 JS 空壳，直取永远拿不到正文
+        with Chrome() as chrome:
+            def renderer(url: str) -> str:
+                chrome.open(url, wait_seconds=5.0)
+                return chrome.html()
+
+            for source in todo:
+                capture = fetch_source(source, renderer=renderer)
+                ledger.record_capture(capture)
+                print("  " + capture.describe())
+                if not capture.ok:
+                    failed += 1
         pending = ledger.pending_candidates()
         print("\n抓到 %d 条候选，失败 %d 条；待确认共 %d 条（用 review / approve）"
               % (len(todo) - failed, failed, len(pending)))
