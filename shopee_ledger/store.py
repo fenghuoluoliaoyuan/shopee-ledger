@@ -762,9 +762,10 @@ class Ledger:
                 self.storage.insert("WatchEntry", dict(
                     entry.as_row(), watch_id=watch_id, first_seen_at=now, last_seen_at=now,
                     status=STATUS_NEW))
-        for article_id in diff["gone"]:
-            self.storage.update("WatchEntry", previous[article_id]["id"],
-                                {"status": STATUS_SEEN})
+        # 注意：**不因为"这次没出现"就把状态改成已读**。
+        # 列表页是分页的——导入第 2 页时，第 1 页的条目全都不在"本页"里，
+        # 那样会被误判成"文档消失"并被标成已读（实测踩过：15 篇同时变已读）。
+        # gone 只作为信息记进审计，不改变任何状态。
         self.storage.record_audit(
             "watch.listing", "Watch", watch_id, result="PASS",
             detail={"page_url": page_url, "total": len(entries),

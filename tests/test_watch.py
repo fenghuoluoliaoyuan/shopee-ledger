@@ -270,6 +270,7 @@ class WatchHttpTest(unittest.TestCase):
 
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "listing-page.html"
+FIXTURE2 = Path(__file__).resolve().parent / "fixtures" / "listing-page2.html"
 
 
 class ListingHtmlParserTest(unittest.TestCase):
@@ -313,6 +314,61 @@ class ListingHtmlParserTest(unittest.TestCase):
         self.assertEqual(entries, [])
         self.assertIsNone(pager["current"])
         self.assertFalse(pager["has_next"])
+
+    # ---- 第 2 页：分页信息 + 两页合并去重 -------------------------------
+    def test_second_page_fixture(self):
+        html = FIXTURE2.read_text(encoding="utf-8")
+        entries, pager = parse_listing_html(html)
+        self.assertEqual(len(entries), 15)
+        self.assertEqual(pager["current"], "2", "要读得出当前是第 2 页")
+        self.assertEqual(entries[0].article_id, "26115")
+        self.assertEqual(entries[-1].article_id, "27747")
+
+    def test_two_pages_do_not_overlap_and_merge_to_thirty(self):
+        first, _ = parse_listing_html(FIXTURE.read_text(encoding="utf-8"))
+        second, _ = parse_listing_html(FIXTURE2.read_text(encoding="utf-8"))
+        ids_first = {entry.article_id for entry in first}
+        ids_second = {entry.article_id for entry in second}
+        self.assertEqual(ids_first & ids_second, set(), "两页不该有重叠条目")
+        self.assertEqual(len(ids_first | ids_second), 30)
+
+    def test_importing_page_two_does_not_mark_page_one_read(self):
+        """分页场景：导入第 2 页时第 1 页的条目都不在"本页"，不能因此标成已读。"""
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        ledger = Ledger(Path(tmp.name) / "l.sqlite")
+        ledger.init()
+        try:
+            ledger.record_listing("W", parse_listing_html(
+                FIXTURE.read_text(encoding="utf-8"))[0])
+            unread_before = len(ledger.watch_entries(only_new=True))
+            self.assertEqual(unread_before, 15)
+            ledger.record_listing("W", parse_listing_html(
+                FIXTURE2.read_text(encoding="utf-8"))[0])
+            self.assertEqual(len(ledger.watch_entries(only_new=True)), 30,
+                             "第 1 页的 15 篇不该因为导入第 2 页而变成已读")
+            self.assertEqual(len(ledger.watch_entries()), 30)
+        finally:
+            ledger.close()
+            tmp.cleanup()
+
+    def test_importing_page_two_after_page_one_reports_all_new(self):
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        ledger = Ledger(Path(tmp.name) / "l.sqlite")
+        ledger.init()
+        try:
+            one = ledger.record_listing("W", parse_listing_html(
+                FIXTURE.read_text(encoding="utf-8"))[0])
+            two = ledger.record_listing("W", parse_listing_html(
+                FIXTURE2.read_text(encoding="utf-8"))[0])
+            self.assertEqual(len(one["new"]), 15)
+            self.assertEqual(len(two["new"]), 15, "第 2 页全是新的")
+            self.assertEqual(len(ledger.watch_entries()), 30, "两页合并 30 篇，不重复")
+            again = ledger.record_listing("W", parse_listing_html(
+                FIXTURE2.read_text(encoding="utf-8"))[0])
+            self.assertEqual(again["new"], [], "再导一次不该报新")
+        finally:
+            ledger.close()
+            tmp.cleanup()
 
     def test_endpoint_accepts_rendered_html(self):
         tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)

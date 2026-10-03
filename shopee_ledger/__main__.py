@@ -121,6 +121,8 @@ def main(argv: list[str] | None = None) -> int:
     watch.add_argument("--from-file", metavar="HTML",
                        help="导入一个 Ctrl+S 存下来的列表页（渲染后的 HTML）")
     watch.add_argument("--url", help="配合 --from-file：这页的地址（用于对上 watch 配置）")
+    watch.add_argument("--fetch", action="store_true",
+                       help="用本机无头浏览器渲染已登记的列表页并比对（我自己跑，不需要浏览器插件）")
     appr = sub.add_parser("approve", help="确认候选值 → 写进覆盖层")
     appr.add_argument("--id", type=int, required=True)
     appr.add_argument("--grade", required=True, choices=("A", "B", "C"))
@@ -137,6 +139,44 @@ def main(argv: list[str] | None = None) -> int:
         return _run(ledger, args)
     finally:
         ledger.close()
+
+
+def _watch_fetch(ledger, args) -> int:
+    """用本机无头浏览器渲染已登记的列表页并比对。
+
+    这是"我自己跑"的通路：不需要浏览器插件，不需要人点。
+    只抓第 1 页——新通知总在最上面，监测够用了。
+    """
+    from shopee_ledger.watch import find_browser, load_watches, parse_listing_html, render_page
+
+    watches = [item for item in load_watches() if item.access == "public" and item.url.startswith("http")]
+    if not watches:
+        print("spec/sources.json 里没有可抓的列表页（watch 段的 url 要是 http 开头）")
+        return 1
+    browser = find_browser()
+    print("浏览器: %s" % (browser or "没找到 Chrome/Edge"))
+    if not browser:
+        return 1
+    ledger.init()
+    total_new = 0
+    for item in watches:
+        html, error = render_page(item.url)
+        if not html:
+            print("  %s 渲染失败：%s" % (item.id, error))
+            continue
+        entries, pager = parse_listing_html(html, base_url=item.url)
+        if not entries:
+            print("  %s 渲染成功但没解析出条目——页面结构可能变了" % item.id)
+            continue
+        result = ledger.record_listing(item.id, entries, page_url=item.url)
+        print("  %s：本页 %d 篇，新出现 %d 篇%s"
+              % (item.id, result["total"], len(result["new"]),
+                 "（分页 当前 %s）" % pager["current"] if pager["current"] else ""))
+        for fresh in result["new"]:
+            print("     🆕 %s  %s" % (fresh["published_at"] or "日期未知", fresh["title"]))
+        total_new += len(result["new"])
+    print("\n合计新文档 %d 篇。看全部：shopee_ledger watch" % total_new)
+    return 0
 
 
 def _watch_from_file(ledger, args) -> int:
@@ -331,6 +371,8 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
     if args.cmd == "watch":
         if args.from_file:
             return _watch_from_file(ledger, args)
+        if args.fetch:
+            return _watch_fetch(ledger, args)
         if args.seen:
             ledger.mark_watch_seen(args.seen)
             print("已标记 #%s 为已读" % args.seen)

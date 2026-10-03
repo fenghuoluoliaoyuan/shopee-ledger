@@ -151,10 +151,58 @@ class _ListingHTMLParser(HTMLParser):
             self._grab = None
 
 
-def parse_listing_html(html: str, base_url: str = "") -> tuple[list[WatchEntry], dict[str, Any]]:
-    """解析**渲染后的 HTML**（用户 Ctrl+S 存下来的，或脚本发回来的 outerHTML）。
+# 无头浏览器：列表页是 SPA，服务端取到的是空壳，必须让浏览器渲染。
+CHROME_CANDIDATES = (
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+)
 
-    拿到真实 DOM 之后就不必再猜选择器了；这个函数就是"先取样本再写规则"的产物。
+
+def find_browser() -> str | None:
+    for path in CHROME_CANDIDATES:
+        if Path(path).exists():
+            return path
+    return None
+
+
+def render_page(url: str, *, browser: str | None = None, wait_ms: int = 12000,
+                timeout: int = 120, runner: Any = None) -> tuple[str, str]:
+    """用无头浏览器把页面渲染出来，返回 (HTML, 错误说明)。
+
+    为什么要用浏览器：shopee.cn/edu 是 SPA，服务端 urllib 抓到的是空壳（0 个文章链接）。
+    列表接口 /help/api/v3/article/list/ 有签名头，直接调会被挡（"not allowed language"）。
+    浏览器本来就执行 JS、带会话，最省事。
+
+    **只抓第 1 页就够**：新通知总是出现在列表最上面。
+    翻旧页是"补历史"，不是"监测"。
+    """
+    import subprocess
+    import tempfile
+
+    exe = browser or find_browser()
+    if not exe:
+        return "", "找不到 Chrome 或 Edge，无法渲染页面"
+    profile = Path(tempfile.gettempdir()) / "sl-chrome-profile"
+    args = [exe, "--headless=new", "--disable-gpu", "--no-first-run",
+            "--no-default-browser-check", "--window-size=1400,2400",
+            "--virtual-time-budget=%d" % wait_ms,
+            "--user-data-dir=%s" % profile, "--dump-dom", url]
+    try:
+        if runner is not None:
+            return runner(args), ""
+        done = subprocess.run(args, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=timeout)
+        return done.stdout or "", "" if done.stdout else "浏览器没有输出"
+    except Exception as exc:  # 超时/浏览器崩溃都当成"这次没抓到"
+        return "", "%s: %s" % (type(exc).__name__, exc)
+
+
+def parse_listing_html(html: str, base_url: str = "") -> tuple[list[WatchEntry], dict[str, Any]]:
+    """解析**渲染后的 HTML**（无头浏览器 dump、用户 Ctrl+S、或脚本发回的 outerHTML）。
+
+    拿到真实 DOM 之后就不必再猜选择器了；这个函数就是「先取样本再写规则」的产物。
     返回 (条目, 分页信息)。
     """
     parser = _ListingHTMLParser()
