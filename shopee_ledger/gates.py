@@ -199,10 +199,19 @@ class GateService:
             )
         outcomes: list[RuleOutcome] = []
         for rule in self.spec.rules_for_gate(gate_id, mode=mode):
-            if rule.gate in CONFIG_ONLY_GATES or rule.raw.get("evaluated_by") == "validate.py":
+            if self._is_config_only(rule):
                 continue
             outcomes.append(self._evaluate(rule, ctx))
         return self._summarise(gate_id, outcomes)
+
+    @staticmethod
+    def _is_config_only(rule: Rule) -> bool:
+        """不参与运行时判定的规则：配置期检查的，或由别的模块算的（如时间型告警）。"""
+        if rule.gate in CONFIG_ONLY_GATES:
+            return True
+        if rule.raw.get("runtime") is False:
+            return True
+        return False
 
     def check_rules(
         self,
@@ -229,6 +238,8 @@ class GateService:
             rule = self.spec.rules.get(rule_id)
             if rule is None:
                 raise ExpressionError("状态机引用了不存在的规则: %s" % rule_id)
+            if self._is_config_only(rule):
+                continue
             outcomes.append(self._evaluate(rule, ctx))
         return self._summarise(gate_id, outcomes)
 

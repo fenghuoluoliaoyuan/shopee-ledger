@@ -255,7 +255,8 @@ class Storage:
     def record_audit(self, action: str, object_type: str, object_id: Any, *,
                      rule_id: str | None = None, params_version: str | None = None,
                      result: str | None = None, operator: str = "cli",
-                     detail: dict[str, Any] | None = None) -> int:
+                     detail: dict[str, Any] | None = None, at: str | None = None) -> int:
+        """at 用于补录历史事件。审计表只增不改，所以只能追加一条带旧时间戳的记录。"""
         return self.insert("AuditLog", {
             "action": action,
             "object_type": object_type,
@@ -264,7 +265,7 @@ class Storage:
             "params_version": params_version or self.fingerprint(),
             "result": result,
             "operator": operator,
-            "at": _now(),
+            "at": at or _now(),
             "detail": detail or {},
         })
 

@@ -122,15 +122,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/orders":
             return _order_post(ledger, form)
         if path == "/checklist":
-            if _first(form, "fetch") == "1":
-                _fetch_public_notes(ledger)
-                return "/checklist?" + urlencode({"notice": "公开页能确定的已写入，费率数字仍空着"})
             ledger.set_checklist(int(_need(form, "id")), _need(form, "date"), _need(form, "conclusion"), _need(form, "grade"))
             return "/checklist?" + urlencode({"notice": "核实结果已写入"})
         if path == "/escrow":
-            result = ledger.record_actual(int(_need(form, "order")), json.loads(_need(form, "payload")))
-            text = "实绩已记在这一单，没有覆盖选品估算" if result.rate is not None else "实绩还缺：" + "、".join(result.missing)
-            return "/books?" + urlencode({"notice": text})
+            view = ledger.record_actual(int(_need(form, "order")), json.loads(_need(form, "payload")))
+            return "/books?" + urlencode({"notice": view.explain()})
         raise ValueError("未知页面")
 
 
@@ -246,14 +242,22 @@ button.slim {{ padding: 4px 8px; font-size: 12px; }}
 </html>"""
 
 
+def _card(title: str, body: str, hint: str = "") -> str:
+    note = f'<p class="k">{escape(hint)}</p>' if hint else ""
+    return f'<section class="card" style="margin-top:12px"><h2>{escape(title)}</h2>{note}{body}</section>'
+
+
 def today(ledger: Ledger) -> str:
-    """市场来自 registry（不再写死 MY/TW）——加一个市场只需要改 spec。"""
+    """今日＝按优先级排的行动清单：告警 → 阻塞第一单的核实 → 选品卡点 → 订单下一步 → 解锁清单。
+
+    这个页面存在的意义是回答"今天该做哪 3 件事"，所以**顺序本身就是结论**。
+    """
     spec = default_spec()
     cards = []
     for market in spec.registry.get("markets") or []:
         code = market.get("code")
         viability = market.get("dropship_viability", "unknown")
-        passed, complete, rate = ledger.survival(code)
+        _passed, _complete, rate = ledger.survival(code)
         shown = "—" if rate is None else f"{rate:.0%}"
         title = f"{market.get('name', code)}站存活率"
         badge = "" if viability == "viable" else f'<div class="k">直发可行性：{escape(viability)}</div>'
@@ -261,22 +265,71 @@ def today(ledger: Ledger) -> str:
             f'<article class="card"><div class="k">{escape(title)}</div><div class="v">{shown}</div>'
             f'<div class="k">{escape(survival_advice(rate))}</div>{badge}</article>'
         )
-    actions = []
+
+    sections: list[str] = []
+
+    alerts = ledger.order_alerts()
+    if alerts:
+        items = "".join(
+            '<li><span class="pill bad">%s</span> 订单 #%s %s：%s%s</li>' % (
+                escape(item["priority"]), item["order_id"], escape(item.get("candidate") or ""),
+                escape(item["message"]),
+                ("（已停留 %s 小时）" % item["hours_in_state"])
+                if item.get("hours_in_state") is not None else "",
+            )
+            for item in alerts
+        )
+        sections.append(_card("要先处理", f"<ul>{items}</ul>",
+                              "异常分支 EX-01/02/03，按订单在当前状态的停留时长算出来。"))
+
+    blocking = [row for row in ledger.checklist_rows()
+                if row.get("blocks_first_order") and not row["conclusion"]]
+    if blocking:
+        items = "".join(
+            '<li><code>%s</code> %s <span class="k">%s</span></li>' % (
+                escape(row.get("spec_task_id") or ""), escape((row.get("item") or "")[:70]),
+                escape(row.get("channel") or ""))
+            for row in blocking
+        )
+        sections.append(_card(f"阻塞第一单的核实（{len(blocking)} 件）", f"<ul>{items}</ul>",
+                              "这些没核实，第一单不该下。逐条在「待核实」页填写结论与等级。"))
+
+    stuck = []
     for row in ledger.list_candidates():
-        gate = _gate(ledger, row)
-        if gate != "可上架":
-            actions.append(f"<li>{escape(row['name'])}：{escape(gate)}</li>")
+        verdict = _gate(ledger, row)
+        if verdict != "可上架":
+            stuck.append(f"<li>{escape(row['name'])}：{escape(verdict)}</li>")
+    if stuck:
+        sections.append(_card("选品卡在哪", f"<ul>{''.join(stuck)}</ul>"))
+    elif not ledger.list_candidates():
+        sections.append(_card("选品卡在哪", '<p class="k">还没录入候选品。先去「选品」录一款样品。</p>'))
+
+    orders = []
     for row in ledger.list_orders():
-        if row["status"] == "done":
+        if row["status"] in ("paid", "cancelled"):
             continue
-        nxt = _next_step(row)
-        deadline = row["deadline"] or "未填发货截止"
-        actions.append(f"<li>订单 #{row['id']} {escape(row['candidate_name'])}：{escape(nxt)} · {escape(deadline)}</li>")
-    if not actions:
-        actions.append("<li>今天没有待办。先在选品里录入一款样品。</li>")
-    return f"""<h1>今日</h1><p class="lead">先处理下面这几件事。待核实不挡操作，费率没抄进来时选品会停在「先补齐费率」。</p>
-<section class="grid">{''.join(cards)}</section>
-<section class="card" style="margin-top:12px"><ul>{''.join(actions)}</ul></section>"""
+        orders.append(f'<li>订单 #{row["id"]} {escape(row["candidate_name"])}：{escape(_next_step(row))}</li>')
+    if orders:
+        sections.append(_card("订单下一步", f"<ul>{''.join(orders)}</ul>"))
+
+    unlocks = ledger.unverified_unlocks()
+    if unlocks:
+        items = "".join(
+            '<li><code>%s</code>（%s 级%s）挡着：%s</li>' % (
+                escape(item["param_id"]), escape(item["level"]),
+                ("，任务 " + escape(item["task_ref"])) if item.get("task_ref") else "",
+                escape(item["feature"]))
+            for item in unlocks
+        )
+        sections.append(_card("未核实参数挡着哪些功能", f"<ul>{items}</ul>",
+                              "核实后这些功能自动启用，不需要改代码。"))
+
+    if not sections:
+        sections.append('<section class="card" style="margin-top:12px"><p>今天没有待办。</p></section>')
+
+    return (f'<h1>今日</h1><p class="lead">按优先级从上往下做。'
+            f'「待核实」不挡录入，但会挡住依赖它的功能——挡了哪些，页面底部会写。</p>'
+            f'<section class="grid">{"".join(cards)}</section>{"".join(sections)}')
 
 
 def _gate(ledger: Ledger, row) -> str:
@@ -336,19 +389,10 @@ def _save_product(ledger: Ledger, form: dict) -> str:
     return "/products?" + urlencode({"notice": "已录入，今日页会告诉你卡在哪"})
 
 
-PUBLIC_NOTES = {
-    5: "公开页面里的马来费率属于本地店或直邮计划，不是 seller.shopee.cn 跨境店，数字未写入参数。",
-    6: "免运是服务费还是运费，要看卖家中心这一单的费用明细，公开页没有跨境店归属。",
-    7: "台湾站佣金、手续费、免运同样以卖家中心为准，公开教育站对不上。",
-    15: "open.shopee.com 只说明接口按应用申请。这家店实际开通了哪些权限，要登录开发者后台看。",
-}
-
-
-def _fetch_public_notes(ledger: Ledger) -> None:
-    for row in ledger.checklist_rows():
-        note = PUBLIC_NOTES.get(row["id"])
-        if note and not row["conclusion"]:
-            ledger.set_checklist(row["id"], "2026-10-03", note, "E")
+# 曾经这里有一张 PUBLIC_NOTES 表，按旧的 1–22 编号往核实清单里预填"结论"。
+# 两个问题：清单已换成 spec 的 48 条任务（按 VT-001…VT-048 排序），编号对不上，
+# 结论会写到 VT-005/006/007/015 上；而且它是在**代替用户宣告已核实**（等级还写 E）。
+# 现由 checklist 页逐条人工填写，未核实的参数挡住哪个功能由 Ledger.unverified_unlocks 说明。
 
 
 def params_page(ledger: Ledger) -> str:
@@ -586,7 +630,7 @@ def checklist_page(ledger: Ledger) -> str:
 <button class="slim">保存</button></form></td></tr>"""
         )
     return f'''<h1>待核实</h1><p class="lead">这是附属记录。公开网页对不上中国跨境店的费率，所以不会把网上的百分比写进参数。</p>
-<form method="post" action="/checklist"><input type="hidden" name="fetch" value="1"><button class="slim">写入公开页已能确定的说明</button></form>
+<form method="post" action="/checklist">
 <section class="card"><table>{''.join(rows)}</table></section>'''
 
 

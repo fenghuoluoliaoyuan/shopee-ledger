@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -97,6 +98,23 @@ class QuoteView:
         text = self.cost.explain()
         if self.gate is not None:
             text += "\n" + self.gate.explain()
+        return text
+
+
+@dataclass
+class ActualView:
+    """托管实绩的映射结果。rate/net 只有在该算的时候才算出来，否则保持 None。"""
+
+    mapped: dict[str, Any]
+    missing: list[str]
+    rate: float | None = None
+    net: float | None = None
+
+    def explain(self) -> str:
+        parts = ["%s=%s" % (k, v) for k, v in self.mapped.items() if v is not None]
+        text = "账单字段：" + "、".join(parts) if parts else "账单字段：无"
+        if self.missing:
+            text += "；还缺 " + "、".join(self.missing) + " 才能与估算逐项比对"
         return text
 
 
@@ -463,8 +481,25 @@ class Ledger:
     def set_deadline(self, order_id: int, deadline: str) -> None:
         self.storage.update("Order", order_id, {"deadline": deadline})
 
-    def record_actual(self, order_id: int, payload: dict[str, Any]) -> None:
-        self.storage.update("Order", order_id, payload)
+    def record_actual(self, order_id: int, payload: dict[str, Any]) -> "ActualView":
+        """记这一单的托管实绩。
+
+        **不在这里重算净利润**——那会把 CostEngine 的算法复制第二份（本模块刚消除过这类重复）。
+        实绩与估算的逐项比对需要先把 service_fee 的归属核实清楚，
+        否则任何"实绩净利"都含一个未核实项，不如不给数字。
+        """
+        from shopee_ledger.escrow import map_escrow
+
+        row = self.storage.get("Order", order_id)
+        if row is None:
+            raise ValueError("找不到订单 %s" % order_id)
+        mapped = map_escrow(payload)
+        missing = []
+        if mapped.get("service_fee") is not None and not mapped.get("service_fee_kind"):
+            missing.append("service_fee_kind")
+        self.storage.record_audit("order.actual", "order", order_id,
+                                  detail={k: v for k, v in mapped.items() if v is not None})
+        return ActualView(mapped=mapped, missing=missing)
 
     def list_orders(self) -> list[dict[str, Any]]:
         out = []
@@ -481,6 +516,54 @@ class Ledger:
     def audit(self, order_id: int, action: str, *, result: str | None = None,
               detail: dict[str, Any] | None = None) -> None:
         self.storage.record_audit(action, "order", order_id, result=result, detail=detail)
+
+    # ---- 告警：把异常分支接到真实时间戳 ---------------------------------
+    def state_since(self, order_id: int) -> str | None:
+        """当前状态的进入时间 = 该订单最后一条 order.transition 审计记录的 at。"""
+        rows = [row for row in self.storage.list("AuditLog", limit=2000)
+                if row["action"] == "order.transition" and str(row["object_id"]) == str(order_id)]
+        return rows[0]["at"] if rows else None
+
+    def hours_in_state(self, order_id: int, now: datetime | None = None) -> float | None:
+        started = _parse_iso(self.state_since(order_id))
+        if started is None:
+            return None
+        return ((now or datetime.now(timezone.utc)) - started).total_seconds() / 3600.0
+
+    def dts_ready(self) -> bool:
+        """发货时限参数是否已升到 A/B——未升级前不生成倒计时（P-TW-DTS 的 note 要求）。"""
+        param = self.spec.params.get("P-TW-DTS")
+        return bool(param and param.hard_eligible())
+
+    def order_alerts(self) -> list[dict[str, Any]]:
+        """EX-01/02/03 告警。EX-02 只在发货时限参数已核实时才启用。"""
+        ready = self.dts_ready()
+        alerts: list[dict[str, Any]] = []
+        for row in self.list_orders():
+            machine = OrderMachine(self.spec, state=row.get("status") or None)
+            if row.get("status") == "paid":
+                continue
+            hours = self.hours_in_state(row["id"])
+            for item in machine.exceptions(hours_in_state=hours, dts_ready=ready):
+                alerts.append(dict(item, order_id=row["id"], state=machine.state,
+                                   candidate=row.get("candidate_name"),
+                                   hours_in_state=None if hours is None else round(hours, 1)))
+        alerts.sort(key=lambda item: (item.get("priority") != "P1", item.get("order_id") or 0))
+        return alerts
+
+    def unverified_unlocks(self) -> list[dict[str, Any]]:
+        """哪些功能正被未核实参数挡着——把"该核实什么"直接摆到台面上。"""
+        unlocks = []
+        for param_id, name, feature in (
+            ("P-TW-DTS", "发货时限与迟发判定", "发货截止倒计时与 EX-02 到仓超期告警"),
+            ("P-TW-SLS-TIERS", "SLS 运费档", "按重量自动取运费"),
+            ("P-TW-FX", "汇率", "利润核算（缺它一律 INCOMPLETE）"),
+        ):
+            param = self.spec.params.get(param_id)
+            if param is not None and not param.hard_eligible():
+                unlocks.append({"param_id": param_id, "name": name, "feature": feature,
+                                "level": param.evidence_level, "task_ref": param.task_ref})
+        return unlocks
 
     # ---- 核实任务 -------------------------------------------------------
     def checklist_rows(self) -> list[dict[str, Any]]:
@@ -542,6 +625,14 @@ def _dump_steps(state: Any) -> str:
 
 
 def _now() -> str:
-    from datetime import datetime, timezone
-
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _parse_iso(stamp: str | None) -> datetime | None:
+    if not stamp:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)

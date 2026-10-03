@@ -52,6 +52,8 @@
       "evidence_level": "E",
       "on_degrade": "P-TW-DTS 为 E 级时不启用告警，只记录时间戳",
       "degrade_policy": "soft",
+      "runtime": false,
+      "evaluated_by": "store.order_alerts",
       "message": "存在迟发风险"
     },
     {
