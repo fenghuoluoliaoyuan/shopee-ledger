@@ -38,7 +38,114 @@ def tw_inputs(**overrides):
     return CostInputs(**data)
 
 
-class CostEngineTest(unittest.TestCase):
+class OfficialSettlementStructureTest(unittest.TestCase):
+    """对齐官方订单结算口径（#25770 附录2）。
+
+        订单收入 = 商品总额 - 运费总额 - 优惠券与回扣 - 各项费用
+        最终金额 = 订单收入 - 订单调整
+
+    以前引擎里没有"订单调整"这一项，马来西亚高价值商品税就无处安放。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spec = Spec.load(SPEC_ROOT)
+        cls.engine = CostEngine(cls.spec, today="2026-10-03")
+
+    def test_order_income_matches_the_official_formula(self):
+        result = self.engine.quote(tw_inputs())
+        self.assertTrue(result.computed, result.missing)
+        components = result.components
+        expected = (350.0 - components["net_freight"] - components["platform_fee"]
+                    - components["affiliate"] - components["coupon_discount"])
+        self.assertAlmostEqual(components["order_income"], expected, places=6)
+
+    def test_order_income_is_exposed_even_when_zero_adjustment(self):
+        result = self.engine.quote(tw_inputs())
+        self.assertIn("order_income", result.components)
+        self.assertEqual(result.components["order_adjustment"], 0.0)
+
+    def test_order_adjustment_reduces_net_one_for_one(self):
+        """订单调整（如马来高价值商品税）要原样从最终金额里扣掉。"""
+        base = self.engine.quote(tw_inputs()).net
+        taxed = self.engine.quote(tw_inputs(order_adjustment=121.80)).net
+        self.assertAlmostEqual(base - taxed, 121.80, places=6)
+
+    def test_order_adjustment_does_not_change_order_income(self):
+        """订单调整是「订单收入之后」的一项，不该反过来影响订单收入。"""
+        plain = self.engine.quote(tw_inputs()).components["order_income"]
+        taxed = self.engine.quote(tw_inputs(order_adjustment=121.80)).components["order_income"]
+        self.assertAlmostEqual(plain, taxed, places=6)
+
+    def test_coupon_discount_reduces_order_income(self):
+        plain = self.engine.quote(tw_inputs()).components["order_income"]
+        discounted = self.engine.quote(tw_inputs(coupon_discount=50.0)).components["order_income"]
+        self.assertAlmostEqual(plain - discounted, 50.0, places=6)
+
+    def test_order_adjustment_shows_up_in_the_trace(self):
+        result = self.engine.quote(tw_inputs(order_adjustment=121.80))
+        labels = [entry.label for entry in result.trace]
+        self.assertIn("订单调整", labels)
+        self.assertIn("订单收入", labels)
+
+
+class FreightByWeightTest(unittest.TestCase):
+    """不填 sls_freight 时，用官方运费表按重量算。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spec = Spec.load(SPEC_ROOT)
+        cls.engine = CostEngine(cls.spec, today="2026-10-03")
+
+    def test_engine_loads_the_freight_table_from_the_repo(self):
+        self.assertIsNotNone(self.engine.freight_config, "仓库里应有运费表快照")
+        self.assertEqual(self.engine.freight_config.get("date"), "2026-10-03")
+
+    def test_weight_and_channel_produce_the_freight(self):
+        result = self.engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
+                                             channel="蝦皮店到店"))
+        self.assertNotIn("sls_freight", result.missing)
+        self.assertAlmostEqual(result.context["sls_freight"], 95.0, places=6)
+
+    def test_computed_freight_matches_a_hand_supplied_one(self):
+        by_weight = self.engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
+                                                channel="蝦皮店到店"))
+        by_hand = self.engine.quote(tw_inputs(sls_freight=95.0))
+        self.assertAlmostEqual(by_weight.net, by_hand.net, places=6)
+
+    def test_unknown_channel_falls_back_to_incomplete_not_zero(self):
+        """表里查不到就必须 INCOMPLETE——把查不到当 0 会凭空多出利润。"""
+        result = self.engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
+                                             channel="不存在的渠道"))
+        self.assertEqual(result.status, INCOMPLETE)
+        self.assertIn("sls_freight", result.missing)
+
+    def test_missing_weight_is_incomplete(self):
+        result = self.engine.quote(tw_inputs(sls_freight=None))
+        self.assertEqual(result.status, INCOMPLETE)
+        self.assertIn("sls_freight", result.missing)
+
+    def test_special_cargo_costs_more(self):
+        normal = self.engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
+                                             channel="蝦皮店到店", cargo="Normal"))
+        special = self.engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
+                                              channel="蝦皮店到店", cargo="Special"))
+        self.assertGreater(special.context["sls_freight"], normal.context["sls_freight"])
+
+    def test_explicit_freight_wins_over_the_table(self):
+        result = self.engine.quote(tw_inputs(sls_freight=11.0, weight_g=1200.0,
+                                             channel="蝦皮店到店"))
+        self.assertAlmostEqual(result.context["sls_freight"], 11.0, places=6)
+
+    def test_engine_without_table_reports_missing_not_guess(self):
+        engine = CostEngine(self.spec, today="2026-10-03", freight_config={})
+        result = engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
+                                        channel="蝦皮店到店"))
+        self.assertEqual(result.status, INCOMPLETE)
+        self.assertIn("sls_freight", result.missing)
+
+
+class CostEngineTestOld(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.spec = Spec.load(SPEC_ROOT)

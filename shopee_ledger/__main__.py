@@ -101,7 +101,13 @@ def main(argv: list[str] | None = None) -> int:
     q2.add_argument("--purchase", type=float, required=True, help="采购实付（人民币）")
     q2.add_argument("--domestic", type=float, required=True, help="国内段运费（人民币）")
     q2.add_argument("--fx", type=float, required=True, help="1 人民币折合多少当地币")
-    q2.add_argument("--sls", type=float, help="SLS 运费（当地币）；缺省则报缺数据")
+    q2.add_argument("--sls", type=float, help="SLS 运费（当地币）；缺省且给了 --weight-g 与 --channel 时按官方运费表算")
+    q2.add_argument("--weight-g", type=float, help="包裹重量（克）：配合 --channel 从官方运费表算运费")
+    q2.add_argument("--channel", help="物流渠道名（支持部分匹配），如 蝦皮店到店")
+    q2.add_argument("--cargo", default="Normal", choices=("Normal", "Special"), help="货类：普货/特货")
+    q2.add_argument("--coupon", type=float, default=0.0, help="优惠券与回扣（官方结算口径里从订单收入减掉）")
+    q2.add_argument("--order-adjustment", type=float, default=0.0,
+                    help="订单调整，如马来西亚高价值商品税（官方结算口径里的单独一项）")
     q2.add_argument("--buyer-shipping", type=float, help="买家实付运费")
     q2.add_argument("--seller-pays-freight", action="store_true", help="卖家包邮")
     q2.add_argument("--return-rate", type=float, help="退货率预留（覆盖参数）")
@@ -709,6 +715,11 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             domestic_cny=args.domestic,
             local_per_cny=args.fx,
             sls_freight=args.sls,
+            weight_g=args.weight_g,
+            channel=args.channel,
+            cargo=args.cargo,
+            coupon_discount=args.coupon,
+            order_adjustment=args.order_adjustment,
             buyer_paid_freight=args.buyer_shipping,
             seller_pays_freight=args.seller_pays_freight,
             in_free_window=args.free_window,

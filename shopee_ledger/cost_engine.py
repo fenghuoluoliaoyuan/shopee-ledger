@@ -69,6 +69,10 @@ class CostInputs:
     local_per_cny: float | None = None        # 汇率：P-*-FX 是 E 级值为 null，必须外部提供
     # 物流
     sls_freight: float | None = None
+    # 不填 sls_freight 时，用它从官方运费表按重量算（缺表就算不出，不会瞎猜）
+    weight_g: float | None = None
+    channel: str | None = None
+    cargo: str = "Normal"
     buyer_paid_freight: float | None = None
     seller_pays_freight: bool = False
     # 订单属性
@@ -76,6 +80,10 @@ class CostInputs:
     is_presale: bool = False
     ad_spend: float = 0.0
     affiliate_rate: float = 0.0
+    # 官方结算口径里的「优惠券与回扣」：结算前从订单收入里减掉
+    coupon_discount: float = 0.0
+    # 官方结算口径里的「订单调整」：如马来西亚站点高价值商品税
+    order_adjustment: float = 0.0
     service_fee: float = 0.0
     service_fee_kind: str = "none"            # service | shipping | none
     # 实测优先（平台账单）
@@ -155,9 +163,32 @@ class CostResult:
 
 
 class CostEngine:
-    def __init__(self, spec: Spec, today: str | None = None):
+    def __init__(self, spec: Spec, today: str | None = None,
+                 freight_config: dict | None = None):
         self.spec = spec
         self.today = today
+        # 官方运费表（定价模拟器接口）。不给就按调用方传入的 sls_freight 算，
+        # 或者在有重量与渠道时直接说"算不出"——不猜。
+        if freight_config is None:
+            try:
+                from shopee_ledger.freight import load_latest_config
+
+                freight_config = load_latest_config()
+            except Exception:
+                freight_config = None
+        self.freight_config = freight_config
+
+    def freight_from_weight(self, market: str, channel: str, weight_g: float,
+                            cargo: str = "Normal") -> tuple[float | None, str]:
+        """按重量从官方运费表算卖家承担的跨境物流成本。返回 (金额, 来源说明)。"""
+        if not self.freight_config:
+            return None, "没有运费表快照（跑 freight 拉取）"
+        from shopee_ledger.freight import FREIGHT_ALGORITHM_SOURCE, seller_fee
+
+        fee = seller_fee(self.freight_config, market, channel, weight_g, cargo=cargo)
+        if fee is None:
+            return None, "运费表里没有 %s/%s/%s 这个渠道" % (market, cargo, channel)
+        return fee, "官方运费表 %s" % self.freight_config.get("date", "?")
 
     # ---- 参数取用 -------------------------------------------------------
     def param_for_role(self, role: str, market: str) -> Param | None:
@@ -204,10 +235,21 @@ class CostEngine:
         trace: list[TraceEntry] = []
         notes: list[str] = []
 
+        # 0) 运费：没直接给就用官方运费表按重量算（表里有就自己算，没有就照实缺）
+        freight_value = data.sls_freight
+        freight_source = "输入"
+        if freight_value is None and data.weight_g and data.channel:
+            computed, note = self.freight_from_weight(market, data.channel, data.weight_g,
+                                                      data.cargo)
+            if computed is not None:
+                freight_value, freight_source = computed, note
+
         # 1) 必填输入
-        for name in ("price_local", "purchase_cny", "domestic_cny", "local_per_cny", "sls_freight"):
+        for name in ("price_local", "purchase_cny", "domestic_cny", "local_per_cny"):
             if getattr(data, name) is None:
                 missing.append(name)
+        if freight_value is None:
+            missing.append("sls_freight")
         if data.price_local is not None and data.price_local <= 0:
             missing.append("price_local")
         if data.buyer_paid_freight is None and not data.seller_pays_freight:
@@ -272,7 +314,7 @@ class CostEngine:
         if missing:
             context = {
                 "price_local": data.price_local,
-                "sls_freight": data.sls_freight,
+                "sls_freight": freight_value,
                 "buyer_paid_freight": data.buyer_paid_freight,
                 "in_free_window": data.in_free_window,
                 "market": market_doc,
@@ -287,7 +329,7 @@ class CostEngine:
         purchase_local = float(data.purchase_cny) * float(data.local_per_cny)
         domestic_local = float(data.domestic_cny) * float(data.local_per_cny)
         buyer = 0.0 if data.seller_pays_freight else float(data.buyer_paid_freight or 0.0)
-        net_freight = max(float(data.sls_freight) - buyer, 0.0)
+        net_freight = max(float(freight_value) - buyer, 0.0)
 
         if data.in_free_window:
             commission_amount, commission_note = 0.0, "免佣窗口内记 0"
@@ -314,24 +356,37 @@ class CostEngine:
         fx_amount = price * float(fx_loss.value)
         return_reserve = float(return_rate.value) * (purchase_local + domestic_local)
 
-        net = (price - purchase_local - domestic_local - net_freight - platform_fee
-               - affiliate - float(data.ad_spend) - withdraw_amount - fx_amount
-               - return_reserve - tax_as_cost)
+        # 官方结算口径（#25770 附录2）：
+        #   订单收入 = 商品总额 - 运费总额 - 优惠券与回扣 - 各项费用
+        #   最终金额 = 订单收入 - 订单调整
+        # 各项费用 = 佣金 + 服务费 + 交易手续费；订单调整如马来西亚高价值商品税。
+        order_income = (price - net_freight - platform_fee - affiliate
+                        - float(data.coupon_discount))
+        net = (order_income - purchase_local - domestic_local - float(data.ad_spend)
+               - withdraw_amount - fx_amount - return_reserve - tax_as_cost
+               - float(data.order_adjustment))
         rate_value = net / price if price else None
 
         trace.extend([
             TraceEntry("售价(商品价)", price, "输入", "-", "不含买家运费"),
             TraceEntry("采购成本(本币)", purchase_local, "输入 × 汇率", "C"),
             TraceEntry("国内段运费(本币)", domestic_local, "输入 × 汇率", "C"),
+            TraceEntry("SLS 运费(卖家承担)", float(freight_value), freight_source, "-",
+                       ("按 %s 与 %sg 从运费表算出" % (data.channel, data.weight_g))
+                       if data.sls_freight is None and data.weight_g else ""),
             TraceEntry("净运费", net_freight, "max(SLS − 买家实付, 0)", "-", "买家多付不退，不计收入"),
             TraceEntry("佣金", commission_amount, commission_source, commission_level, commission_note),
             TraceEntry("交易手续费", txn_amount, txn_source, txn_level, "免佣窗口内照收"),
             TraceEntry("平台费合计", platform_fee, "佣金+手续费+预售+服务费"),
+            TraceEntry("优惠券与回扣", float(data.coupon_discount), "输入", "-", "官方结算口径里从订单收入减掉"),
             TraceEntry("联盟佣金", affiliate, "输入"),
+            TraceEntry("订单收入", order_income, "官方口径：商品总额-运费总额-优惠券与回扣-各项费用"),
             TraceEntry("广告费", float(data.ad_spend), "输入"),
             TraceEntry("提现费", withdraw_amount, withdraw.source, withdraw.level),
             TraceEntry("汇损", fx_amount, fx_loss.source, fx_loss.level),
             TraceEntry("退货预留", return_reserve, "%s × (采购+国内)" % return_rate.source, return_rate.level),
+            TraceEntry("订单调整", float(data.order_adjustment), "输入", "-",
+                       "官方口径里的订单调整，如马来高价值商品税"),
         ])
         if margin_rate.ok:
             notes.append("阈值 %s：可做 ≥%.0f%%（D 级经验值，对无货源可能过严，第一轮建议先按较低阈值找品）"
@@ -343,10 +398,14 @@ class CostEngine:
             "platform_fee": platform_fee, "affiliate": affiliate, "ad_spend": float(data.ad_spend),
             "withdraw": withdraw_amount, "fx_loss": fx_amount, "return_reserve": return_reserve,
             "import_tax": tax_as_cost,
+            # 官方结算口径里的两项，便于与平台账单逐项对齐
+            "order_income": order_income,
+            "order_adjustment": float(data.order_adjustment),
+            "coupon_discount": float(data.coupon_discount),
         }
         context = {
             "price_local": price,
-            "sls_freight": float(data.sls_freight),
+            "sls_freight": float(freight_value),
             "buyer_paid_freight": buyer,
             "net_freight": net_freight,
             "in_free_window": data.in_free_window,
@@ -357,6 +416,8 @@ class CostEngine:
             "net_profit": net,
             "market": market_doc,
             "import_tax_treatment": treatment,
+            "order_income": order_income,
+            "order_adjustment": float(data.order_adjustment),
             "inputs": {"price_local_includes_shipping": False},
         }
         return CostResult(COMPUTED, net=net, rate=rate_value, trace=trace, components=components,

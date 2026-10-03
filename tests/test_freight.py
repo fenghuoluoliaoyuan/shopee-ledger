@@ -45,17 +45,47 @@ def config(date="2026-10-03", fee=25.0, extra_channel=False):
 
 
 class RateCardTest(unittest.TestCase):
+    def find(self, cards, prefix):
+        """按前缀找卡。key 里含区间，所以不用全等匹配。"""
+        hits = [key for key in cards if key.startswith(prefix)]
+        self.assertTrue(hits, "找不到 %s" % prefix)
+        return cards[min(hits, key=len)]
+
     def test_flattens_nested_structure_into_addressable_keys(self):
         cards = rate_cards(config())
-        self.assertIn("TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange", cards)
-        self.assertIn("TW/Normal/蝦皮店到店/所有地区/Buyer/Flat", cards)
-        self.assertEqual(cards["TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange"]["fee"], 25.0)
+        seller = self.find(cards, "TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange")
+        self.assertEqual(seller["fee"], 25.0)
+        self.assertEqual(seller["payer"], "Seller")
+
+    def test_key_includes_the_weight_range(self):
+        """区间必须进 key——否则同渠道的多个 Increment 档会互相覆盖。"""
+        cards = rate_cards(config())
+        seller_keys = [key for key in cards if "/Seller/" in key]
+        self.assertEqual(len(seller_keys), 1, "合成数据里只有一个 Seller 档")
+        self.assertTrue(seller_keys[0].endswith("/0.0/500.0"), seller_keys[0])
+
+    def test_multiple_increment_tiers_survive_flattening(self):
+        """回归：实测真实配置里店到店有 6 档，曾被压成 3 档，导致变化检测漏报。"""
+        many = config()
+        fees = many["site_info"][0]["cargo_types"][0]["channels"][0]["zones"][0]["fee_modes"]
+        fees.extend([
+            {"name": "Increment", "type": "Seller", "effective_date": "2024-05-01",
+             "start_weight": 500.01, "end_weight": 1000.0, "original_fee": None,
+             "increment_unit": 500.0, "increment_amount": 30.0},
+            {"name": "Increment", "type": "Seller", "effective_date": "2024-05-01",
+             "start_weight": 1000.01, "end_weight": 2000.0, "original_fee": None,
+             "increment_unit": 500.0, "increment_amount": 40.0},
+        ])
+        cards = rate_cards(many)
+        seller_keys = [key for key in cards if "/Seller/" in key]
+        self.assertEqual(len(seller_keys), 3, "三档必须是三张卡")
 
     def test_buyer_and_seller_are_kept_apart(self):
         """买家付的运费和卖家承担的藏价是两回事，混在一起会算错利润。"""
         cards = rate_cards(config())
-        self.assertEqual(cards["TW/Normal/蝦皮店到店/所有地区/Buyer/Flat"]["fee"], 45.0)
-        self.assertEqual(cards["TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange"]["fee"], 25.0)
+        self.assertEqual(self.find(cards, "TW/Normal/蝦皮店到店/所有地区/Buyer/Flat")["fee"], 45.0)
+        self.assertEqual(
+            self.find(cards, "TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange")["fee"], 25.0)
 
 
 class DiffTest(unittest.TestCase):
@@ -112,8 +142,11 @@ class FetchTest(unittest.TestCase):
         payload = json.dumps({"code": 200000, "data": config()}).encode("utf-8")
         result = fetch_site_config("2026-10-03", opener=lambda url: payload)
         self.assertEqual(result["date"], "2026-10-03")
-        self.assertEqual(rate_cards(result)["TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange"]["fee"],
-                         25.0)
+        cards = rate_cards(result)
+        hits = [key for key in cards if key.startswith(
+            "TW/Normal/蝦皮店到店/所有地区/Seller/WeightRange")]
+        self.assertTrue(hits)
+        self.assertEqual(cards[hits[0]]["fee"], 25.0)
 
     def test_api_success_code_is_200000(self):
         """实测：成功时 code=200000，msg="ok"。按 0 判成功会一直误报失败。"""
