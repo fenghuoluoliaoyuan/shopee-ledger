@@ -195,7 +195,7 @@ aside a.on, aside a:hover {{ background: #27272a; color: white; }}
 main {{ padding: 28px 32px 48px; max-width: 1180px; }}
 h1 {{ font-size: 22px; letter-spacing: -0.03em; margin: 0 0 6px; }}
 .lead {{ color: var(--muted); margin: 0 0 18px; }}
-.grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }}
+.grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }}
 .card {{ background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }}
 .k {{ color: var(--muted); font-size: 12px; }}
 .v {{ font-size: 28px; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; margin-top: 6px; }}
