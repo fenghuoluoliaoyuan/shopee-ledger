@@ -525,6 +525,9 @@ def spec_page(ledger: Ledger) -> str:
 
     overrides = {row["param_id"]: row
                  for row in ledger.storage.list("ParamOverride", limit=500)}
+    from shopee_ledger.reachability import load_reachability, unreachable_for
+
+    reachability = load_reachability()
     param_rows = []
     for pid, param in sorted(spec.params.items()):
         if param.value is None:
@@ -548,6 +551,10 @@ def spec_page(ledger: Ledger) -> str:
             origin = '<a href="%s">来源</a>' % escape(param.source["url"])
         else:
             origin = '<span class="k">未记来源</span>'
+        # 等级评上去了、URL 却打不开——那 A 级只是记录，不是可复核的证据，必须显出来
+        source_url = (override or {}).get("source_url") or param.source.get("url")
+        if source_url and unreachable_for(source_url, reachability):
+            origin += ' <span class="pill cut" title="%s 实测打不开；A 级要求可打开的 URL">来源不可达</span>' % escape(source_url)
         param_rows.append(
             "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td><td>%s%s</td><td>%s</td><td>%s</td></tr>" % (
                 escape(pid), escape(param.name[:22]), shown,

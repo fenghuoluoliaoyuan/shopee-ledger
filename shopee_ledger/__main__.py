@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     q2.add_argument("--free-window", action="store_true", help="处于免佣窗口内")
     q2.add_argument("--grant", type=int, help="不填则只打印；填候选品 id 则留档成本快照")
 
-    sub.add_parser("sources", help="列出抓取配方与访问方式")
+    sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
     harvest.add_argument("--redo", action="store_true", help="已有的正文也重抓一遍")
@@ -383,6 +383,55 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("浏览器起不来：%s" % exc)
             return 1
         print("\n成功 %d 篇，失败 %d 篇" % (ok, failed))
+        return 0
+    if args.cmd == "check-sources":
+        import urllib.error
+        import urllib.request
+
+        # 每条来源 URL → 哪些参数在用它
+        usage: dict[str, list[str]] = {}
+        for pid, param in sorted(ledger.spec.params.items()):
+            url = param.source.get("url")
+            if url:
+                usage.setdefault(url, []).append("%s(%s)" % (pid, param.evidence_level))
+        for row in ledger.storage.list("ParamOverride", limit=500):
+            url = row.get("source_url")
+            if url:
+                usage.setdefault(url, []).append("覆盖:%s(%s)" % (row["param_id"],
+                                                                row.get("evidence_level")))
+        if not usage:
+            print("没有任何来源 URL")
+            return 0
+        print("检查 %d 个来源 URL…\n" % len(usage))
+        broken = []
+        statuses: list[tuple[str, str]] = []
+        for url, users in sorted(usage.items()):
+            status = ""
+            try:
+                request = urllib.request.Request(
+                    url, headers={"User-Agent": "Mozilla/5.0"}, method="GET")
+                with urllib.request.urlopen(request, timeout=8) as response:
+                    status = "HTTP %s" % response.status
+            except urllib.error.HTTPError as exc:
+                status = "HTTP %s" % exc.code
+            except Exception as exc:
+                status = "打不开：%s" % type(exc).__name__
+                broken.append((url, users))
+            statuses.append((url, status))
+            mark = "OK  " if status.startswith("HTTP") else "❌  "
+            print("%s%-58s %-22s %s" % (mark, url[:58], status, ", ".join(users)[:60]))
+        print("\n打不开的来源 %d 个" % len(broken))
+        # 把可达性记成证据：这是「关于证据的证据」，A 级是否成立要看它
+        from shopee_ledger.reachability import record_reachability
+
+        record = record_reachability(ledger.path.parent.parent,
+                                     [(url, status) for url, status in statuses])
+        print("已记录到 %s（%s 条）" % (record, len(statuses)))
+        if broken:
+            print("提示：A 级的定义是「有可打开的 URL」。这些 URL 打不开，")
+            print("      对应的 A 级证据就只是记录，不构成可复核的证据。")
+            print("      若你用代理/VPN 能打开，重跑本命令即可更新这份记录。")
+            return 1
         return 0
     if args.cmd == "sources":
         from shopee_ledger.sources import load_sources
