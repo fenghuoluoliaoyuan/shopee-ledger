@@ -336,9 +336,27 @@ class CostEngine:
             missing.append("infra_fee")
         if not tech.ok and market in self.fee_markets("P-TECH-FEE"):
             missing.append("tech_fee")
+
+        # **服务费与平台基础设施费可能重叠。**
+        # 官方 #25798 自己写着：「泰国订单详情直接显示【平台基础设施费】；
+        # 其他站点显示为服务费」——也就是说在马来西亚等地，卖家从订单详情抄下来的
+        # "服务费"里**已经含了**那笔 0.54。若照抄进 service_fee，而这里又加一次
+        # infra_amount，同一笔钱会被扣两遍。
+        # 拿不出证据判定用户抄的那个数含不含，所以**不下结论、只提示**。
+        #
+        # 位置有讲究：fee_trace 在缺字段时也要输出（用户最常见的情形就是缺字段），
+        # 所以这两行必须在 fee_trace 之前算好——否则就是"在赋值前引用局部变量"。
+        service_amount = data.service_fee if data.service_fee_kind == "service" else 0.0
+        overlap_note = ""
+        if service_amount > 0 and infra_amount > 0:
+            overlap_note = ("服务费已输入；注意 %s 的订单详情把平台基础设施费(%s)也显示为服务费，"
+                            "若这个数是从订单详情抄的，可能已含它，再加一次就重复扣了"
+                            % (market, infra_amount))
+
         fee_trace = [
             TraceEntry("平台基础设施费", infra_amount, infra.source, infra.level,
-                       "每笔已完成订单固定额，含增值税；官方列表未列该站点时按不收取"),
+                       "每笔已完成订单固定额，含增值税；官方列表未列该站点时按不收取"
+                       + ("　⚠ " + overlap_note if overlap_note else "")),
             TraceEntry("技术支持费", tech_amount, tech.source, tech.level,
                        "按已完成订单商品总额比例，含税费"),
         ]
@@ -381,7 +399,7 @@ class CostEngine:
             txn_source, txn_level = txn_rate.source, txn_rate.level
 
         presale_amount = price * float(presale_rate.value) if (data.is_presale and presale_rate.ok) else 0.0
-        service_amount = data.service_fee if data.service_fee_kind == "service" else 0.0
+        # service_amount 与 overlap_note 已在上面算过（fee_trace 要先用到）
 
         platform_fee = (commission_amount + txn_amount + presale_amount + service_amount
                         + infra_amount + tech_amount)
@@ -412,7 +430,7 @@ class CostEngine:
             TraceEntry("佣金", commission_amount, commission_source, commission_level, commission_note),
             TraceEntry("交易手续费", txn_amount, txn_source, txn_level, "免佣窗口内照收"),
             TraceEntry("平台基础设施费", infra_amount, infra.source, infra.level,
-                       "每笔已完成订单固定额，含增值税"),
+                       "每笔已完成订单固定额，含增值税" + ("　⚠ " + overlap_note if overlap_note else "")),
             TraceEntry("技术支持费", tech_amount, tech.source, tech.level,
                        "按已完成订单商品总额比例，含税费"),
             TraceEntry("平台费合计", platform_fee, "佣金+手续费+预售+服务费+基础设施费+技术支持费"),

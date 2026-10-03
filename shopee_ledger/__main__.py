@@ -1072,6 +1072,16 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         gate = GateService(spec).check("G3", result.gate_context(), platform="shopee", market=args.market)
         print()
         print(gate.explain())
+        if result.status != "COMPUTED":
+            # 同一款在 quote2 与 quote（候选品流程）下常得到不同结论，根因是
+            # **字段来源不同**，不是哪一边算错：
+            #   quote --id N 会从候选品里读买家运费、退货率等字段；
+            #   quote2 是纯 what-if，字段要你给全（如 --buyer-shipping）。
+            # 不说清这一点，用户会以为其中一个坏了。
+            print()
+            print("提示：这是纯 what-if 计算，字段要你给全（如 --buyer-shipping）。")
+            print("      候选品流程（quote --id N）会自己从候选品读这些字段——")
+            print("      同一款两边结论不同，通常就是这个原因，不是哪一边算错了。")
         if args.grant:
             from shopee_ledger.storage import Storage
 

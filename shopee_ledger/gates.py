@@ -270,11 +270,19 @@ class GateService:
         if outcome.is_unknown:
             # 硬规则缺数据 → INCOMPLETE（拦住流程）；软/建议规则缺数据 → WARN（提示即可）
             result = INCOMPLETE if level in ("hard", "incomplete") else WARN
+            # **不能照抄 rule.message。** 那些 message 是"判据成立时"的话
+            # （如「净利润率低于下限，砍掉」），而此刻判据根本没成立——值还没算出来。
+            # 照抄的后果实测过：R-COST-002 与 R-COST-003 同时显示，
+            # 一句说"砍掉"、一句说"处于观察区间"，两句互斥，而净利润率是未知的。
+            unknown = list(outcome.unknowns)
+            what = "、".join(unknown) if unknown else "所需数值"
             return RuleOutcome(
                 rule_id=rule.id, name=rule.name, result=result, fired=None, level=level,
-                action=rule.action, message=rule.message, next_action="补齐下列字段",
+                action=rule.action,
+                message="判不了「%s」：%s 还没定" % (rule.name, what),
+                next_action="补齐下列字段",
                 evidence_level=evidence_level, param_ids=param_ids, degraded=degraded,
-                unknowns=list(outcome.unknowns),
+                unknowns=unknown,
             )
 
         if not outcome.value:

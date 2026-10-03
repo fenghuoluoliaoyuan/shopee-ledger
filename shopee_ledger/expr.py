@@ -288,11 +288,31 @@ class _Evaluator:
                 else:
                     raise ExpressionError("不支持的比较符: %s" % type(op).__name__)
             except TypeError:
+                # None 参与比较会抛 TypeError。返回 UNKNOWN 时**必须记下是哪些字段**，
+                # 否则调用方只知道"算不出来"，不知道缺什么——实测 R-COST-002 因此
+                # 报出「净利润率低于下限，砍掉」这种把未知当既成事实的话。
+                self._note_none_names(node.left)
+                self._note_none_names(comparator)
                 return UNKNOWN
             if not ok:
                 return False
             left = right
         return True
+
+    def _note_none_names(self, node: ast.AST) -> None:
+        """把子表达式里**取值为 None** 的字段名记进 unknowns。
+
+        与 ``eval`` 里"名字不在 context 就记名"是两件事：这里的名字**在** context 里，
+        只是值是 None（字段存在但还没算出来）。两种都该让调用方知道缺什么。
+        """
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Name):
+                continue
+            if child.id in self.context:
+                if self.context[child.id] is None:
+                    self._note(child.id)
+            elif child.id not in ALLOWED_FUNCS:
+                self._note(child.id)
 
     def _call(self, node: ast.Call) -> Any:
         name = node.func.id
