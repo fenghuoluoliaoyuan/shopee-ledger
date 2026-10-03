@@ -134,8 +134,14 @@ class Ledger:
     @property
     def spec(self) -> Spec:
         if self._spec is None:
+            from shopee_ledger.verified import as_override_rows, read_verified
+
             base = default_spec()
-            rows = self._overrides() if self._table_exists() else []
+            # 先应用 spec/verified.json（随 git 走的真值），再应用库里的覆盖（运行时更新）。
+            # 顺序很重要：库里的是"后来改的"，应当覆盖文件里的。
+            rows = as_override_rows(read_verified())
+            if self._table_exists():
+                rows = rows + self._overrides()
             self._spec = base.with_overrides(rows)
         return self._spec
 

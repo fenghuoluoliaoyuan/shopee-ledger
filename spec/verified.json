@@ -1,0 +1,1918 @@
+{
+  "checklist_done": [
+    {
+      "checked_date": "2025-12-15",
+      "conclusion": "保证金 3000 元/营业执照，未缴 60 天后冻结店铺",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-16905-8a7cb601968f.txt",
+      "source_url": "https://shopee.cn/edu/article/16905",
+      "spec_task_id": "VT-008",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-10-03",
+      "conclusion": "拿到 9 站点完整运费费率表（含台湾 18 个渠道、每档生效日期）；累计口径待用模拟器当 oracle 反推",
+      "grade": "A",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "spec_task_id": "VT-012",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-10-03",
+      "conclusion": "官方运费表：买家侧为固定值、卖家侧按 500g 档累加",
+      "grade": "A",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "spec_task_id": "VT-013",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-09-16",
+      "conclusion": "禁运品 A/B 分类标准 + 官方清单附件（原件已入库）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-25237-acaf93ebfc33.txt",
+      "source_url": "https://shopee.cn/edu/article/25237",
+      "spec_task_id": "VT-014",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-09-18",
+      "conclusion": "出货天数定义与迟发/自动取消示例（依据：Shopee 2026年中秋节和国庆放假安排通知）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-28294-e663dd49e965.txt",
+      "source_url": "https://shopee.cn/edu/article/28294",
+      "spec_task_id": "VT-015",
+      "status": "done"
+    },
+    {
+      "checked_date": "2025-12-24",
+      "conclusion": "台湾店配尺寸 45×30×30cm、重量≤10KG（解决了 5kg/10kg 冲突）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26634-b5af9093e74e.txt",
+      "source_url": "https://shopee.cn/edu/article/26634",
+      "spec_task_id": "VT-016",
+      "status": "done"
+    },
+    {
+      "checked_date": "2025-01-09",
+      "conclusion": "易漏品包装门槛 150毫升/5公斤（包装分类，非运输禁令）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-23907-5f0cf541f9b2.txt",
+      "source_url": "https://shopee.cn/edu/article/23907",
+      "spec_task_id": "VT-017",
+      "status": "done"
+    },
+    {
+      "checked_date": "2025-12-24",
+      "conclusion": "快递进口申报货值上限 50,000 TWD（转正式报关红线）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26633-32de554bcfcd.txt",
+      "source_url": "https://shopee.cn/edu/article/26633",
+      "spec_task_id": "VT-018",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-10-03",
+      "conclusion": "官方运费表：买家侧为固定值、卖家侧按 500g 档累加",
+      "grade": "A",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "spec_task_id": "VT-026",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-09-04",
+      "conclusion": "台湾站点第1-2级惩罚周期缩短（2026-08-31 起）（依据：Shopee部分站点卖家罚分惩罚周期变更通知）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-28146-6ac8da8d6745.txt",
+      "source_url": "https://shopee.cn/edu/article/28146",
+      "spec_task_id": "VT-031",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-09-03",
+      "conclusion": "首店免佣期每月免佣订单上限 500 单；免佣期前 3 个月（新加坡站自 2026-07-01 起延长至 6 个月）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26619-f7d01b14e3da.txt",
+      "source_url": "https://shopee.cn/edu/article/26619",
+      "spec_task_id": "VT-035",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-09-22",
+      "conclusion": "计算基数为卖家自设优惠后的最终售价；仅已完成订单收取；并拿到完整订单结算结构（含 SST）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-25770-ed91fc65ffea.txt",
+      "source_url": "https://shopee.cn/edu/article/25770",
+      "spec_task_id": "VT-038",
+      "status": "done"
+    },
+    {
+      "checked_date": "2026-09-10",
+      "conclusion": "低价值门槛 500 MYR 与代收方式（依据：Shopee 马来站点高价值商品税相关通知）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-19945-99705debd5ce.txt",
+      "source_url": "https://shopee.cn/edu/article/19945",
+      "spec_task_id": "VT-046",
+      "status": "done"
+    }
+  ],
+  "note": "核实成果的可追溯快照。真值在这里（随 git 走），数据库是派生物。用 export-verified 生成，用 import-verified 回灌。",
+  "params": {
+    "P-MY-LVG-TAX": {
+      "checked_at": "2026-09-22",
+      "created_at": "2026-10-03T09:26:01+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-MY-LVG-TAX",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-25770-ed91fc65ffea.txt",
+      "source_url": "https://shopee.cn/edu/article/25770",
+      "value": {
+        "high_value_note": "高价值商品（>500 MYR）自 2024-01-01 起由平台代缴，通过每月账单 manual adjustment 收取",
+        "low_value_note": "低价值商品（<=500 MYR）的相关税费由平台自动加入商品价格",
+        "low_value_threshold_myr": 500,
+        "low_value_treatment": "buyer_uplift",
+        "open_question": "已补上 10%；高价值商品税的具体税率仍随官方税率表变动",
+        "rate": 0.1,
+        "rate_source": "官方 #25770 附录1：马来西亚 10% 低价值商品税",
+        "vat_exclusive_formula": "商品价格税前值 = 商品折扣后价格 / (1 + NLVG 税率)"
+      }
+    },
+    "P-MY-SLS-TIERS": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:30:25+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-MY-SLS-TIERS",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": {
+        "algorithm_source": "模拟器前端 app.bb24a38e.js 的 ke() 函数（按重量累加口径）",
+        "channels": {
+          "Heavy/Express Delivery (International)  （快速渠道-重货）": {
+            "buyer_flat": 25.8,
+            "seller_by_weight_g": {
+              "1000": 48.0,
+              "2000": 92.00000000000001,
+              "3000": 136.0,
+              "500": 26.0,
+              "5000": 224.00000000000003
+            }
+          },
+          "Heavy/Standard Doorstep Delivery (International)  (标准渠道-重货)": {
+            "buyer_flat": 25.8,
+            "seller_by_weight_g": {
+              "1000": 48.0,
+              "2000": 92.00000000000001,
+              "3000": 136.0,
+              "500": 26.0,
+              "5000": 224.00000000000003
+            }
+          },
+          "Normal/Doorstep Delivery (Brunei) (文莱渠道)": {
+            "buyer_flat": 25.0,
+            "seller_by_weight_g": {
+              "1000": 15.0,
+              "2000": 30.0,
+              "3000": 45.0,
+              "500": 7.5,
+              "5000": 75.0
+            }
+          },
+          "Normal/Doorstep Delivery (International Sea Shipping) (海运经济渠道)": {
+            "buyer_flat": 1.5,
+            "seller_by_weight_g": {
+              "1000": 60.0,
+              "2000": 120.0,
+              "3000": 180.0,
+              "500": 30.0,
+              "5000": 300.0
+            }
+          },
+          "Normal/Express Delivery (International)  （快速渠道）": {
+            "buyer_flat": 25.8,
+            "seller_by_weight_g": {
+              "1000": 60.0,
+              "2000": 120.0,
+              "3000": 180.0,
+              "500": 30.0,
+              "5000": 300.0
+            }
+          },
+          "Normal/Self Collection (Shopee Xpress) (买家自提渠道)": {
+            "buyer_flat": 0.0,
+            "seller_by_weight_g": {
+              "1000": 45.0,
+              "2000": 90.0,
+              "3000": 135.0,
+              "500": 22.5,
+              "5000": 225.0
+            }
+          },
+          "Normal/Standard Doorstep Delivery (International) (标准渠道)": {
+            "buyer_flat": 25.8,
+            "seller_by_weight_g": {
+              "1000": 60.0,
+              "2000": 120.0,
+              "3000": 180.0,
+              "500": 30.0,
+              "5000": 300.0
+            }
+          },
+          "Special/Sea Shipping（海运大件渠道）": {
+            "buyer_flat": 0.0,
+            "seller_by_weight_g": {
+              "1000": 15.0,
+              "2000": 25.0,
+              "3000": 35.0,
+              "500": 15.0,
+              "5000": 55.0
+            }
+          }
+        },
+        "currency": "MYR",
+        "how_to_compute": "seller_fee(config, 'MY', channel, weight_g, cargo)；实现见 shopee_ledger/freight.py",
+        "rate_date": "2026-10-03",
+        "reference_file": "spec/reference/sls-site-config-2026-10-03.json",
+        "source_api": "https://solutions.shopee.cn/sellers/pricing-simulator/api/sls/site-config",
+        "weight_unit": "g"
+      }
+    },
+    "P-PENALTY-RULES": {
+      "checked_at": "2025-06-01",
+      "created_at": "2026-10-03T09:26:01+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-PENALTY-RULES",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-25750-f576c327165e.txt",
+      "source_url": "https://shopee.cn/edu/article/25750",
+      "value": {
+        "free_shipping_coupon_threshold": {
+          "at_6_points": "失去免运优惠券权益；Shopee 会在卖家改善表现后恢复",
+          "rule": "卖家必须维持罚分少于 6 分，才能继续享有免运优惠券权益",
+          "scope_note": "这条来自菲律宾站运费说明；其他站点是否同规则未在本篇确认"
+        },
+        "penalty_period_shortened": {
+          "2026-08-31": [
+            "马来西亚第1-3级",
+            "巴西第1-3级",
+            "阿根廷第1-3级",
+            "台湾第1-2级"
+          ],
+          "2026-09-14": [
+            "新加坡第1级",
+            "墨西哥第1-2级"
+          ]
+        },
+        "scope_note": "本文只覆盖惩罚周期变更；FHR / 不良包装的计分标准不在本文"
+      }
+    },
+    "P-SLS-BANNED": {
+      "checked_at": "2026-09-16",
+      "created_at": "2026-10-03T09:12:47+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-SLS-BANNED",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-25237-acaf93ebfc33.txt",
+      "source_url": "https://shopee.cn/edu/article/25237",
+      "value": {
+        "attachment_bytes": 258939,
+        "attachment_note": "各站点禁运品类清单（B类违禁品标准、空运&陆运清单）——原件已入库 spec/evidence/attachments/",
+        "attachment_sha256": "aed1ead661f300cf2de28c9958dddf9215e143528f9231c7dedf0398aa4245e3",
+        "classes": {
+          "A": "国家法律法规及进出境口岸明令禁止寄递、运输的物品",
+          "B": "平台定义的禁运商品，包括特定国家/地区新增的禁运要求"
+        },
+        "final_judgement_rule": "查获的禁运品不限于附件所列名称；最终判定依据国家民航总局禁令、航空器安全因素、检验检疫局及海关限制出口物品",
+        "official_attachment": "https://mms.file.susercontent.com/api/v4/11195002/mms/cn-11195002-bmlg7-mt6ke0nkbi1091?app_type=shopee",
+        "vn_table_note": "越南站点逐类目禁运标记见 vn-highvalue-tax-26632.xlsx（2153 行）"
+      }
+    },
+    "P-TW-BUYER-SHIP": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:30:25+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-BUYER-SHIP",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": {
+        "benchmark_used_before": "行业估计「店配 60-80 TWD」实际接近 7-11/全家的买家固定运费 60 TWD",
+        "buyer_flat_fee_by_channel": {
+          "蝦皮海外 - 7-11": 60.0,
+          "蝦皮海外 - 7-11（海運）": 20.0,
+          "蝦皮海外 - OK MART（海運）": 10.0,
+          "蝦皮海外 - 全家": 60.0,
+          "蝦皮海外 - 宅配 （空運）": 70.0,
+          "蝦皮海外 - 宅配（海運）": 20.0,
+          "蝦皮海外 - 宅配（空運）": 70.0,
+          "蝦皮海外 - 快速到貨（蝦皮店到店）": 60.0,
+          "蝦皮海外 - 蝦皮店到店": 45.0,
+          "蝦皮海外 - 蝦皮店到店 （海運）": 15.0
+        },
+        "currency": "TWD",
+        "rate_date": "2026-10-03",
+        "rule": "买家实付运费在各渠道是**固定值**（与重量无关），不是按重量分档；卖家侧才是按重量累加",
+        "source_api": "https://solutions.shopee.cn/sellers/pricing-simulator/api/sls/site-config",
+        "why_it_matters": "净运费 = max(SLS 运费 − 买家实付, 0)；买家实付是固定额，直接减即可"
+      }
+    },
+    "P-TW-COMMISSION": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T08:41:41+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-COMMISSION",
+      "snapshot_ref": "data\\snapshots\\SRC-TW-COMMISSION-fbd3b7d4a989.txt",
+      "source_url": "https://shopee.cn/edu/article/26620",
+      "value": 0.14
+    },
+    "P-TW-DEPOSIT": {
+      "checked_at": "2025-12-15",
+      "created_at": "2026-10-03T09:12:46+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-DEPOSIT",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-16905-8a7cb601968f.txt",
+      "source_url": "https://shopee.cn/edu/article/16905",
+      "value": {
+        "activation": "资料审核通过 + 绑定收款账户 + 足额缴纳保证金 → 自动激活销售权",
+        "amount_cny": 3000,
+        "amount_display": "人民币3,000元整",
+        "charged_per": "同一个营业执照注册的卖家（商家）为单位，不是按店铺",
+        "confirm_within": "缴纳后 1-2 个工作日确认",
+        "consequence_of_not_paying": "移除所有店铺销售权及官方营销活动提报资格；移除 60 天后店铺被冻结",
+        "higher_required_when": [
+          "海外仓店铺（含一店多运或独立海外仓）",
+          "重点品类",
+          "多次违规"
+        ],
+        "pay_at": "中国卖家中心 >> 财务 >> 卖家保证金",
+        "scope": "所有中国跨境卖家（不含中国香港地区卖家及经 Shopee 通…）"
+      }
+    },
+    "P-TW-DTS": {
+      "checked_at": "2026-09-18",
+      "created_at": "2026-10-03T08:36:17+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-DTS",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-28294-e663dd49e965.txt",
+      "source_url": "https://shopee.cn/edu/article/28294",
+      "value": {
+        "auto_cancel_example": "DTS=1：9/23 11:00 下单 → 9/24 前扫描为准时；9/27 前须到仓扫描，否则订单自动取消。DTS=2：→ 9/26 准时；9/29 须到仓",
+        "definition": "DTS = Days To Ship（出货天数）：订单从确认到完成发货所需的时间，也称备货时长/备货天数",
+        "on_time": "DTS 天内被首公里成功扫描或到仓扫描即视为准时出货",
+        "open_question": "原文只给了节假日豁免期的示例，未给出「自动取消 = 准时日 + N 天」的通用公式",
+        "workday_rule": "只计算发货工作日（周一至周六），不包含周日及法定节假日",
+        "workdays_only": true
+      }
+    },
+    "P-TW-FX": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:24:39+00:00",
+      "evidence_level": "B",
+      "operator": "cli",
+      "param_id": "P-TW-FX",
+      "source_url": "https://solutions.shopee.cn/sellers/lff-cost-calculator/",
+      "value": {
+        "all_sites": {
+          "BR": "0.78",
+          "MX": "2.51",
+          "MY": "0.65",
+          "PH": "8.09",
+          "SG": "0.19",
+          "TH": "5.07",
+          "TW": "4.49",
+          "VN": "3498.85"
+        },
+        "kind": "cost_calculator_reference_rate",
+        "reference_file": "spec/reference/lff-site-and-channel.json",
+        "reference_rate_display": "1 CNY ≈ 4.49 TWD",
+        "reference_rate_twd_per_cny": 4.49,
+        "what_it_is": "Shopee 官方「多履约渠道利润计算器」用于成本换算的参考汇率",
+        "what_it_is_NOT": "**不是**卖家中心的实际结算汇率；结算汇率只在卖家中心账单里",
+        "why_only_B": "来源是官方的，但它回答的是「成本建模用哪个汇率」，不是参数要的「结算汇率」。给 B 而不是 A，避免把建模汇率当成结算汇率用。"
+      }
+    },
+    "P-TW-LIQUID-ML": {
+      "checked_at": "2025-01-09",
+      "created_at": "2026-10-03T09:12:46+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-LIQUID-ML",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-23907-5f0cf541f9b2.txt",
+      "source_url": "https://shopee.cn/edu/article/23907",
+      "value": {
+        "caveat": "能否寄运要看禁运清单（P-SLS-BANNED），本文不构成运输许可",
+        "leaky_categories": [
+          "液体",
+          "乳状液",
+          "谷物",
+          "种子",
+          "粉末",
+          "凝胶内容物",
+          "湿巾",
+          "面膜",
+          "含液体和谷物的食品",
+          "压力液体/乳状液（最多50公斤）",
+          "蜡"
+        ],
+        "packaging_rule": "所有易漏品带盖应该有盖胶带",
+        "packaging_threshold_kg": 5,
+        "packaging_threshold_ml": 150,
+        "scope_note": "这是《易漏品和易碎品/易损品 - 包装指南》的分类门槛（小于150毫升/5公斤 vs 大于等于），用于决定**包装要求**，不是运输禁令"
+      }
+    },
+    "P-TW-PARCEL-CAP": {
+      "checked_at": "2025-12-24",
+      "created_at": "2026-10-03T09:12:46+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-PARCEL-CAP",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26633-32de554bcfcd.txt",
+      "source_url": "https://shopee.cn/edu/article/26633",
+      "value": {
+        "commercial_import_risk": "组合SKU相同物品>5件可能被判商业进口触发正报，需保持套装内 SKU ≤ 5 件",
+        "distinction": "这是**快递进口申报货值上限**，不是关税起征点（免税额另见 P-TW-TAX-THRESHOLD）",
+        "exceeding_means": "无法快递进口申报，转正式进口报关（高成本/延迟），报关费+滞纳金向卖家收取",
+        "express_import_declaration_cap_twd": 50000,
+        "other_formal_declaration_triggers": [
+          "包装后重量>70kg",
+          "包装后两边长度均>130cm",
+          "涉及主管机关规范商品",
+          "其他海关查验告知"
+        ]
+      }
+    },
+    "P-TW-PRESALE-FEE": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T08:41:41+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-PRESALE-FEE",
+      "snapshot_ref": "data\\snapshots\\SRC-TW-PRESALE-FEE-fbd3b7d4a989.txt",
+      "source_url": "https://shopee.cn/edu/article/26620",
+      "value": 0.03
+    },
+    "P-TW-SHIPPING-FEE-RANGE": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:30:26+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-SHIPPING-FEE-RANGE",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": {
+        "buyer_side_twd": {
+          "蝦皮海外 - 7-11": 60.0,
+          "蝦皮海外 - 7-11（海運）": 20.0,
+          "蝦皮海外 - OK MART（海運）": 10.0,
+          "蝦皮海外 - 全家": 60.0,
+          "蝦皮海外 - 宅配 （空運）": 70.0,
+          "蝦皮海外 - 宅配（海運）": 20.0,
+          "蝦皮海外 - 宅配（空運）": 70.0,
+          "蝦皮海外 - 快速到貨（蝦皮店到店）": 60.0,
+          "蝦皮海外 - 蝦皮店到店": 45.0,
+          "蝦皮海外 - 蝦皮店到店 （海運）": 15.0
+        },
+        "correction": "**旧估计把买家侧与卖家侧混在一起了**：basis 里写的「店配约 60-80、宅配约 80-120」接近于买家固定运费（7-11/全家 60、宅配空运 70），而卖家承担的跨境物流成本首重 500g 只有 25 TWD、按 500g 档累加。两者量级完全不同，混用会把净运费成本算错一个数量级。",
+        "currency": "TWD",
+        "rate_date": "2026-10-03",
+        "seller_side_by_weight": {
+          "蝦皮海外 - 7-11": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 7-11（海運）": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - OK MART（海運）": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 全家": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 宅配 （空運）": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 宅配（海運）": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 宅配（空運）": {
+            "1000": 55.0,
+            "2000": 135.0,
+            "3000": 245.0,
+            "500": 25.0,
+            "5000": 485.0
+          },
+          "蝦皮海外 - 快速到貨（蝦皮店到店）": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 蝦皮店到店": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          },
+          "蝦皮海外 - 蝦皮店到店 （海運）": {
+            "1000": 85.0,
+            "2000": 185.0,
+            "3000": 315.0,
+            "500": 45.0,
+            "5000": 595.0
+          }
+        },
+        "source_api": "https://solutions.shopee.cn/sellers/pricing-simulator/api/sls/site-config"
+      }
+    },
+    "P-TW-SHOPEE-SHIP-W": {
+      "checked_at": "2025-12-24",
+      "created_at": "2026-10-03T09:12:46+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-SHOPEE-SHIP-W",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26634-b5af9093e74e.txt",
+      "source_url": "https://shopee.cn/edu/article/26634",
+      "value": {
+        "channel": "蝦皮海外五日到貨（蝦皮店到店）— 台湾站点店配渠道",
+        "consequence": "未按要求发货，下个月将被移除该渠道使用资格",
+        "dims_cm": [
+          45,
+          30,
+          30
+        ],
+        "longest_side_max_cm": 45,
+        "max_weight_display": "≤10KG",
+        "max_weight_g": 10000,
+        "other_sides_max_cm": 30,
+        "resolved_conflict": "spec 的 unverified_claim 里 10kg 与 5kg 二说并存；官方渠道页写明 ≤10KG，故 10kg 成立、5kg 不成立"
+      }
+    },
+    "P-TW-SLS-TIERS": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T09:16:51+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-SLS-TIERS",
+      "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+      "value": {
+        "caveat_from_official": "模拟器页面自述：若此表与「藏价与运费计算工具」有差异，以企业微信那个为准（https://shopee.cn/edu/article/5091）。",
+        "channels": {
+          "普货/蝦皮海外 - 7-11": [
+            {
+              "effective_date": "2021-01-01",
+              "end_weight_g": null,
+              "fee": 60.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1500.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 7-11（海運）": [
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 999.99,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 1500.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1500.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-04-01",
+              "end_weight_g": null,
+              "fee": 20.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - OK MART（海運）": [
+            {
+              "effective_date": "2026-04-01",
+              "end_weight_g": null,
+              "fee": 10.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 全家": [
+            {
+              "effective_date": "2021-01-01",
+              "end_weight_g": null,
+              "fee": 60.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 宅配（海運）": [
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": null,
+              "fee": 20.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 1500.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 宅配（空運）": [
+            {
+              "effective_date": "2021-01-01",
+              "end_weight_g": null,
+              "fee": 70.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 快速到貨（蝦皮店到店）": [
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": null,
+              "fee": 60.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 蝦皮店到店": [
+            {
+              "effective_date": "2024-05-01",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2024-05-01",
+              "end_weight_g": null,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2024-05-01",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2024-05-01",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2024-05-01",
+              "end_weight_g": 2499.99,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2024-05-01",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.0,
+              "zone": "所有地区"
+            }
+          ],
+          "普货/蝦皮海外 - 蝦皮店到店 （海運）": [
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 500.0,
+              "fee": 25.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 30.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 1500.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": null,
+              "fee": 15.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 7-11": [
+            {
+              "effective_date": "2021-01-01",
+              "end_weight_g": null,
+              "fee": 60.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 7-11（海運）": [
+            {
+              "effective_date": "2026-04-01",
+              "end_weight_g": null,
+              "fee": 20.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 1500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-09-05",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - OK MART（海運）": [
+            {
+              "effective_date": "2026-04-01",
+              "end_weight_g": null,
+              "fee": 10.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-10-31",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 全家": [
+            {
+              "effective_date": "2021-01-01",
+              "end_weight_g": null,
+              "fee": 60.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 宅配 （空運）": [
+            {
+              "effective_date": "2021-01-01",
+              "end_weight_g": null,
+              "fee": 70.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-09",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 宅配（海運）": [
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": null,
+              "fee": 20.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-08-23",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 快速到貨（蝦皮店到店）": [
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2025-02-26",
+              "end_weight_g": null,
+              "fee": 60.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 蝦皮店到店": [
+            {
+              "effective_date": "2022-05-12",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-12",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-12",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-12",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2022-05-12",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "所有地区"
+            },
+            {
+              "effective_date": "2023-02-01",
+              "end_weight_g": null,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "所有地区"
+            }
+          ],
+          "特货/蝦皮海外 - 蝦皮店到店 （海運）": [
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 500.0,
+              "fee": 45.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "WeightRange",
+              "payer": "Seller",
+              "start_weight_g": 0.0,
+              "zone": "全部地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 1000.0,
+              "fee": null,
+              "increment_amount": 40.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 500.01,
+              "zone": "全部地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 1500.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1000.01,
+              "zone": "全部地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 2000.0,
+              "fee": null,
+              "increment_amount": 50.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 1500.01,
+              "zone": "全部地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": 2500.0,
+              "fee": null,
+              "increment_amount": 60.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2000.01,
+              "zone": "全部地区"
+            },
+            {
+              "effective_date": "2026-01-05",
+              "end_weight_g": null,
+              "fee": null,
+              "increment_amount": 70.0,
+              "increment_unit_g": 500.0,
+              "mode": "Increment",
+              "payer": "Seller",
+              "start_weight_g": 2500.01,
+              "zone": "全部地区"
+            },
+            {
+              "effective_date": "2026-04-01",
+              "end_weight_g": null,
+              "fee": 15.0,
+              "increment_amount": null,
+              "increment_unit_g": null,
+              "mode": "Flat",
+              "payer": "Buyer",
+              "start_weight_g": null,
+              "zone": "全部地区"
+            }
+          ]
+        },
+        "currency": "TWD",
+        "how_to_read": "同一渠道的 fee_modes 是一张平铺的表：type=Buyer 是买家付的固定运费；type=Seller 是卖家承担的跨境物流成本（藏价），name=WeightRange 给出首重档的 original_fee，name=Increment 给出该重量区间的 increment_amount/每 increment_unit_g。",
+        "rate_date": "2026-10-03",
+        "reference_file": "spec/reference/sls-site-config-2026-10-03.json",
+        "source": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+        "unverified": "**累计口径未验证**：Increment 档是逐档累加还是取所在档的单价，官方表里没有说明。定价模拟器本身能算，可拿它当 oracle 反推公式；在验证前不得用这张表自动算运费。",
+        "weight_unit": "g"
+      }
+    },
+    "P-TW-TXN-FEE": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T08:41:41+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-TXN-FEE",
+      "snapshot_ref": "data\\snapshots\\SRC-TW-TXN-FEE-fbd3b7d4a989.txt",
+      "source_url": "https://shopee.cn/edu/article/26620",
+      "value": 0.025
+    },
+    "P-TW-TXN-FEE-BASIS": {
+      "checked_at": "2026-09-22",
+      "created_at": "2026-10-03T09:26:01+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-TXN-FEE-BASIS",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-25770-ed91fc65ffea.txt",
+      "source_url": "https://shopee.cn/edu/article/25770",
+      "value": {
+        "charged_on": "仅对已完成订单收取（订单已履约且买家点击【确认收货】）",
+        "commission_base": "商品应用完所有卖家自设优惠（店铺折扣、卖家优惠券）后的最终售价",
+        "not_charged_on": [
+          "被取消的订单",
+          "买家在确认收货前发起退货退款的订单",
+          "仍在运输中、买家尚未确认收货的订单"
+        ],
+        "reference_file": "spec/reference/order-settlement-structure.json",
+        "settlement": "系统在每笔订单结算前自动从收入中扣除，剩余部分打入卖家余额",
+        "sst_note": "官方示例中佣金与交易手续费均**含 SST**；成本核算漏掉会高估利润",
+        "structure": "订单收入 = 商品总额 - 运费总额 - 优惠券与回扣 - 各项费用；各项费用 = 佣金 + 服务费 + 交易手续费"
+      }
+    }
+  }
+}

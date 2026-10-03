@@ -127,6 +127,12 @@ def main(argv: list[str] | None = None) -> int:
     fr.add_argument("--check", action="store_true", help="只比对不保存；有变化时返回码 1")
     fr.add_argument("--list", metavar="CHANNEL", help="列出名字含该关键词的渠道费率档位")
 
+    sub.add_parser("export-verified",
+                   help="把核实成果导出到 spec/verified.json（真值进 git，数据库只是派生物）")
+    imp = sub.add_parser("import-verified",
+                         help="把 spec/verified.json 回灌进库（换机器/重建库后恢复核实成果）")
+    imp.add_argument("--dry-run", action="store_true", help="只报将要写入什么")
+
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
@@ -506,6 +512,56 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                                     result="PASS" if not changes else "WARN",
                                     detail={"date": config["date"], "cards": len(cards),
                                             "changes": changes[:20]})
+        return 0
+    if args.cmd == "export-verified":
+        from shopee_ledger.verified import build_verified, write_verified
+
+        ledger.init()
+        payload = build_verified(ledger.storage.list("ParamOverride", limit=2000),
+                                 ledger.storage.list("VerificationTask", limit=2000))
+        path = write_verified(payload)
+        print("已导出 %d 个参数覆盖、%d 条核实结论 → %s"
+              % (len(payload["params"]), len(payload["checklist_done"]), path))
+        print("数据库是派生物；真值现在随 git 走了。")
+        return 0
+    if args.cmd == "import-verified":
+        from shopee_ledger.verified import read_verified
+
+        payload = read_verified()
+        print("文件里有 %d 个参数覆盖、%d 条核实结论"
+              % (len(payload["params"]), len(payload["checklist_done"])))
+        if args.dry_run:
+            for param_id, item in sorted(payload["params"].items()):
+                print("   将写入 %-26s %s 级" % (param_id, item.get("evidence_level")))
+            return 0
+        ledger.init()
+        restored_params = restored_tasks = 0
+        for param_id, item in sorted(payload["params"].items()):
+            existing = [row for row in ledger.storage.list("ParamOverride", limit=2000)
+                        if row["param_id"] == param_id
+                        and row.get("checked_at") == item.get("checked_at")]
+            if existing:
+                continue
+            ledger.storage.insert("ParamOverride", {
+                "param_id": param_id, "value": item.get("value"),
+                "evidence_level": item.get("evidence_level"),
+                "source_url": item.get("source_url"), "snapshot_ref": item.get("snapshot_ref"),
+                "checked_at": item.get("checked_at"),
+                "note": "从 spec/verified.json 回灌",
+                "operator": item.get("operator") or "import",
+            })
+            restored_params += 1
+        tasks = {row["spec_task_id"]: row for row in ledger.checklist_rows()}
+        for item in payload["checklist_done"]:
+            row = tasks.get(item.get("spec_task_id"))
+            if not row or row["conclusion"]:
+                continue
+            ledger.set_checklist(row["id"], item.get("checked_date") or "",
+                                 item.get("conclusion") or "", item.get("grade"),
+                                 source_url=item.get("source_url"),
+                                 snapshot_ref=item.get("snapshot_ref"))
+            restored_tasks += 1
+        print("回灌完成：参数覆盖 %d 条、核实结论 %d 条" % (restored_params, restored_tasks))
         return 0
     if args.cmd == "check-sources":
         import urllib.error
