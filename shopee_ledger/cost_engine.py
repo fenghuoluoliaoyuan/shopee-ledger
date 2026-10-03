@@ -129,6 +129,18 @@ class CostResult:
     components: dict[str, float] = field(default_factory=dict)
     context: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        """INV-004：INCOMPLETE 必须说清缺什么。
+
+        这条以前只在 governance.json 里是一句话，**源码与测试里都没人提**——
+        典型的"纸面不变量"。而它恰恰守着一个很容易犯的错：拿"算不出来"当结论
+        却不说明为什么，调用方只能猜。说不出来就是引擎 bug，不是数据不全，
+        所以在构造时就拒绝，而不是等人在报表里发现。
+        """
+        if self.status == INCOMPLETE and not self.missing:
+            raise ValueError(
+                "INV-004 违反：status=INCOMPLETE 但 missing 为空——这是引擎 bug，不是数据不全")
+
     @property
     def computed(self) -> bool:
         return self.status == COMPUTED
