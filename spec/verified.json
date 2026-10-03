@@ -515,6 +515,30 @@
       "source_url": "https://shopee.cn/edu/article/26620",
       "value": 0.14
     },
+    "P-TW-DELIVERY-DAYS": {
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T10:49:36+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TW-DELIVERY-DAYS",
+      "snapshot_ref": "spec/reference/delivery-deadline-samples.json",
+      "source_url": "https://solutions.shopee.cn/sellers/delivery-calculator/#/order-date",
+      "value": {
+        "all_markets_same": "9 个站点在相同输入下的 DTS 与扫描截止完全一致（官方页面亦注明「各站点发货时效一致」）",
+        "definition": "发货时效（跨境订单）：从下单到必须完成发货、以及必须到仓扫描的时点",
+        "dts_examples": {
+          "DTS=1 下单 2026-09-23": "DTS 2026-09-24，扫描截止 2026-09-27",
+          "DTS=2 下单 2026-09-23": "DTS 2026-09-26，扫描截止 2026-09-29"
+        },
+        "dts_rule": "DTS（最迟发货时间）= 下单日 + 备货天数，按发货日推进",
+        "how_to_reproduce": "python -m shopee_ledger delivery --verify",
+        "natural_day_no_holiday_shift": "自然日站点的扫描截止只看日历天数，不因节假日顺延",
+        "scan_rule_business": "到仓扫描截止 = DTS + 3 发货日（TH/BR/AR）",
+        "scan_rule_natural": "到仓扫描截止 = DTS + 3 自然日（TW/MY/PH/SG/VN/MX 等）",
+        "shipping_day": "发货日 = 非周日、非节假日（**周六算工作日**）",
+        "verification": "630/630 样本外验证（14 个下单日 × 5 种备货天数 × 9 个站点）"
+      }
+    },
     "P-TW-DEPOSIT": {
       "checked_at": "2025-12-15",
       "created_at": "2026-10-03T09:12:46+00:00",
@@ -540,18 +564,19 @@
       }
     },
     "P-TW-DTS": {
-      "checked_at": "2026-09-18",
-      "created_at": "2026-10-03T08:36:17+00:00",
+      "checked_at": "2026-10-03",
+      "created_at": "2026-10-03T10:49:37+00:00",
       "evidence_level": "A",
       "operator": "cli",
       "param_id": "P-TW-DTS",
-      "snapshot_ref": "data\\snapshots\\ARTICLE-28294-e663dd49e965.txt",
-      "source_url": "https://shopee.cn/edu/article/28294",
+      "snapshot_ref": "spec/reference/delivery-deadline-samples.json",
+      "source_url": "https://solutions.shopee.cn/sellers/delivery-calculator/#/order-date",
       "value": {
         "auto_cancel_example": "DTS=1：9/23 11:00 下单 → 9/24 前扫描为准时；9/27 前须到仓扫描，否则订单自动取消。DTS=2：→ 9/26 准时；9/29 须到仓",
+        "cross_check": "该规则由两条独立来源互证：原文给的工作日规则（周一至周六、不含周日与法定节假日）与计算器接口实测归纳一致；且本实现精确复现了原文示例（9/24 & 9/27、9/26 & 9/29）",
         "definition": "DTS = Days To Ship（出货天数）：订单从确认到完成发货所需的时间，也称备货时长/备货天数",
         "on_time": "DTS 天内被首公里成功扫描或到仓扫描即视为准时出货",
-        "open_question": "原文只给了节假日豁免期的示例，未给出「自动取消 = 准时日 + N 天」的通用公式",
+        "scan_deadline_rule": "到仓扫描截止 = DTS + 3 自然日（TH/BR/AR 为 DTS + 3 发货日）——原先的 open_question 已由发货时间计算器接口解决",
         "workday_rule": "只计算发货工作日（周一至周六），不包含周日及法定节假日",
         "workdays_only": true
       }

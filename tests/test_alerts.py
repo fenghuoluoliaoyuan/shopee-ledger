@@ -45,6 +45,20 @@ class AlertTest(unittest.TestCase):
         self.ledger.storage.record_audit("order.transition", "order", self.order,
                                          at=text, detail={"from": "stock_checked", "to": "ship_arranged"})
 
+    def _enable_dts(self) -> None:
+        """把 P-TW-DTS 升到 A 级——EX-02 只在参数已核实时才启用。"""
+        self.ledger._spec = default_spec().with_overrides([{
+            "param_id": "P-TW-DTS", "value": {"days": 5}, "evidence_level": "A",
+            "checked_at": "2026-10-03", "source_url": "https://seller.test/dts",
+        }])
+        self.assertTrue(self.ledger.dts_ready())
+
+    def _near_deadline(self, hours: float) -> None:
+        """把到仓扫描截止挪到距现在 hours 小时处。"""
+        stamp = (datetime.now(timezone.utc) + timedelta(hours=hours))
+        self.ledger.storage.update("Order", self.order,
+                                   {"scan_deadline": stamp.isoformat(timespec="seconds")})
+
     # ---- 时间戳接线 -----------------------------------------------------
     def test_state_since_reads_latest_transition(self):
         self.ledger.apply_arrange(self.order)
@@ -106,8 +120,53 @@ class AlertTest(unittest.TestCase):
         }])
         self.assertTrue(self.ledger.dts_ready())
         self._to_supplier_shipped()
-        self._backdate(200)
+        self._near_deadline(hours=6)
         self.assertEqual(len([a for a in self.ledger.order_alerts() if a["id"] == "EX-02"]), 1)
+
+    def test_ex02_does_not_fire_while_the_deadline_is_far(self):
+        """这是改动的要点：**时间在过去不等于有风险**。
+
+        旧口径是"进入 supplier_shipped 满 72 小时"，既不看站点也不看下单时刻——
+        一单要是备货 7 天，它在第 3 天就会被误报。
+        """
+        self._enable_dts()
+        self._to_supplier_shipped()
+        self._backdate(200)          # 状态里待了很久
+        self.assertEqual([a for a in self.ledger.order_alerts() if a["id"] == "EX-02"], [],
+                         "到仓截止还早，不该因为「待得久」就报警")
+
+    def test_ex02_says_how_long_is_left(self):
+        """告警要给数字，不能只说"有风险"——靠它决定现在去催还是明天再说。"""
+        self._enable_dts()
+        self._to_supplier_shipped()
+        self._near_deadline(hours=6)
+        alert = [a for a in self.ledger.order_alerts() if a["id"] == "EX-02"][0]
+        self.assertIn("到仓扫描截止", alert["message"])
+        self.assertLessEqual(alert["hours_to_scan_deadline"], 24)
+        self.assertTrue(alert["scan_deadline"])
+
+    def test_ex02_distinguishes_already_overdue(self):
+        self._enable_dts()
+        self._to_supplier_shipped()
+        self._near_deadline(hours=-3)      # 已过期
+        alert = [a for a in self.ledger.order_alerts() if a["id"] == "EX-02"][0]
+        self.assertIn("已过", alert["message"])
+
+    def test_deadlines_are_frozen_at_order_time(self):
+        """开单时算好并冻住——以后改商品的备货时长，不该改写已经开出去的单。"""
+        info = self.ledger.order_deadlines(self.order)
+        self.assertTrue(info["frozen"])
+        self.assertTrue(info["dts"] and info["scan"])
+        self.ledger.set_dts_days(self.candidate, 7)
+        again = self.ledger.order_deadlines(self.order)
+        self.assertEqual(again["scan"], info["scan"], "已开的单不该被改")
+        # 但新开的单要用新值
+        fresh = self.ledger.open_order(self.candidate)
+        self.assertEqual(self.ledger.order_deadlines(fresh)["dts_days"], 7)
+
+    def test_scan_deadline_is_after_the_dts_deadline(self):
+        info = self.ledger.order_deadlines(self.order)
+        self.assertLess(info["dts"], info["scan"])
 
     # ---- EX-03 与终态 ---------------------------------------------------
     def test_ex03_on_cancelled_order(self):

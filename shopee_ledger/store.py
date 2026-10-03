@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any
 
 from shopee_ledger.cost_engine import COMPUTED, CostEngine, CostInputs, CostResult
+from shopee_ledger.delivery import (DEFAULT_DTS_DAYS, deadlines_at, end_of_day_iso,
+                                    hours_until)
 from shopee_ledger.fulfillment import (
     Fulfillment,
     advance,
@@ -432,13 +434,44 @@ class Ledger:
         candidate = self._candidate(candidate_id) or {}
         view = self.quote(candidate_id)  # 把下单时的估算冻住，之后改参数不影响这一单
         frozen = view.cost.computed
+        # 发货时效从**下单时刻**开始走，所以开单时就把两个截止算出来冻住。
+        # 与成本快照同一个道理：规则以后变了，不该改写已经开出去的单。
+        created = _now()
+        market = candidate.get("market", "TW")
+        dts_days = candidate.get("dts_days")
+        dts_days = DEFAULT_DTS_DAYS if dts_days is None else int(dts_days)
+        deadline = deadlines_at(created, market=market, dts_days=dts_days)
         return self.storage.insert("Order", {
-            "platform": "shopee", "market": candidate.get("market", "TW"),
+            "platform": "shopee", "market": market,
             "mode": "dropship", "listing_id": str(candidate_id), "candidate_id": str(candidate_id),
-            "state": "created", "steps": "", "block_reason": "", "created_at": _now(),
+            "state": "created", "steps": "", "block_reason": "", "created_at": created,
             "estimate_net": view.net if frozen else None,
             "estimate_rate": view.rate if frozen else None,
+            "dts_days": dts_days,
+            "deadline": end_of_day_iso(deadline.dts_day),
+            "scan_deadline": end_of_day_iso(deadline.scan_day),
         })
+
+    def set_dts_days(self, candidate_id: int, days: int) -> None:
+        """设置一个商品的备货时长。之后开的单按新值算，已开的单不变。"""
+        if days < 0:
+            raise ValueError("备货时长不能为负")
+        self.storage.update("ProductCandidate", candidate_id, {"dts_days": int(days)})
+
+    def order_deadlines(self, order_id: int) -> dict[str, Any]:
+        """一个订单的截止时间。老单没有算出来的截止就现算一份，只用于展示。"""
+        row = self.storage.get("Order", order_id) or {}
+        if row.get("scan_deadline"):
+            return {"dts": row.get("deadline") or "", "scan": row.get("scan_deadline") or "",
+                    "frozen": True, "dts_days": row.get("dts_days"),
+                    "market": row.get("market") or "TW"}
+        market = row.get("market") or "TW"
+        candidate = self._candidate(int(row["candidate_id"])) if row.get("candidate_id") else {}
+        dts_days = candidate.get("dts_days")
+        dts_days = DEFAULT_DTS_DAYS if dts_days is None else int(dts_days)
+        result = deadlines_at(row.get("created_at") or _now(), market=market, dts_days=dts_days)
+        return {"dts": end_of_day_iso(result.dts_day), "scan": end_of_day_iso(result.scan_day),
+                "frozen": False, "dts_days": dts_days, "market": market}
 
     def load_order(self, order_id: int) -> Fulfillment:
         row = self.storage.get("Order", order_id)
@@ -711,9 +744,15 @@ class Ledger:
             if row.get("status") == "paid":
                 continue
             hours = self.hours_in_state(row["id"])
-            for item in machine.exceptions(hours_in_state=hours, dts_ready=ready):
+            info = self.order_deadlines(row["id"])
+            left = hours_until(info["scan"]) if info.get("scan") else None
+            for item in machine.exceptions(hours_in_state=hours, dts_ready=ready,
+                                           hours_to_scan_deadline=left,
+                                           scan_deadline=(info.get("scan") or "")[:16]):
                 alerts.append(dict(item, order_id=row["id"], state=machine.state,
                                    candidate=row.get("candidate_name"),
+                                   scan_deadline=info.get("scan") or "",
+                                   hours_to_scan_deadline=None if left is None else round(left, 1),
                                    hours_in_state=None if hours is None else round(hours, 1)))
         alerts.sort(key=lambda item: (item.get("priority") != "P1", item.get("order_id") or 0))
         return alerts

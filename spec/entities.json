@@ -2,328 +2,1508 @@
   "schema_version": "4.0.0",
   "layer": "entities",
   "note": "实体按 layer 归属：platform（平台级）/ module:<key> / mode:<id>。字段记法：type 为逻辑类型；required 为必填；level 为该字段的证据等级；param 关联参数 ID。",
-  "immutable_entities": ["CostSnapshot", "SupplierQuote", "AuditLog", "ParamOverride"],
+  "immutable_entities": [
+    "CostSnapshot",
+    "SupplierQuote",
+    "AuditLog",
+    "ParamOverride"
+  ],
   "entities": [
-    { "id": "Param", "layer": "platform", "key": "param_id",
+    {
+      "id": "Param",
+      "layer": "platform",
+      "key": "param_id",
       "fields": [
-        {"name": "name", "type": "string", "required": true},
-        {"name": "scope", "type": "object", "required": true, "shape": {"platform": "string", "market": "string", "mode": "string"}},
-        {"name": "value", "type": "any", "required": true, "note": "允许 null 表示未核实；禁止用 0 冒充未知"},
-        {"name": "unverified_claim", "type": "any", "required": false, "note": "E 级的未核实候选值，只有 advisory 规则可读"},
-        {"name": "evidence_level", "type": "enum", "values": ["A", "B", "C", "D", "E"], "required": true},
-        {"name": "state", "type": "enum", "values": ["draft", "to_verify", "active", "stale"], "required": true},
-        {"name": "gate_eligible", "type": "boolean", "required": true},
-        {"name": "source", "type": "object", "required": false},
-        {"name": "corroboration", "type": "array", "required": false},
-        {"name": "snapshot_ref", "type": "string", "required": false, "required_when": "evidence_level == 'A'"},
-        {"name": "review_cycle", "type": "string", "required": true},
-        {"name": "next_review_at", "type": "date", "required": true}
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "type": "object",
+          "required": true,
+          "shape": {
+            "platform": "string",
+            "market": "string",
+            "mode": "string"
+          }
+        },
+        {
+          "name": "value",
+          "type": "any",
+          "required": true,
+          "note": "允许 null 表示未核实；禁止用 0 冒充未知"
+        },
+        {
+          "name": "unverified_claim",
+          "type": "any",
+          "required": false,
+          "note": "E 级的未核实候选值，只有 advisory 规则可读"
+        },
+        {
+          "name": "evidence_level",
+          "type": "enum",
+          "values": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E"
+          ],
+          "required": true
+        },
+        {
+          "name": "state",
+          "type": "enum",
+          "values": [
+            "draft",
+            "to_verify",
+            "active",
+            "stale"
+          ],
+          "required": true
+        },
+        {
+          "name": "gate_eligible",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "object",
+          "required": false
+        },
+        {
+          "name": "corroboration",
+          "type": "array",
+          "required": false
+        },
+        {
+          "name": "snapshot_ref",
+          "type": "string",
+          "required": false,
+          "required_when": "evidence_level == 'A'"
+        },
+        {
+          "name": "review_cycle",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "next_review_at",
+          "type": "date",
+          "required": true
+        }
       ]
     },
-    { "id": "Rule", "layer": "platform", "key": "rule_id",
+    {
+      "id": "Rule",
+      "layer": "platform",
+      "key": "rule_id",
       "fields": [
-        {"name": "name", "type": "string", "required": true},
-        {"name": "layer", "type": "enum", "values": ["platform", "mode"], "required": true},
-        {"name": "mode", "type": "string", "required": false},
-        {"name": "gate", "type": "string", "required": true},
-        {"name": "level", "type": "enum", "values": ["hard", "soft", "advisory"], "required": true},
-        {"name": "action", "type": "enum", "values": ["BLOCK", "WARN", "AUTO_FILL", "TASK", "ALERT"], "required": true},
-        {"name": "condition", "type": "string", "required": true},
-        {"name": "depends_on", "type": "array<string>", "required": true},
-        {"name": "evidence_level", "type": "enum", "values": ["A", "B", "C", "D", "E"], "required": false},
-        {"name": "on_degrade", "type": "string", "required": false},
-        {"name": "result", "type": "enum", "values": ["PASS", "INCOMPLETE", "WARN", "REJECT"], "required": false},
-        {"name": "advisory_only", "type": "boolean", "required": false},
-        {"name": "reads_unverified_claim", "type": "boolean", "required": false}
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "layer",
+          "type": "enum",
+          "values": [
+            "platform",
+            "mode"
+          ],
+          "required": true
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "gate",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "level",
+          "type": "enum",
+          "values": [
+            "hard",
+            "soft",
+            "advisory"
+          ],
+          "required": true
+        },
+        {
+          "name": "action",
+          "type": "enum",
+          "values": [
+            "BLOCK",
+            "WARN",
+            "AUTO_FILL",
+            "TASK",
+            "ALERT"
+          ],
+          "required": true
+        },
+        {
+          "name": "condition",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "depends_on",
+          "type": "array<string>",
+          "required": true
+        },
+        {
+          "name": "evidence_level",
+          "type": "enum",
+          "values": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E"
+          ],
+          "required": false
+        },
+        {
+          "name": "on_degrade",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "result",
+          "type": "enum",
+          "values": [
+            "PASS",
+            "INCOMPLETE",
+            "WARN",
+            "REJECT"
+          ],
+          "required": false
+        },
+        {
+          "name": "advisory_only",
+          "type": "boolean",
+          "required": false
+        },
+        {
+          "name": "reads_unverified_claim",
+          "type": "boolean",
+          "required": false
+        }
       ]
     },
-    { "id": "VerificationTask", "layer": "platform", "key": "task_id",
+    {
+      "id": "VerificationTask",
+      "layer": "platform",
+      "key": "task_id",
       "fields": [
-        {"name": "module", "type": "string", "required": true},
-        {"name": "item", "type": "string", "required": true},
-        {"name": "channel", "type": "string", "required": true},
-        {"name": "blocks_first_order", "type": "boolean", "required": true},
-        {"name": "target_param_id", "type": "string", "required": false},
-        {"name": "status", "type": "enum", "values": ["todo", "doing", "done", "upgraded"], "required": true},
-        {"name": "owner", "type": "string", "required": false},
-        {"name": "due_at", "type": "date", "required": false},
-        {"name": "conclusion", "type": "string", "required": false},
-        {"name": "evidence_ref", "type": "string", "required": false},
-        {"name": "spec_task_id", "type": "string", "required": false, "note": "spec/evidence 里的任务 id（VT-xxx）"},
-        {"name": "grade", "type": "enum", "required": false, "note": "核实后的证据等级"},
-        {"name": "checked_date", "type": "string", "required": false, "note": "核实日期"},
-        {"name": "source_url", "type": "string", "required": false, "note": "核实依据的可打开 URL（A 级必须有）"},
-        {"name": "snapshot_ref", "type": "string", "required": false, "note": "截图/存档引用：本地路径或链接"}
+        {
+          "name": "module",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "item",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "channel",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "blocks_first_order",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "target_param_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "todo",
+            "doing",
+            "done",
+            "upgraded"
+          ],
+          "required": true
+        },
+        {
+          "name": "owner",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "due_at",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "conclusion",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "evidence_ref",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "spec_task_id",
+          "type": "string",
+          "required": false,
+          "note": "spec/evidence 里的任务 id（VT-xxx）"
+        },
+        {
+          "name": "grade",
+          "type": "enum",
+          "required": false,
+          "note": "核实后的证据等级"
+        },
+        {
+          "name": "checked_date",
+          "type": "string",
+          "required": false,
+          "note": "核实日期"
+        },
+        {
+          "name": "source_url",
+          "type": "string",
+          "required": false,
+          "note": "核实依据的可打开 URL（A 级必须有）"
+        },
+        {
+          "name": "snapshot_ref",
+          "type": "string",
+          "required": false,
+          "note": "截图/存档引用：本地路径或链接"
+        }
       ]
     },
-    { "id": "AuditLog", "layer": "platform", "key": "log_id",
+    {
+      "id": "AuditLog",
+      "layer": "platform",
+      "key": "log_id",
       "fields": [
-        {"name": "action", "type": "string", "required": true},
-        {"name": "object_type", "type": "string", "required": true},
-        {"name": "object_id", "type": "string", "required": true},
-        {"name": "rule_id", "type": "string", "required": false},
-        {"name": "params_version", "type": "string", "required": false},
-        {"name": "result", "type": "enum", "values": ["PASS", "INCOMPLETE", "WARN", "REJECT"], "required": false},
-        {"name": "operator", "type": "string", "required": true},
-        {"name": "at", "type": "datetime", "required": true},
-        {"name": "detail", "type": "object", "required": false, "note": "决策日志上下文（参考 OPA 的 decision log）"}
+        {
+          "name": "action",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "object_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "object_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "rule_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "params_version",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "result",
+          "type": "enum",
+          "values": [
+            "PASS",
+            "INCOMPLETE",
+            "WARN",
+            "REJECT"
+          ],
+          "required": false
+        },
+        {
+          "name": "operator",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "at",
+          "type": "datetime",
+          "required": true
+        },
+        {
+          "name": "detail",
+          "type": "object",
+          "required": false,
+          "note": "决策日志上下文（参考 OPA 的 decision log）"
+        }
       ]
     },
-    { "id": "CostSnapshot", "layer": "module:pricing", "key": "snapshot_id",
+    {
+      "id": "CostSnapshot",
+      "layer": "module:pricing",
+      "key": "snapshot_id",
       "fields": [
-        {"name": "subject_type", "type": "enum", "values": ["candidate", "order", "sku"], "required": true},
-        {"name": "subject_id", "type": "string", "required": true},
-        {"name": "platform", "type": "string", "required": true},
-        {"name": "market", "type": "string", "required": true},
-        {"name": "mode", "type": "enum", "values": ["dropship", "stock", "platform_managed"], "required": true},
-        {"name": "type", "type": "enum", "values": ["estimate", "actual"], "required": true},
-        {"name": "inputs", "type": "object", "required": true},
-        {"name": "params_version", "type": "string", "required": true},
-        {"name": "outputs", "type": "object", "required": true},
-        {"name": "trace", "type": "array", "required": true},
-        {"name": "created_at", "type": "datetime", "required": true}
+        {
+          "name": "subject_type",
+          "type": "enum",
+          "values": [
+            "candidate",
+            "order",
+            "sku"
+          ],
+          "required": true
+        },
+        {
+          "name": "subject_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "platform",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "market",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "mode",
+          "type": "enum",
+          "values": [
+            "dropship",
+            "stock",
+            "platform_managed"
+          ],
+          "required": true
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "values": [
+            "estimate",
+            "actual"
+          ],
+          "required": true
+        },
+        {
+          "name": "inputs",
+          "type": "object",
+          "required": true
+        },
+        {
+          "name": "params_version",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "outputs",
+          "type": "object",
+          "required": true
+        },
+        {
+          "name": "trace",
+          "type": "array",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "datetime",
+          "required": true
+        }
       ]
     },
-    { "id": "FeeRecord", "layer": "module:pricing", "key": "fee_id",
+    {
+      "id": "FeeRecord",
+      "layer": "module:pricing",
+      "key": "fee_id",
       "fields": [
-        {"name": "order_id", "type": "ref<Order>", "required": true},
-        {"name": "commission", "type": "number", "required": true},
-        {"name": "txn_fee", "type": "number", "required": true},
-        {"name": "presale_fee", "type": "number", "required": false},
-        {"name": "source", "type": "enum", "values": ["estimated", "platform_bill"], "required": true}
+        {
+          "name": "order_id",
+          "type": "ref<Order>",
+          "required": true
+        },
+        {
+          "name": "commission",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "txn_fee",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "presale_fee",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "source",
+          "type": "enum",
+          "values": [
+            "estimated",
+            "platform_bill"
+          ],
+          "required": true
+        }
       ]
     },
-    { "id": "AdSpend", "layer": "module:growth", "key": "ad_id",
+    {
+      "id": "AdSpend",
+      "layer": "module:growth",
+      "key": "ad_id",
       "fields": [
-        {"name": "listing_id", "type": "ref<Listing>", "required": true},
-        {"name": "date", "type": "date", "required": true},
-        {"name": "impressions", "type": "number", "required": false, "note": "M6 补齐：曝光从未被建模"},
-        {"name": "clicks", "type": "number", "required": false},
-        {"name": "amount", "type": "number", "required": true},
-        {"name": "attribution", "type": "string", "required": false}
+        {
+          "name": "listing_id",
+          "type": "ref<Listing>",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "impressions",
+          "type": "number",
+          "required": false,
+          "note": "M6 补齐：曝光从未被建模"
+        },
+        {
+          "name": "clicks",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "attribution",
+          "type": "string",
+          "required": false
+        }
       ]
     },
-    { "id": "RiskHit", "layer": "module:risk", "key": "hit_id",
+    {
+      "id": "RiskHit",
+      "layer": "module:risk",
+      "key": "hit_id",
       "fields": [
-        {"name": "object_type", "type": "enum", "values": ["candidate", "listing", "order"], "required": true},
-        {"name": "object_id", "type": "string", "required": true},
-        {"name": "rule_id", "type": "string", "required": true},
-        {"name": "matched_terms", "type": "array<string>", "required": false},
-        {"name": "disposition", "type": "enum", "values": ["rejected", "paused", "passed_with_note"], "required": true},
-        {"name": "lexicon_version", "type": "string", "required": true, "note": "词库版本化，历史判定可按当时版本复现"},
-        {"name": "at", "type": "datetime", "required": true}
+        {
+          "name": "object_type",
+          "type": "enum",
+          "values": [
+            "candidate",
+            "listing",
+            "order"
+          ],
+          "required": true
+        },
+        {
+          "name": "object_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "rule_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "matched_terms",
+          "type": "array<string>",
+          "required": false
+        },
+        {
+          "name": "disposition",
+          "type": "enum",
+          "values": [
+            "rejected",
+            "paused",
+            "passed_with_note"
+          ],
+          "required": true
+        },
+        {
+          "name": "lexicon_version",
+          "type": "string",
+          "required": true,
+          "note": "词库版本化，历史判定可按当时版本复现"
+        },
+        {
+          "name": "at",
+          "type": "datetime",
+          "required": true
+        }
       ]
     },
-    { "id": "CashLedger", "layer": "module:finance", "key": "entry_id",
+    {
+      "id": "CashLedger",
+      "layer": "module:finance",
+      "key": "entry_id",
       "fields": [
-        {"name": "direction", "type": "enum", "values": ["in", "out"], "required": true},
-        {"name": "category", "type": "enum", "values": ["capital", "purchase", "shipping", "ad", "payout", "withdraw", "fee", "refund"], "required": true},
-        {"name": "amount", "type": "number", "required": true},
-        {"name": "currency", "type": "string", "required": true},
-        {"name": "at", "type": "datetime", "required": true}
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "in",
+            "out"
+          ],
+          "required": true
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "values": [
+            "capital",
+            "purchase",
+            "shipping",
+            "ad",
+            "payout",
+            "withdraw",
+            "fee",
+            "refund"
+          ],
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "at",
+          "type": "datetime",
+          "required": true
+        }
       ]
     },
-    { "id": "ReturnRecord", "layer": "platform", "key": "return_id",
+    {
+      "id": "ReturnRecord",
+      "layer": "platform",
+      "key": "return_id",
       "fields": [
-        {"name": "order_id", "type": "ref<Order>", "required": true},
-        {"name": "reason", "type": "string", "required": false},
-        {"name": "refund_amount", "type": "number", "required": true},
-        {"name": "goods_returned", "type": "boolean", "required": true}
+        {
+          "name": "order_id",
+          "type": "ref<Order>",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "refund_amount",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "goods_returned",
+          "type": "boolean",
+          "required": true
+        }
       ]
     },
-    { "id": "Payout", "layer": "module:finance", "key": "payout_id",
+    {
+      "id": "Payout",
+      "layer": "module:finance",
+      "key": "payout_id",
       "fields": [
-        {"name": "order_id", "type": "ref<Order>", "required": true},
-        {"name": "paid_out_at", "type": "datetime", "required": false},
-        {"name": "received_at", "type": "datetime", "required": false},
-        {"name": "withdraw_fee", "type": "number", "required": false},
-        {"name": "fx_loss", "type": "number", "required": false}
+        {
+          "name": "order_id",
+          "type": "ref<Order>",
+          "required": true
+        },
+        {
+          "name": "paid_out_at",
+          "type": "datetime",
+          "required": false
+        },
+        {
+          "name": "received_at",
+          "type": "datetime",
+          "required": false
+        },
+        {
+          "name": "withdraw_fee",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "fx_loss",
+          "type": "number",
+          "required": false
+        }
       ]
     },
-    { "id": "OnboardingCase", "layer": "module:onboarding", "key": "case_id",
+    {
+      "id": "OnboardingCase",
+      "layer": "module:onboarding",
+      "key": "case_id",
       "fields": [
-        {"name": "platform", "type": "string", "required": true},
-        {"name": "entity_type", "type": "enum", "values": ["individual", "company"], "required": true},
-        {"name": "first_site", "type": "string", "required": false, "param": "P-ONB-FIRST-SITE"},
-        {"name": "materials", "type": "map", "required": true},
-        {"name": "submitted_at", "type": "datetime", "required": false},
-        {"name": "activated_at", "type": "datetime", "required": true, "note": "免佣窗口起算依据（19 日规则）"}
+        {
+          "name": "platform",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "entity_type",
+          "type": "enum",
+          "values": [
+            "individual",
+            "company"
+          ],
+          "required": true
+        },
+        {
+          "name": "first_site",
+          "type": "string",
+          "required": false,
+          "param": "P-ONB-FIRST-SITE"
+        },
+        {
+          "name": "materials",
+          "type": "map",
+          "required": true
+        },
+        {
+          "name": "submitted_at",
+          "type": "datetime",
+          "required": false
+        },
+        {
+          "name": "activated_at",
+          "type": "datetime",
+          "required": true,
+          "note": "免佣窗口起算依据（19 日规则）"
+        }
       ]
     },
-    { "id": "ProductCandidate", "layer": "module:catalog", "key": "candidate_id",
+    {
+      "id": "ProductCandidate",
+      "layer": "module:catalog",
+      "key": "candidate_id",
       "fields": [
-        {"name": "platform", "type": "string", "required": true},
-        {"name": "market", "type": "string", "required": true},
-        {"name": "source_url", "type": "string", "required": true, "unique": true},
-        {"name": "title", "type": "string", "required": true},
-        {"name": "category", "type": "string", "required": true},
-        {"name": "veto_flags", "type": "map", "required": true},
-        {"name": "competitor_notes", "type": "object", "required": true},
-        {"name": "state", "type": "enum", "values": ["candidate", "accepted", "measured", "costed", "observe", "listed", "dropped", "rejected"], "required": true},
-        {"name": "weight_g", "type": "number", "required": false, "note": "实测重量（C 级）"},
-        {"name": "weight_is_measured", "type": "boolean", "required": false, "note": "重量是实测还是估算——上架前录的都是估算，属 D 级证据"},
-        {"name": "purchase_cny", "type": "number", "required": false, "note": "1688 下单页实付"},
-        {"name": "domestic_cny", "type": "number", "required": false, "note": "国内段运费"},
-        {"name": "price_local", "type": "number", "required": false, "note": "商品价，不含买家运费"},
-        {"name": "sls_fee", "type": "number", "required": false, "note": "SLS 运费（当地币）"},
-        {"name": "buyer_paid_freight", "type": "number", "required": false, "note": "买家实付运费"},
-        {"name": "intends_free_shipping", "type": "boolean", "required": false, "note": "是否卖家包邮"},
-        {"name": "ads", "type": "number", "required": false, "note": "本单分摊广告费"},
-        {"name": "return_rate", "type": "number", "required": false, "note": "退货率预留"},
-        {"name": "flags", "type": "string", "required": false, "note": "逗号分隔的否决标记"},
-        {"name": "sample_bought", "type": "boolean", "required": false, "note": "样品是否已购买"},
-        {"name": "photo_ready", "type": "boolean", "required": false, "note": "主图是否自拍完成"},
-        {"name": "title_text", "type": "string", "required": false, "note": "标题草稿"},
-        {"name": "detail_ready", "type": "boolean", "required": false, "note": "详情前 3 屏是否完成"}
+        {
+          "name": "platform",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "market",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "source_url",
+          "type": "string",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "veto_flags",
+          "type": "map",
+          "required": true
+        },
+        {
+          "name": "competitor_notes",
+          "type": "object",
+          "required": true
+        },
+        {
+          "name": "state",
+          "type": "enum",
+          "values": [
+            "candidate",
+            "accepted",
+            "measured",
+            "costed",
+            "observe",
+            "listed",
+            "dropped",
+            "rejected"
+          ],
+          "required": true
+        },
+        {
+          "name": "weight_g",
+          "type": "number",
+          "required": false,
+          "note": "实测重量（C 级）"
+        },
+        {
+          "name": "weight_is_measured",
+          "type": "boolean",
+          "required": false,
+          "note": "重量是实测还是估算——上架前录的都是估算，属 D 级证据"
+        },
+        {
+          "name": "purchase_cny",
+          "type": "number",
+          "required": false,
+          "note": "1688 下单页实付"
+        },
+        {
+          "name": "domestic_cny",
+          "type": "number",
+          "required": false,
+          "note": "国内段运费"
+        },
+        {
+          "name": "price_local",
+          "type": "number",
+          "required": false,
+          "note": "商品价，不含买家运费"
+        },
+        {
+          "name": "sls_fee",
+          "type": "number",
+          "required": false,
+          "note": "SLS 运费（当地币）"
+        },
+        {
+          "name": "buyer_paid_freight",
+          "type": "number",
+          "required": false,
+          "note": "买家实付运费"
+        },
+        {
+          "name": "intends_free_shipping",
+          "type": "boolean",
+          "required": false,
+          "note": "是否卖家包邮"
+        },
+        {
+          "name": "ads",
+          "type": "number",
+          "required": false,
+          "note": "本单分摊广告费"
+        },
+        {
+          "name": "return_rate",
+          "type": "number",
+          "required": false,
+          "note": "退货率预留"
+        },
+        {
+          "name": "flags",
+          "type": "string",
+          "required": false,
+          "note": "逗号分隔的否决标记"
+        },
+        {
+          "name": "sample_bought",
+          "type": "boolean",
+          "required": false,
+          "note": "样品是否已购买"
+        },
+        {
+          "name": "photo_ready",
+          "type": "boolean",
+          "required": false,
+          "note": "主图是否自拍完成"
+        },
+        {
+          "name": "title_text",
+          "type": "string",
+          "required": false,
+          "note": "标题草稿"
+        },
+        {
+          "name": "detail_ready",
+          "type": "boolean",
+          "required": false,
+          "note": "详情前 3 屏是否完成"
+        },
+        {
+          "name": "dts_days",
+          "type": "number",
+          "required": false,
+          "note": "备货时长（按发货日计），默认 1。由卖家在商品上设置，与 Shopee 的 DTS 设置一致"
+        }
       ]
     },
-    { "id": "Sample", "layer": "module:catalog", "key": "sample_id",
+    {
+      "id": "Sample",
+      "layer": "module:catalog",
+      "key": "sample_id",
       "fields": [
-        {"name": "candidate_id", "type": "ref<ProductCandidate>", "required": true},
-        {"name": "paid_amount_cny", "type": "number", "required": true, "level": "C"},
-        {"name": "ordered_at", "type": "date", "required": true},
-        {"name": "received_at", "type": "date", "required": false}
+        {
+          "name": "candidate_id",
+          "type": "ref<ProductCandidate>",
+          "required": true
+        },
+        {
+          "name": "paid_amount_cny",
+          "type": "number",
+          "required": true,
+          "level": "C"
+        },
+        {
+          "name": "ordered_at",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "received_at",
+          "type": "date",
+          "required": false
+        }
       ]
     },
-    { "id": "Measurement", "layer": "module:catalog", "key": "measure_id",
+    {
+      "id": "Measurement",
+      "layer": "module:catalog",
+      "key": "measure_id",
       "fields": [
-        {"name": "sample_id", "type": "ref<Sample>", "required": true},
-        {"name": "weight_g", "type": "number", "required": true, "level": "C"},
-        {"name": "dims_cm", "type": "array<number>", "required": false},
-        {"name": "is_liquid", "type": "boolean", "required": true},
-        {"name": "liquid_ml", "type": "number", "required": false}
+        {
+          "name": "sample_id",
+          "type": "ref<Sample>",
+          "required": true
+        },
+        {
+          "name": "weight_g",
+          "type": "number",
+          "required": true,
+          "level": "C"
+        },
+        {
+          "name": "dims_cm",
+          "type": "array<number>",
+          "required": false
+        },
+        {
+          "name": "is_liquid",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "liquid_ml",
+          "type": "number",
+          "required": false
+        }
       ]
     },
-    { "id": "Listing", "layer": "module:catalog", "key": "listing_id",
+    {
+      "id": "Listing",
+      "layer": "module:catalog",
+      "key": "listing_id",
       "fields": [
-        {"name": "candidate_id", "type": "ref<ProductCandidate>", "required": true},
-        {"name": "price_local", "type": "number", "required": true},
-        {"name": "main_image_source", "type": "enum", "values": ["self_shot"], "required": true},
-        {"name": "title", "type": "string", "required": true},
-        {"name": "attribute_completeness", "type": "number", "required": true},
-        {"name": "state", "type": "enum", "values": ["draft", "live", "paused", "removed"], "required": true}
+        {
+          "name": "candidate_id",
+          "type": "ref<ProductCandidate>",
+          "required": true
+        },
+        {
+          "name": "price_local",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "main_image_source",
+          "type": "enum",
+          "values": [
+            "self_shot"
+          ],
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "attribute_completeness",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "state",
+          "type": "enum",
+          "values": [
+            "draft",
+            "live",
+            "paused",
+            "removed"
+          ],
+          "required": true
+        }
       ]
     },
-    { "id": "Supplier", "layer": "module:supply", "key": "supplier_id",
+    {
+      "id": "Supplier",
+      "layer": "module:supply",
+      "key": "supplier_id",
       "fields": [
-        {"name": "name", "type": "string", "required": true},
-        {"name": "url", "type": "string", "required": true},
-        {"name": "years_in_business", "type": "number", "required": true},
-        {"name": "supports_dropship", "type": "boolean", "required": true},
-        {"name": "accepts_warehouse_address_format", "type": "boolean", "required": false, "mode": "dropship"},
-        {"name": "accepts_bulk_batch", "type": "boolean", "required": false, "mode": "stock"},
-        {"name": "score", "type": "number", "required": false},
-        {"name": "pay_cny", "type": "number", "required": false, "note": "最近一次已知价（历史报价进 SupplierQuote）"}
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "url",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "years_in_business",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "supports_dropship",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "accepts_warehouse_address_format",
+          "type": "boolean",
+          "required": false,
+          "mode": "dropship"
+        },
+        {
+          "name": "accepts_bulk_batch",
+          "type": "boolean",
+          "required": false,
+          "mode": "stock"
+        },
+        {
+          "name": "score",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "pay_cny",
+          "type": "number",
+          "required": false,
+          "note": "最近一次已知价（历史报价进 SupplierQuote）"
+        }
       ]
     },
-    { "id": "SupplierQuote", "layer": "module:supply", "key": "quote_id",
+    {
+      "id": "SupplierQuote",
+      "layer": "module:supply",
+      "key": "quote_id",
       "fields": [
-        {"name": "supplier_id", "type": "ref<Supplier>", "required": true},
-        {"name": "price_cny", "type": "number", "required": true},
-        {"name": "domestic_ship_cny", "type": "number", "required": false},
-        {"name": "quoted_at", "type": "datetime", "required": true}
+        {
+          "name": "supplier_id",
+          "type": "ref<Supplier>",
+          "required": true
+        },
+        {
+          "name": "price_cny",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "domestic_ship_cny",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "quoted_at",
+          "type": "datetime",
+          "required": true
+        }
       ]
     },
-    { "id": "Order", "layer": "module:fulfillment", "key": "order_id",
+    {
+      "id": "Order",
+      "layer": "module:fulfillment",
+      "key": "order_id",
       "fields": [
-        {"name": "platform", "type": "string", "required": true},
-        {"name": "market", "type": "string", "required": true},
-        {"name": "mode", "type": "string", "required": true},
-        {"name": "listing_id", "type": "ref<Listing>", "required": true},
-        {"name": "buyer_paid_freight", "type": "number", "required": true},
-        {"name": "state", "type": "string", "required": true, "note": "取值由所属履约模式的状态机定义"},
-        {"name": "created_at", "type": "datetime", "required": true},
-        {"name": "completed_at", "type": "datetime", "required": false},
-        {"name": "candidate_id", "type": "string", "required": true, "note": "关联候选品"},
-        {"name": "supplier_id", "type": "string", "required": false, "note": "实际供货商"},
-        {"name": "warehouse_address", "type": "string", "required": false, "note": "当单页面抄来的中转仓地址"},
-        {"name": "address_source", "type": "enum", "required": false, "note": "order_page/manual/copied_elsewhere"},
-        {"name": "block_reason", "type": "string", "required": false, "note": "阻断原因"},
-        {"name": "steps", "type": "string", "required": false, "note": "已完成步骤（逗号分隔）"},
-        {"name": "deadline", "type": "string", "required": false, "note": "发货截止"},
-        {"name": "estimate_net", "type": "number", "required": false, "note": "估算净利润"},
-        {"name": "estimate_rate", "type": "number", "required": false, "note": "估算净利润率"},
-        {"name": "actual_net", "type": "number", "required": false, "note": "账单实测净利润"},
-        {"name": "actual_rate", "type": "number", "required": false, "note": "账单实测净利润率"}
+        {
+          "name": "platform",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "market",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "listing_id",
+          "type": "ref<Listing>",
+          "required": true
+        },
+        {
+          "name": "buyer_paid_freight",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "state",
+          "type": "string",
+          "required": true,
+          "note": "取值由所属履约模式的状态机定义"
+        },
+        {
+          "name": "created_at",
+          "type": "datetime",
+          "required": true
+        },
+        {
+          "name": "completed_at",
+          "type": "datetime",
+          "required": false
+        },
+        {
+          "name": "candidate_id",
+          "type": "string",
+          "required": true,
+          "note": "关联候选品"
+        },
+        {
+          "name": "supplier_id",
+          "type": "string",
+          "required": false,
+          "note": "实际供货商"
+        },
+        {
+          "name": "warehouse_address",
+          "type": "string",
+          "required": false,
+          "note": "当单页面抄来的中转仓地址"
+        },
+        {
+          "name": "address_source",
+          "type": "enum",
+          "required": false,
+          "note": "order_page/manual/copied_elsewhere"
+        },
+        {
+          "name": "block_reason",
+          "type": "string",
+          "required": false,
+          "note": "阻断原因"
+        },
+        {
+          "name": "steps",
+          "type": "string",
+          "required": false,
+          "note": "已完成步骤（逗号分隔）"
+        },
+        {
+          "name": "deadline",
+          "type": "string",
+          "required": false,
+          "note": "发货截止"
+        },
+        {
+          "name": "estimate_net",
+          "type": "number",
+          "required": false,
+          "note": "估算净利润"
+        },
+        {
+          "name": "estimate_rate",
+          "type": "number",
+          "required": false,
+          "note": "估算净利润率"
+        },
+        {
+          "name": "actual_net",
+          "type": "number",
+          "required": false,
+          "note": "账单实测净利润"
+        },
+        {
+          "name": "actual_rate",
+          "type": "number",
+          "required": false,
+          "note": "账单实测净利润率"
+        },
+        {
+          "name": "scan_deadline",
+          "type": "string",
+          "required": false,
+          "note": "到仓扫描截止（下单时按发货时效规则算出并冻结）。deadline 是 DTS 截止"
+        },
+        {
+          "name": "dts_days",
+          "type": "number",
+          "required": false,
+          "note": "下单时冻结的备货时长——之后改商品设置不影响已开的单"
+        }
       ]
     },
-    { "id": "StockCheck", "layer": "mode:dropship", "key": "check_id",
+    {
+      "id": "StockCheck",
+      "layer": "mode:dropship",
+      "key": "check_id",
       "fields": [
-        {"name": "candidate_id", "type": "ref<ProductCandidate>", "required": true},
-        {"name": "order_id", "type": "ref<Order>", "required": false},
-        {"name": "supplier_id", "type": "ref<Supplier>", "required": true},
-        {"name": "result", "type": "enum", "values": ["pending", "checking", "found", "all_out"], "required": true},
-        {"name": "checked_at", "type": "datetime", "required": false}
+        {
+          "name": "candidate_id",
+          "type": "ref<ProductCandidate>",
+          "required": true
+        },
+        {
+          "name": "order_id",
+          "type": "ref<Order>",
+          "required": false
+        },
+        {
+          "name": "supplier_id",
+          "type": "ref<Supplier>",
+          "required": true
+        },
+        {
+          "name": "result",
+          "type": "enum",
+          "values": [
+            "pending",
+            "checking",
+            "found",
+            "all_out"
+          ],
+          "required": true
+        },
+        {
+          "name": "checked_at",
+          "type": "datetime",
+          "required": false
+        }
       ]
     },
-    { "id": "PurchaseOrder", "layer": "mode:dropship", "key": "po_id",
+    {
+      "id": "PurchaseOrder",
+      "layer": "mode:dropship",
+      "key": "po_id",
       "fields": [
-        {"name": "order_id", "type": "ref<Order>", "required": true},
-        {"name": "supplier_id", "type": "ref<Supplier>", "required": true},
-        {"name": "amount_cny", "type": "number", "required": true},
-        {"name": "address_source", "type": "enum", "values": ["order_page", "manual", "copied_elsewhere"], "required": true},
-        {"name": "warehouse_address_raw", "type": "string", "required": true},
-        {"name": "created_at", "type": "datetime", "required": true}
+        {
+          "name": "order_id",
+          "type": "ref<Order>",
+          "required": true
+        },
+        {
+          "name": "supplier_id",
+          "type": "ref<Supplier>",
+          "required": true
+        },
+        {
+          "name": "amount_cny",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "address_source",
+          "type": "enum",
+          "values": [
+            "order_page",
+            "manual",
+            "copied_elsewhere"
+          ],
+          "required": true
+        },
+        {
+          "name": "warehouse_address_raw",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "type": "datetime",
+          "required": true
+        }
       ]
     },
-    { "id": "Shipment", "layer": "mode:dropship", "key": "shipment_id",
+    {
+      "id": "Shipment",
+      "layer": "mode:dropship",
+      "key": "shipment_id",
       "fields": [
-        {"name": "po_id", "type": "ref<PurchaseOrder>", "required": true},
-        {"name": "supplier_shipped_at", "type": "datetime", "required": false},
-        {"name": "warehouse_scanned_at", "type": "datetime", "required": false},
-        {"name": "exception_flag", "type": "boolean", "required": false}
+        {
+          "name": "po_id",
+          "type": "ref<PurchaseOrder>",
+          "required": true
+        },
+        {
+          "name": "supplier_shipped_at",
+          "type": "datetime",
+          "required": false
+        },
+        {
+          "name": "warehouse_scanned_at",
+          "type": "datetime",
+          "required": false
+        },
+        {
+          "name": "exception_flag",
+          "type": "boolean",
+          "required": false
+        }
       ]
     },
-    { "id": "ParamOverride", "layer": "platform", "key": "override_id", "note": "参数覆盖层：DB 只存实测/后台抄录的覆盖值，不复制 spec 里的制度性费率（INV-009）",
+    {
+      "id": "ParamOverride",
+      "layer": "platform",
+      "key": "override_id",
+      "note": "参数覆盖层：DB 只存实测/后台抄录的覆盖值，不复制 spec 里的制度性费率（INV-009）",
       "fields": [
-        {"name": "param_id", "type": "string", "required": true},
-        {"name": "platform", "type": "string", "required": false},
-        {"name": "market", "type": "string", "required": false},
-        {"name": "mode", "type": "string", "required": false},
-        {"name": "value", "type": "any", "required": true},
-        {"name": "evidence_level", "type": "enum", "values": ["A", "B", "C"], "required": true, "note": "覆盖只能用 A/B/C；D/E 不允许写进覆盖层"},
-        {"name": "source_url", "type": "string", "required": false},
-        {"name": "checked_at", "type": "string", "required": false},
-        {"name": "snapshot_ref", "type": "string", "required": false},
-        {"name": "operator", "type": "string", "required": true},
-        {"name": "note", "type": "string", "required": false}
+        {
+          "name": "param_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "platform",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "market",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "value",
+          "type": "any",
+          "required": true
+        },
+        {
+          "name": "evidence_level",
+          "type": "enum",
+          "values": [
+            "A",
+            "B",
+            "C"
+          ],
+          "required": true,
+          "note": "覆盖只能用 A/B/C；D/E 不允许写进覆盖层"
+        },
+        {
+          "name": "source_url",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "checked_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "snapshot_ref",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "operator",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false
+        }
       ]
     },
-    { "id": "CandidateSupplier", "layer": "module:supply", "key": "link_id",
+    {
+      "id": "CandidateSupplier",
+      "layer": "module:supply",
+      "key": "link_id",
       "fields": [
-        {"name": "candidate_id", "type": "string", "required": true},
-        {"name": "supplier_id", "type": "string", "required": true},
-        {"name": "is_primary", "type": "boolean", "required": false}
+        {
+          "name": "candidate_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "supplier_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "is_primary",
+          "type": "boolean",
+          "required": false
+        }
       ]
     },
-    { "id": "ParamCandidate", "layer": "platform", "key": "capture_id", "note": "抓取/截图来的候选值。approve 之后才写进 ParamOverride；本身不是决策依据",
+    {
+      "id": "ParamCandidate",
+      "layer": "platform",
+      "key": "capture_id",
+      "note": "抓取/截图来的候选值。approve 之后才写进 ParamOverride；本身不是决策依据",
       "fields": [
-        {"name": "param_id", "type": "string", "required": true},
-        {"name": "value", "type": "any", "required": false},
-        {"name": "source_id", "type": "string", "required": false},
-        {"name": "source_url", "type": "string", "required": false},
-        {"name": "snapshot_ref", "type": "string", "required": false},
-        {"name": "raw_sha256", "type": "string", "required": false},
-        {"name": "captured_at", "type": "string", "required": true},
-        {"name": "channel", "type": "enum", "values": ["fetch", "userscript", "manual", "agent"], "required": true},
-        {"name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "required": true},
-        {"name": "message", "type": "string", "required": false},
-        {"name": "decided_at", "type": "string", "required": false},
-        {"name": "decided_by", "type": "string", "required": false}
+        {
+          "name": "param_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "value",
+          "type": "any",
+          "required": false
+        },
+        {
+          "name": "source_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "source_url",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "snapshot_ref",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "raw_sha256",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "captured_at",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "channel",
+          "type": "enum",
+          "values": [
+            "fetch",
+            "userscript",
+            "manual",
+            "agent"
+          ],
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "required": true
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "decided_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "decided_by",
+          "type": "string",
+          "required": false
+        }
       ]
     },
-    { "id": "WatchEntry", "layer": "platform", "key": "entry_id", "note": "列表页监控到的文档条目。只回答「该看哪篇」，不存任何参数值",
+    {
+      "id": "WatchEntry",
+      "layer": "platform",
+      "key": "entry_id",
+      "note": "列表页监控到的文档条目。只回答「该看哪篇」，不存任何参数值",
       "fields": [
-        {"name": "watch_id", "type": "string", "required": true},
-        {"name": "article_id", "type": "string", "required": true},
-        {"name": "title", "type": "string", "required": true},
-        {"name": "url", "type": "string", "required": true},
-        {"name": "published_at", "type": "string", "required": false},
-        {"name": "first_seen_at", "type": "string", "required": true},
-        {"name": "last_seen_at", "type": "string", "required": true},
-        {"name": "status", "type": "enum", "values": ["new", "seen"], "required": true},
-        {"name": "content_ref", "type": "string", "required": false, "note": "渲染后正文的快照路径（自己读文档时用）"},
-        {"name": "harvested_at", "type": "string", "required": false, "note": "最近一次采集正文的时间"}
+        {
+          "name": "watch_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "article_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "url",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "published_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "first_seen_at",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "last_seen_at",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "new",
+            "seen"
+          ],
+          "required": true
+        },
+        {
+          "name": "content_ref",
+          "type": "string",
+          "required": false,
+          "note": "渲染后正文的快照路径（自己读文档时用）"
+        },
+        {
+          "name": "harvested_at",
+          "type": "string",
+          "required": false,
+          "note": "最近一次采集正文的时间"
+        }
       ]
     }
   ]

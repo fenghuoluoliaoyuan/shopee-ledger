@@ -48,6 +48,58 @@ class ManualQueuePageTest(unittest.TestCase):
         self.assertIn("不用你抄字", html, "要明确告诉用户读数不是他的活")
 
 
+class OrderDeadlinePageTest(unittest.TestCase):
+    """订单页上的发货时效一行。
+
+    接线的意义在于：**时间在过去不等于有风险**。旧口径是「进入某状态满 72 小时」，
+    既不看站点也不看下单时刻。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
+        self.ledger.init()
+        self.ledger.set_param("TW", "local_per_cny", "4.5", "C")
+        self.candidate = self.ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)
+        self.order = self.ledger.open_order(self.candidate)
+
+    def tearDown(self):
+        self.ledger.close()
+        self.tmp.cleanup()
+
+    def _html(self) -> str:
+        return orders_page(self.ledger)
+
+    def test_shows_both_deadlines(self):
+        info = self.ledger.order_deadlines(self.order)
+        html = self._html()
+        self.assertIn("到仓扫描截止", html)
+        self.assertIn(info["dts"][:10], html)
+        self.assertIn(info["scan"][:10], html)
+
+    def test_shows_hours_left(self):
+        self.assertIn("还剩", self._html())
+
+    def test_overdue_is_called_out_not_hidden(self):
+        from datetime import datetime, timedelta, timezone
+
+        past = (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat(timespec="seconds")
+        self.ledger.storage.update("Order", self.order, {"scan_deadline": past})
+        self.assertIn("已过期", self._html())
+
+    def test_candidate_form_has_dts_days(self):
+        html = products_page(self.ledger)
+        self.assertIn("dts_days", html)
+        self.assertIn("备货时长", html)
+
+    def test_dts_days_renders_as_an_integer(self):
+        """列类型是 REAL，不格式化会显示成 5.0——填的是「几天」。"""
+        self.ledger.set_dts_days(self.candidate, 5)
+        html = products_page(self.ledger)
+        self.assertIn("name='dts_days' value='5'", html)
+        self.assertNotIn("value='5.0'", html)
+
+
 class LandedPageTest(unittest.TestCase):
     """落地对比页。选品页能带参跳过来，所以两种入口都要能用。"""
 

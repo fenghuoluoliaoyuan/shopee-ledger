@@ -9,6 +9,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from shopee_ledger.delivery import hours_until
 from shopee_ledger.desk import listing_gate, listing_gate_result, survival_advice
 from shopee_ledger.fulfillment import STEP_LABEL, STEPS
 from shopee_ledger.profit import Decision
@@ -759,6 +760,10 @@ def _update_product(ledger: Ledger, form: dict) -> str:
     ads = _first(form, "ads")
     if ads:
         ledger.set_ads(candidate_id, float(ads))
+    dts_days = _first(form, "dts_days")
+    if dts_days:
+        # 备货时长决定发货截止怎么算——商品上是几天就填几天，与 Shopee 的 DTS 设置对齐
+        ledger.set_dts_days(candidate_id, int(float(dts_days)))
     ledger.set_flags(candidate_id, form.get("flag", []))
     for supplier_id in form.get("supplier", []):
         if int(supplier_id) not in ledger.supplier_ids(candidate_id):
@@ -802,6 +807,7 @@ def products_page(ledger: Ledger) -> str:
             "<label class='checks'><input type='checkbox' name='detail' value='yes'%s> 详情前 3 屏已写</label>"
             "<label>退货率<input name='return_rate' value='%s'></label>"
             "<label>本单广告费<input name='ads' value='%s'></label>"
+            "<label>备货时长（发货日）<input name='dts_days' value='%s' placeholder='商品上是几天就填几天，默认 1'></label>"
             "<div class='checks'>%s</div><div class='checks'>%s</div>"
             "<button class='slim'>更新这一款</button></form></details></td></tr>" % (
                 escape(row["name"]), escape(row["site"]), result.decision.value,
@@ -815,6 +821,7 @@ def products_page(ledger: Ledger) -> str:
                 " checked" if row["detail_ready"] else "",
                 "" if row["return_rate"] is None else row["return_rate"],
                 "" if row["ads"] is None else row["ads"],
+                "" if row.get("dts_days") is None else _num(row["dts_days"]),
                 row_suppliers, row_flags))
 
     market_options = "".join(
@@ -927,16 +934,20 @@ def orders_page(ledger: Ledger) -> str:
             bar = "".join(
                 f'<span class="step{" done" if step in done else ""}">{STEP_LABEL[step]}</span>' for step in STEPS
             )
+        info = ledger.order_deadlines(row["id"])
+        left = hours_until(info["scan"]) if info.get("scan") else None
+        deadline_line = _deadline_line(info, left, row.get("status") or "")
         blocks.append(
             f"""<section class="card"><h2>#{row['id']} {escape(row['candidate_name'])} · {escape(row['site'])}</h2>
 <p class="k">当前：<b>{escape(STEP_LABEL.get(state, state))}</b> <code>{escape(state)}</code> {escape(row['block_reason'] or '')}</p>
 <div class="steps">{bar}</div>
+{deadline_line}
 <p class="k">当单地址：{escape(row['warehouse_address'] or '还没抄')}</p>
 {_order_forms(row, supplier_options)}
 <details><summary class="k">其它记录</summary>
 <form method="post" action="/orders" class="stack" style="margin-top:8px">
 <input type="hidden" name="order" value="{row['id']}">
-<label>发货截止<input name="deadline" value="{escape(row['deadline'] or '')}" placeholder="2026-10-04 18:00"></label>
+<label>人工覆盖的截止时间（留空就用算出来的）<input name="deadline" value="{escape(row['deadline'] or '')}" placeholder="YYYY-MM-DDTHH:MM:SS+08:00"></label>
 <button class="ghost" name="action" value="deadline">记下截止时间</button>
 <label>这一单的托管 JSON<textarea name="payload"></textarea></label>
 <button class="ghost" name="action" value="actual">记下实绩</button>
@@ -949,6 +960,33 @@ def orders_page(ledger: Ledger) -> str:
     return (f'<h1>订单</h1><p class="lead">下面每个按钮都是状态机当前允许走的那一步；'
             f'跳步或前置条件不满足会被拒，并告诉你为什么。地址只能抄当单页面。</p>'
             f'<div class="row">{opener}<div>{"".join(blocks) or "<p class=\'k\'>还没有订单</p>"}</div></div>')
+
+
+def _deadline_line(info: dict, left: float | None, status: str) -> str:
+    """订单卡片上的发货时效一行。
+
+    这一行是这次接线的意义所在：**时间在过去不等于有风险**。
+    旧口径是"进入某状态满 72 小时"，既不看站点也不看下单时刻。
+    现在对着下单时算出的到仓扫描截止说还剩多少。
+    """
+    if not info.get("scan"):
+        return '<p class="k">发货时效：这一单没有算出截止时间</p>'
+    stamp = "%s" % info["scan"][:16].replace("T", " ")
+    if status in ("cancelled",):
+        return '<p class="k">发货时效：已取消，不再计时</p>'
+    if left is None:
+        return '<p class="k">发货时效：扫描截止 %s</p>' % escape(stamp)
+    if left <= 0:
+        pill = '<span class="pill cut">已过期 %.0f 小时</span>' % abs(left)
+    elif left <= 24:
+        pill = '<span class="pill bad">还剩 %.1f 小时</span>' % left
+    else:
+        pill = '<span class="pill go">还剩 %.1f 小时</span>' % left
+    frozen = "" if info.get("frozen") else "（临时算的，下单时的值没存）"
+    return ('<p class="k">发货时效：DTS 截止 %s ｜ <b>到仓扫描截止 %s</b> %s%s'
+            ' <span class="k">备货 %s 天 · %s</span></p>'
+            % (escape(info["dts"][:16].replace("T", " ")), escape(stamp), pill, escape(frozen),
+               escape(str(info.get("dts_days"))), escape(info.get("market") or "")))
 
 
 def checklist_page(ledger: Ledger) -> str:

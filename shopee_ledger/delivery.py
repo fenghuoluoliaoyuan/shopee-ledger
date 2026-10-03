@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -137,6 +137,58 @@ def holidays_between(start: date, end: date,
             names.append(name)
         current += timedelta(days=1)
     return names
+
+
+# 中国不实行夏令时，固定 UTC+8 即可。用 timezone 而不是 zoneinfo：
+# zoneinfo 在 Windows 上要靠 tzdata，而 zoneinfo 是标准库、tzdata 不是——
+# 这个项目坚持零新依赖，所以不引入那个不确定性。
+CHINA_TZ = timezone(timedelta(hours=8), name="CST")
+
+
+def order_day_of(created_at: str | datetime) -> date:
+    """把订单创建时间（UTC）换成一个「中国时区的日期」。
+
+    发货时效是按北京时间算的：官方计算器的输入是 `%Y-%m-%d %H:%M:%S`，
+    返回的时间戳也在该时区。订单表里存的是 UTC，所以要换过来再取日期。
+    """
+    if isinstance(created_at, datetime):
+        moment = created_at
+    else:
+        moment = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(CHINA_TZ).date()
+
+
+def deadlines_at(created_at: str | datetime, *, market: str = "TW",
+                 dts_days: int = DEFAULT_DTS_DAYS,
+                 holidays: dict[date, str] | None = None,
+                 reference: Path | str | None = None) -> DeliveryDeadline:
+    """按订单创建时间算截止。"""
+    return deadlines(order_day_of(created_at), market=market, dts_days=dts_days,
+                     holidays=holidays, reference=reference)
+
+
+def end_of_day_iso(day: date) -> str:
+    """当天 23:59（中国时区）的 ISO 时刻，**带偏移量**。
+
+    不带偏移量的话，和 UTC 的 now() 一比就差 8 小时——「还有 3 小时」会算成「还有 11 小时」。
+    """
+    return "%sT23:59:00+08:00" % day.isoformat()
+
+
+def hours_until(moment_iso: str, now: datetime | None = None) -> float | None:
+    """距离某个「当天 23:59」的截止还有多少小时。负数表示已过期。"""
+    if not moment_iso:
+        return None
+    try:
+        target = datetime.fromisoformat(str(moment_iso))
+    except ValueError:
+        return None
+    if target.tzinfo is None:
+        target = target.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    return (target - current).total_seconds() / 3600.0
 
 
 def deadlines(order_day: date, *, market: str = "TW", dts_days: int = DEFAULT_DTS_DAYS,

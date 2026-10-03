@@ -14,6 +14,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+
+# EX-02 的提前预警窗口：距到仓扫描截止不足这些小时就报。
+# 不再是"进入某状态满 72 小时"——那条既不看站点也不看下单时刻。
+EX02_WARN_HOURS = 24
 from typing import Any
 
 from shopee_ledger.spec import Spec, default_spec
@@ -95,19 +99,37 @@ class OrderMachine:
         return list(transition.rules) if transition else []
 
     # ---- 异常分支 -------------------------------------------------------
-    def exceptions(self, *, hours_in_state: float | None = None, dts_ready: bool = False) -> list[dict]:
+    def exceptions(self, *, hours_in_state: float | None = None, dts_ready: bool = False,
+                   hours_to_scan_deadline: float | None = None,
+                   scan_deadline: str | None = None) -> list[dict]:
         """按 modes/*.json 的 exceptions 语义编码实现。
 
         spec 里的 condition 是散文（"ship_arranged 后 24h 未 po_created"），
         这里用状态 + 停留时长表达同一件事。阈值仍来自参数（EX-02 依赖 P-TW-DTS 是否为 A/B）。
+
+        EX-02 原先用的是**写死的 72 小时**，而且从"进入该状态的时间"算——两处都不对：
+        真正的期限取决于站点与备货时长，而且要**从下单时刻**算起（发货时效从下单就开始走）。
+        现在改成对着下单时冻结的到仓扫描截止判。
         """
         alerts: list[dict] = []
         if self.state == "ship_arranged" and hours_in_state is not None and hours_in_state > 24:
             alerts.append({"id": "EX-01", "priority": "P1",
                            "message": "已安排发货但超过 24 小时未拍单：发货时效在走"})
-        if self.state == "supplier_shipped" and dts_ready and hours_in_state is not None and hours_in_state > 72:
-            alerts.append({"id": "EX-02", "priority": "P1",
-                           "message": "供应商已发货但迟迟未到仓，存在迟发风险"})
+        if self.state == "supplier_shipped" and dts_ready:
+            if hours_to_scan_deadline is not None:
+                if hours_to_scan_deadline <= 0:
+                    alerts.append({"id": "EX-02", "priority": "P1",
+                                   "message": "已过到仓扫描截止（%s）：订单可能被取消，"
+                                              "立刻查物流" % (scan_deadline or "")})
+                elif hours_to_scan_deadline <= EX02_WARN_HOURS:
+                    alerts.append({"id": "EX-02", "priority": "P1",
+                                   "message": "距到仓扫描截止（%s）不到 %d 小时：抓紧催件"
+                                              % (scan_deadline or "", EX02_WARN_HOURS)})
+            elif hours_in_state is not None and hours_in_state > 72:
+                # 没有截止时间的兜底：老订单（开单时还没有发货时效规则）用旧口径，并说明
+                alerts.append({"id": "EX-02", "priority": "P1",
+                               "message": "供应商已发货但迟迟未到仓，存在迟发风险"
+                                          "（这一单没有算出的到仓截止时间，按旧口径 72 小时判）"})
         if self.state == "cancelled":
             alerts.append({"id": "EX-03", "priority": "P1",
                            "message": "订单已取消：先下架商品，取消按卖家中心当时规则处理"})
