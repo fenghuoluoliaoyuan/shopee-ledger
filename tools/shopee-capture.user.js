@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shopee 台账 · 参数采集
 // @namespace    shopee-ledger
-// @version      0.1
+// @version      0.3.0
 // @description  在 Shopee 页面上把渲染后的正文送回本机台账，产出「候选值」等人工确认。本脚本不会直接修改任何参数。
 // @author       shopee-ledger
 // @match        https://shopee.cn/edu/*
@@ -11,8 +11,16 @@
 // @match        https://shopee.tw/*
 // @grant        GM_xmlhttpRequest
 // @connect      127.0.0.1
+// @updateURL    http://127.0.0.1:8765/shopee-capture.user.js
+// @downloadURL  http://127.0.0.1:8765/shopee-capture.user.js
 // @run-at       document-idle
 // ==/UserScript==
+
+/*
+ * 以后不用再手工粘贴：脚本由本机 http://127.0.0.1:8765/shopee-capture.user.js 托管，
+ * Tampermonkey 会按 @updateURL 自动检查更新（也可在面板里手动「检查更新」）。
+ * 改脚本时我会同时抬 @version，Tampermonkey 就会拉到新版。
+ */
 
 /*
  * 为什么必须是浏览器脚本，而不是服务端抓取
@@ -37,9 +45,10 @@
 
   const APP = 'http://127.0.0.1:8765';
   const PANEL_ID = 'shopee-ledger-capture';
+  const VERSION = '0.3.0';   // 改脚本就改这里：console 一眼看出装的是哪版
 
   function log(...args) {
-    console.log('[台账采集]', ...args);
+    console.log('[台账采集 v' + VERSION + ']', ...args);
   }
 
   function request(options) {
@@ -113,13 +122,25 @@
 
   // 自动报送：打开的就是已登记的列表页时，每天送一次。
   // 不设定时器——列表页是浏览器渲染的，服务端抓不到；"你打开过"就是最好的触发条件。
+  // 注意去重是**每天一次**，所以更新脚本后当天不会再自动报送——用面板的按钮手动送一次。
   async function autoReportIfWatched() {
     const watches = await loadWatches();
+    if (!watches.length) {
+      log('没有已登记的列表页（/watches.json 返回空）');
+      return null;
+    }
     const hit = watches.find((item) => item.url && sameUrl(item.url, location.href));
-    if (!hit) return null;
+    if (!hit) {
+      log('当前页不是要盯的列表页；已登记的是：', watches.map((w) => w.url));
+      return null;
+    }
     const key = 'sl-listing-sent:' + hit.id;
     const today = new Date().toISOString().slice(0, 10);
-    if (localStorage.getItem(key) === today) return null;
+    if (localStorage.getItem(key) === today) {
+      log('列表页 ' + hit.id + ' 今天已经报送过，跳过。要再送一次请点面板的「这是列表页」按钮。');
+      return null;
+    }
+    log('正在报送列表页 ' + hit.id + ' …');
     const result = await sendListing();
     if (result && result.ok) localStorage.setItem(key, today);
     return { watch: hit, result: result };
@@ -257,16 +278,19 @@
       const sources = await loadSources();
       if (Array.isArray(sources) && sources.length > 0) {
         buildPanel(sources);
-        log('已加载 ' + sources.length + ' 条配方');
+        log('已加载 ' + sources.length + ' 条配方；当前页 ' + location.href);
+      } else {
+        log('配方清单为空，面板未注入');
       }
+      const calls = discoverApiCalls();
+      log('发现 ' + calls.length + ' 个数据请求（点「这是列表页」会一并上报）');
       const auto = await autoReportIfWatched();
       if (auto && auto.result && auto.result.ok) {
         const fresh = (auto.result.new || []).length;
         log('已自动报送列表页 ' + auto.watch.id + '：共 ' + auto.result.total +
-            ' 篇，新出现 ' + fresh + ' 篇');
+            ' 篇，新出现 ' + fresh + ' 篇，接口 ' + (auto.result.api_calls || []).length + ' 个');
         if (fresh > 0) {
-          console.log('[台账采集] 🆕 新文档：',
-                      (auto.result.new || []).map((i) => i.published_at + ' ' + i.title));
+          log('🆕 新文档：', (auto.result.new || []).map((i) => i.published_at + ' ' + i.title));
         }
       }
     } catch (err) {

@@ -5,6 +5,7 @@
 """
 
 import json
+import re
 import sys
 import tempfile
 import threading
@@ -235,6 +236,13 @@ class WatchHttpTest(unittest.TestCase):
         Handler.snapshot_dir = None
         self.tmp.cleanup()
 
+    def test_serves_the_userscript_for_auto_update(self):
+        """脚本由本机托管，Tampermonkey 按 @updateURL 自动更新——不用再手工粘贴。"""
+        body = urlopen(self.base + "/shopee-capture.user.js", timeout=10).read().decode("utf-8")
+        self.assertIn("@updateURL", body)
+        self.assertIn("http://127.0.0.1:8765/shopee-capture.user.js", body)
+        self.assertIn("GM_xmlhttpRequest", body)
+
     def test_watches_endpoint_lists_the_configured_listing(self):
         data = json.loads(urlopen(self.base + "/watches.json", timeout=10).read().decode())
         self.assertEqual(data[0]["id"], "WATCH-EDU-POLICY")
@@ -379,5 +387,23 @@ class ConflictTest(unittest.TestCase):
         self.assertAlmostEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, 0.16, places=6)
 
 
+
+class UserscriptHeaderTest(unittest.TestCase):
+    def test_version_header_matches_the_js_constant(self):
+        """抬版本时 @version 与 VERSION 要一起改，否则 console 看不出装的是哪一版。"""
+        path = Path(__file__).resolve().parents[1] / "tools" / "shopee-capture.user.js"
+        text = path.read_text(encoding="utf-8")
+        header = re.search(r"@version\s+([\d.]+)", text)
+        constant = re.search(r"const VERSION = '([\d.]+)'", text)
+        self.assertIsNotNone(header, "缺 @version")
+        self.assertIsNotNone(constant, "缺 VERSION 常量")
+        self.assertEqual(header.group(1), constant.group(1))
+
+    def test_panel_has_manual_list_report_button(self):
+        """每日去重会让当天无法再自动报送，面板必须留一个手动按钮。"""
+        path = Path(__file__).resolve().parents[1] / "tools" / "shopee-capture.user.js"
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("sl-list", text)
+        self.assertIn("这是列表页", text)
 if __name__ == "__main__":
     unittest.main()

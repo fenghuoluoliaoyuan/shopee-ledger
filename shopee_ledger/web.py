@@ -51,6 +51,21 @@ class Handler(BaseHTTPRequestHandler):
         notice = _first(query, "notice")
         error = _first(query, "error")
 
+        if parsed.path == "/shopee-capture.user.js":
+            # 本机托管脚本：Tampermonkey 通过 @updateURL 指向这里，以后改脚本自动更新，
+            # 不用每次让人重新粘贴一遍。
+            path = Path(__file__).resolve().parent.parent / "tools" / "shopee-capture.user.js"
+            if not path.exists():
+                self._send(404, b"user.js not found")
+                return
+            body = path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         if parsed.path == "/sources.json":
             # 给油猴脚本的配方清单——下拉框据此生成，脚本里不重复写一份
             from shopee_ledger.sources import sources_payload
