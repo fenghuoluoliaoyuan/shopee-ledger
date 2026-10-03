@@ -162,7 +162,8 @@
         "url": "https://shopee.cn/edu/article/26620",
         "checked_at": "2026-10-03",
         "recheck_status": "manual_only",
-        "snapshot_ref": null
+        "snapshot_ref": "data\\snapshots\\ARTICLE-26620-7c5ef8ff2b9d.txt",
+        "captured_at": "2025-12-22"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
@@ -203,7 +204,8 @@
         "checked_at": "2026-10-03",
         "recheck_status": "manual_only",
         "recheck_note": "JS 空壳，需人工登录复核",
-        "snapshot_ref": null
+        "snapshot_ref": "data\\snapshots\\ARTICLE-26619-f7d01b14e3da.txt",
+        "captured_at": "2026-09-03"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
@@ -505,6 +507,108 @@
       "review_cycle": "on_first_campaign",
       "next_review_at": "2026-12-31",
       "task_ref": "VT-047"
+    },
+    {
+      "id": "P-INFRA-FEE",
+      "name": "平台基础设施费（每笔已完成订单固定额，含增值税）",
+      "scope": {
+        "platform": "shopee",
+        "market": "*",
+        "mode": "*"
+      },
+      "value": {
+        "by_market": {
+          "VN": 3000.0,
+          "MY": 0.54,
+          "TH": 1.07,
+          "PH": 5.0
+        },
+        "currency": "本地币",
+        "tax_included": true,
+        "charged_on": "每笔已完成订单，从订单中直接扣除",
+        "effective_dates": {
+          "VN": "2025-07-01",
+          "MY": "2025-07-16",
+          "TH": "2025-09-15",
+          "PH": "2025-09-03"
+        },
+        "refunds": "全额退款（未收到商品）不收；部分退款按未退部分比例收",
+        "exemptions": {
+          "PH": [
+            "过去30天已完成订单的前50笔豁免",
+            "新店首次上架起90个自然日内豁免"
+          ],
+          "MY": [
+            "官方仓（FBS）订单预扣后每月返还，实际不产生"
+          ]
+        },
+        "display_note": "泰国订单详情直接显示【平台基础设施费】；其他站点显示为服务费"
+      },
+      "evidence_level": "A",
+      "state": "active",
+      "gate_eligible": false,
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "source": {
+        "url": "https://shopee.cn/edu/article/25798",
+        "kind": "official_article",
+        "captured_at": "2025-08-20",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "已设季度复核；金额与费率可能随平台调整变动",
+        "snapshot_ref": "data\\snapshots\\ARTICLE-25798-d2b408c008c0.txt"
+      },
+      "basis": "官方《Shopee平台基础设施费》费用标准表，含增值税；金额原文给出"
+    },
+    {
+      "id": "P-TECH-FEE",
+      "name": "技术支持费（按已完成订单商品总额的比例，含税费）",
+      "scope": {
+        "platform": "shopee",
+        "market": "*",
+        "mode": "*"
+      },
+      "value": {
+        "by_market": {
+          "VN": {
+            "rate": 0.05,
+            "tax_rate": 0.08,
+            "rate_incl_tax": 0.054,
+            "formula": "5% + 5%×8% = 5.4%"
+          }
+        },
+        "effective_from": "2026-02-02",
+        "applies_to": [
+          "跨境直邮店铺",
+          "官方仓店铺",
+          "三方仓店铺"
+        ],
+        "markets": [
+          "SG",
+          "MY",
+          "TH",
+          "VN"
+        ],
+        "basis_note": "以已完成订单的**商品总额**为基数；无优惠券和回扣，如有会先减除再计算",
+        "refunds": "订单完成前部分退货 → 按已完成部分收；订单完成后 → 正常收取不退回",
+        "ad_credit": "初期按增长潜力赠送不超过已完成订单销售额 5% 的广告金（2026-06-30 起所赠广告金有效期 6 个月）",
+        "open_gap": "其余站点的费率在原文的表格图片里，正文未给出文字值——**未知，不是 0**"
+      },
+      "evidence_level": "A",
+      "state": "active",
+      "gate_eligible": false,
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "source": {
+        "url": "https://shopee.cn/edu/article/26628",
+        "kind": "official_article",
+        "captured_at": "2026-07-08",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "已设季度复核；金额与费率可能随平台调整变动",
+        "snapshot_ref": "data\\snapshots\\ARTICLE-26628-5c0ad9e51390.txt"
+      },
+      "basis": "官方《2026 Shopee技术支持费》；越南 5%+8% 税费的算法在原文示例里给出"
     }
   ]
 }

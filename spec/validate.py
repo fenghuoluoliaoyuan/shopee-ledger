@@ -51,6 +51,22 @@ def load(path):
         return json.load(handle)
 
 
+# 核实覆盖层（spec/verified.json，随 git 走）。真值分两层：spec 文件是制度性的，
+# 覆盖层是核实成果。查"有没有证据"时必须看两层，否则会误报——实测 11 条
+# "A 级无快照"里大部分参数其实已有快照，只是记在覆盖层。
+def load_verified():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verified.json")
+    if not os.path.exists(path):
+        return {}
+    try:
+        return load(path).get("params") or {}
+    except (ValueError, OSError):
+        return {}
+
+
+verified = load_verified()
+
+
 # ---------------------------------------------------------------- 收集
 
 class Bag(object):
@@ -107,8 +123,12 @@ def check_param(bag, param, rel, file_scope):
             err("%s: %s 级但缺少 source.recheck_status" % (pid, level))
 
     # INV-003：A 级必须有快照（corroboration 不能替代）
-    if level == "A" and not source.get("snapshot_ref"):
-        warn("INV-003 待补: %s 为 A 级但 snapshot_ref 为空（无快照的 A 级参数视为无证据）" % pid)
+    #
+    # 两层都查：spec 文件里的 source.snapshot_ref，或覆盖层里的 snapshot_ref。
+    # 只看 spec 会误报——很多 A 级参数的快照是无头浏览器抓的，记在覆盖层。
+    snapshot = source.get("snapshot_ref") or (verified.get(pid) or {}).get("snapshot_ref")
+    if level == "A" and not snapshot:
+        warn("INV-003 待补: %s 为 A 级但 snapshot_ref 为空（spec 与 verified.json 里都没有）" % pid)
 
     # 交叉验证条目格式
     for item in param.get("corroboration") or []:
@@ -165,7 +185,10 @@ def check_rule(bag, rule, rel):
             entry = bag.params.get(dep)
             if entry is None:
                 continue  # 引用完整性在后面的 passes 里统一报
-            dep_level = entry[0].get("evidence_level")
+            # 等级要看**核实后的视图**：参数可能已在覆盖层里升到 A/B/C，
+            # 只看 spec 会把"已经修好的降级"继续报出来（实测 4 条误报）。
+            dep_level = ((verified.get(dep) or {}).get("evidence_level")
+                         or entry[0].get("evidence_level"))
             if dep_level not in HARD_OK:
                 if not rule.get("on_degrade"):
                     err("INV-001 违反: 硬规则 %s 依赖 %s 级参数 %s，且未声明 on_degrade"

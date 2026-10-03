@@ -528,8 +528,12 @@ def spec_page(ledger: Ledger) -> str:
     from shopee_ledger.reachability import load_reachability, unreachable_for
 
     reachability = load_reachability()
+    # 参数表要用**核实后的视图**（基础 spec + spec/verified.json + 库里的覆盖）。
+    # 之前这里遍历的是 default_spec()，于是已核实的参数在配置页上仍显示「未核实」——
+    # 页面同时给出"已核实 A 级"和"未核实"，自相矛盾。registry/DDL 仍用基础 spec。
+    view = ledger.spec
     param_rows = []
-    for pid, param in sorted(spec.params.items()):
+    for pid, param in sorted(view.params.items()):
         if param.value is None:
             shown = '<span class="k">未核实</span>'
         elif isinstance(param.value, (dict, list)):

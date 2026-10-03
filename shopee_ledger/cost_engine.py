@@ -311,6 +311,26 @@ class CostEngine:
                                     duty.level, "平台不代收，须由卖家承担"))
 
         market_doc = self.spec.market(market)
+
+        # 两项容易被漏掉的平台费用。放在"缺字段提前返回"**之前**算：
+        # 缺别的字段时更该看得见费用构成，而不是整块被吞掉（实测泰国站就看不到）。
+        price_now = float(data.price_local) if data.price_local else 0.0
+        infra = self.per_order_fee(market)
+        tech = self.tech_fee_rate(market)
+        infra_amount = float(infra.value) if infra.ok else 0.0
+        tech_amount = price_now * float(tech.value) if tech.ok else 0.0
+        # 官方列表里列了这个站点却取不到值 → 真缺；没列 → 该站点不收取，记 0
+        if not infra.ok and market in self.fee_markets("P-INFRA-FEE"):
+            missing.append("infra_fee")
+        if not tech.ok and market in self.fee_markets("P-TECH-FEE"):
+            missing.append("tech_fee")
+        fee_trace = [
+            TraceEntry("平台基础设施费", infra_amount, infra.source, infra.level,
+                       "每笔已完成订单固定额，含增值税；官方列表未列该站点时按不收取"),
+            TraceEntry("技术支持费", tech_amount, tech.source, tech.level,
+                       "按已完成订单商品总额比例，含税费"),
+        ]
+
         if missing:
             context = {
                 "price_local": data.price_local,
@@ -321,7 +341,7 @@ class CostEngine:
                 "import_tax_treatment": treatment,
                 "inputs": {"price_local_includes_shipping": False},
             }
-            return CostResult(INCOMPLETE, missing=sorted(set(missing)), trace=trace,
+            return CostResult(INCOMPLETE, missing=sorted(set(missing)), trace=trace + fee_trace,
                               buyer_price_uplift=buyer_uplift, notes=notes, context=context)
 
         # 4) 计算
@@ -350,7 +370,9 @@ class CostEngine:
 
         presale_amount = price * float(presale_rate.value) if (data.is_presale and presale_rate.ok) else 0.0
         service_amount = data.service_fee if data.service_fee_kind == "service" else 0.0
-        platform_fee = commission_amount + txn_amount + presale_amount + service_amount
+
+        platform_fee = (commission_amount + txn_amount + presale_amount + service_amount
+                        + infra_amount + tech_amount)
         affiliate = price * data.affiliate_rate
         withdraw_amount = price * float(withdraw.value)
         fx_amount = price * float(fx_loss.value)
@@ -377,7 +399,11 @@ class CostEngine:
             TraceEntry("净运费", net_freight, "max(SLS − 买家实付, 0)", "-", "买家多付不退，不计收入"),
             TraceEntry("佣金", commission_amount, commission_source, commission_level, commission_note),
             TraceEntry("交易手续费", txn_amount, txn_source, txn_level, "免佣窗口内照收"),
-            TraceEntry("平台费合计", platform_fee, "佣金+手续费+预售+服务费"),
+            TraceEntry("平台基础设施费", infra_amount, infra.source, infra.level,
+                       "每笔已完成订单固定额，含增值税"),
+            TraceEntry("技术支持费", tech_amount, tech.source, tech.level,
+                       "按已完成订单商品总额比例，含税费"),
+            TraceEntry("平台费合计", platform_fee, "佣金+手续费+预售+服务费+基础设施费+技术支持费"),
             TraceEntry("优惠券与回扣", float(data.coupon_discount), "输入", "-", "官方结算口径里从订单收入减掉"),
             TraceEntry("联盟佣金", affiliate, "输入"),
             TraceEntry("订单收入", order_income, "官方口径：商品总额-运费总额-优惠券与回扣-各项费用"),
@@ -398,6 +424,8 @@ class CostEngine:
             "platform_fee": platform_fee, "affiliate": affiliate, "ad_spend": float(data.ad_spend),
             "withdraw": withdraw_amount, "fx_loss": fx_amount, "return_reserve": return_reserve,
             "import_tax": tax_as_cost,
+            "infra_fee": infra_amount,
+            "tech_fee": tech_amount,
             # 官方结算口径里的两项，便于与平台账单逐项对齐
             "order_income": order_income,
             "order_adjustment": float(data.order_adjustment),
@@ -433,3 +461,53 @@ class CostEngine:
             if isinstance(raw, dict) and raw.get("platform_collects_at_checkout"):
                 return True
         return False
+
+    # ---- 被漏掉的平台费用：基础设施费与技术支撑费 -------------------------
+    def _table(self, param_id: str) -> tuple[dict[str, Any] | None, str]:
+        """取按市场分列的费用表。返回 (by_market 字典, 参数等级)。"""
+        param = self.spec.params.get(param_id)
+        if param is None:
+            return None, "-"
+        raw = param.value if param.value is not None else param.unverified_claim
+        if not isinstance(raw, dict):
+            return None, param.evidence_level
+        table = raw.get("by_market")
+        return (table if isinstance(table, dict) else {}), param.evidence_level
+
+    def per_order_fee(self, market: str, param_id: str = "P-INFRA-FEE") -> Rate:
+        """每笔已完成订单的固定额（含税），如平台基础设施费。
+
+        区分两件事，别混：
+        * **官方列表里没有这个站点** → 该站点不收取，记 0（不是"未知"）；
+        * **列表里有这个站点却取不到值** → 真缺，调用方应记 INCOMPLETE。
+        """
+        table, level = self._table(param_id)
+        if table is None:
+            return Rate(None, param_id, level)
+        if market not in table:
+            return Rate(0.0, "%s：官方列表未列该站点，按不收取" % param_id, level)
+        value = table[market]
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return Rate(float(value), "%s.by_market.%s" % (param_id, market), level)
+        return Rate(None, "%s.by_market.%s" % (param_id, market), level)
+
+    def tech_fee_rate(self, market: str, param_id: str = "P-TECH-FEE") -> Rate:
+        """按已完成订单商品总额收取的技术支持费（含税费）比例。"""
+        table, level = self._table(param_id)
+        if table is None:
+            return Rate(None, param_id, level)
+        if market not in table:
+            return Rate(0.0, "%s：官方列表未列该站点，按不收取" % param_id, level)
+        entry = table[market]
+        if not isinstance(entry, dict):
+            return Rate(None, "%s.by_market.%s" % (param_id, market), level)
+        rate = entry.get("rate_incl_tax")
+        if rate is None:
+            rate = entry.get("rate")
+        if rate is None:
+            return Rate(None, "%s.by_market.%s" % (param_id, market), level)
+        return Rate(float(rate), "%s.by_market.%s.rate_incl_tax" % (param_id, market), level)
+
+    def fee_markets(self, param_id: str) -> set[str]:
+        table, _level = self._table(param_id)
+        return set(table or {})

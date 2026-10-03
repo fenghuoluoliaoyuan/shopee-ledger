@@ -748,12 +748,13 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
     if args.cmd == "spec-info":
         from shopee_ledger.spec import default_spec
 
-        spec = default_spec()
-        print(spec.summary())
-        print("指纹:", __import__("shopee_ledger.storage", fromlist=["Storage"]).Storage(args.db, spec).fingerprint())
-        if spec.problems:
+        # 摘要用**核实后的视图**。指纹仍用基础 spec——它记录的是"制度性配置"的版本，
+        # 与运行期的核实覆盖无关（覆盖是数据，不是配置）。
+        print(ledger.spec.summary())
+        print("指纹:", __import__("shopee_ledger.storage", fromlist=["Storage"]).Storage(args.db, default_spec()).fingerprint())
+        if ledger.spec.problems:
             print("加载期问题:")
-            for item in spec.problems:
+            for item in ledger.spec.problems:
                 print("  -", item)
             return 1
         print("加载期问题: 无")
@@ -761,9 +762,8 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
     if args.cmd == "quote2":
         from shopee_ledger.cost_engine import CostEngine, CostInputs
         from shopee_ledger.gates import GateService
-        from shopee_ledger.spec import default_spec
 
-        spec = default_spec()
+        spec = ledger.spec
         inputs = CostInputs(
             market=args.market,
             price_local=args.price,

@@ -130,6 +130,76 @@ class PrecedenceTest(unittest.TestCase):
         self.assertEqual(ids, sorted(ids), "文件内部也要按升序，否则应用顺序会被打乱")
 
 
+class VerifiedViewTest(unittest.TestCase):
+    """用户可见的地方必须用**核实后的视图**，不能只读基础 spec。
+
+    这曾经是个用户可见的 bug：配置页遍历 default_spec()，于是已核实的参数
+    在页面上仍显示「未核实」——同一行里同时给出"已核实 A 级"和"未核实"，自相矛盾。
+    quote2 更严重：拿基础 spec 算钱，用的是 E 级原值。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.folder = Path(self.tmp.name)
+        payload = {"params": {
+            "P-TW-SLS-TIERS": {"value": {"rate_date": "2026-10-03", "channels": {}},
+                               "evidence_level": "A", "source_url": "https://example.test/sim",
+                               "checked_at": "2026-10-03"},
+        }, "checklist_done": []}
+        self.path = self.folder / "verified.json"
+        write_verified(payload, self.path)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_ledger_spec_sees_the_file_override(self):
+        from shopee_ledger.store import Ledger
+
+        ledger = Ledger(self.folder / "l.sqlite", verified_path=self.path)
+        ledger.init()
+        try:
+            self.assertEqual(ledger.spec.params["P-TW-SLS-TIERS"].evidence_level, "A")
+        finally:
+            ledger.close()
+
+    def test_disabling_the_file_restores_the_base_level(self):
+        from shopee_ledger.store import Ledger
+
+        ledger = Ledger(self.folder / "l.sqlite", verified_path=None)
+        ledger.init()
+        try:
+            self.assertNotEqual(ledger.spec.params["P-TW-SLS-TIERS"].evidence_level, "A")
+        finally:
+            ledger.close()
+
+    def test_spec_page_shows_the_verified_value_not_unverified(self):
+        from shopee_ledger.store import Ledger
+        from shopee_ledger.web import spec_page
+
+        ledger = Ledger(self.folder / "l.sqlite", verified_path=self.path)
+        ledger.init()
+        try:
+            html = spec_page(ledger)
+            start = html.find("P-TW-SLS-TIERS")
+            self.assertGreater(start, 0)
+            row = html[start:start + 700]
+            self.assertNotIn("未核实", row, "已核实的参数不该在配置页上显示未核实")
+            self.assertIn("rate_date", row, "应当显示核实后的值")
+        finally:
+            ledger.close()
+
+    def test_spec_page_without_the_file_still_renders(self):
+        from shopee_ledger.store import Ledger
+        from shopee_ledger.web import spec_page
+
+        ledger = Ledger(self.folder / "l.sqlite", verified_path=None)
+        ledger.init()
+        try:
+            self.assertIn("P-TW-SLS-TIERS", spec_page(ledger))
+        finally:
+            ledger.close()
+
+
 class ApplyTest(unittest.TestCase):
     def test_rows_apply_onto_the_base_spec(self):
         payload = build_verified([override(1, "P-TW-COMMISSION", 0.14, "A")], [])

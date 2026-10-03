@@ -38,6 +38,93 @@ def tw_inputs(**overrides):
     return CostInputs(**data)
 
 
+class MissedPlatformFeesTest(unittest.TestCase):
+    """两项以前被漏掉的真实平台费用：平台基础设施费、技术支持费。
+
+    Shopee 自己的定价模拟器在页面上就写着「对于技术支持费上线的站点，请在定价时
+    考虑相关费用」——spec 里原本一个都没有，成本模型会系统性高估利润。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spec = Spec.load(SPEC_ROOT)
+        cls.engine = CostEngine(cls.spec, today="2026-10-03")
+
+    def test_infra_fee_by_market_matches_the_official_table(self):
+        self.assertAlmostEqual(self.engine.per_order_fee("VN").value, 3000.0, places=6)
+        self.assertAlmostEqual(self.engine.per_order_fee("MY").value, 0.54, places=6)
+        self.assertAlmostEqual(self.engine.per_order_fee("TH").value, 1.07, places=6)
+        self.assertAlmostEqual(self.engine.per_order_fee("PH").value, 5.0, places=6)
+
+    def test_unlisted_market_is_zero_with_a_reason_not_missing(self):
+        """官方列表没列这个站点 → 该站点不收取，记 0。这和"未知"是两回事。"""
+        rate = self.engine.per_order_fee("TW")
+        self.assertAlmostEqual(rate.value, 0.0, places=6)
+        self.assertIn("未列该站点", rate.source)
+
+    def test_tech_fee_uses_the_tax_inclusive_rate(self):
+        """越南官方示例：5% + 5%×8% = 5.4%，要用含税比例而不是 5%。"""
+        rate = self.engine.tech_fee_rate("VN")
+        self.assertAlmostEqual(rate.value, 0.054, places=6)
+        self.assertIn("rate_incl_tax", rate.source)
+
+    def test_tech_fee_unlisted_market_is_zero(self):
+        self.assertAlmostEqual(self.engine.tech_fee_rate("TH").value, 0.0, places=6)
+
+    def test_fee_markets_expose_which_markets_are_covered(self):
+        self.assertEqual(self.engine.fee_markets("P-INFRA-FEE"), {"VN", "MY", "TH", "PH"})
+        self.assertEqual(self.engine.fee_markets("P-TECH-FEE"), {"VN"})
+
+    def test_quote_folds_both_fees_into_the_platform_fee(self):
+        """把 TW 也塞进费用表，看钱有没有真的进 platform_fee。"""
+        extra = {"P-INFRA-FEE": {"value": {"by_market": {"TW": 7.0}}, "evidence_level": "A"},
+                 "P-TECH-FEE": {"value": {"by_market": {"TW": {"rate_incl_tax": 0.02}}},
+                                "evidence_level": "A"}}
+        from shopee_ledger.verified import as_override_rows
+
+        spec = self.spec.with_overrides(as_override_rows({"params": extra}))
+        result = CostEngine(spec).quote(tw_inputs())
+        self.assertTrue(result.computed, result.missing)
+        # 7.0 固定 + 350 × 2% = 7 元 → 共 14 进平台费
+        self.assertAlmostEqual(result.components["infra_fee"], 7.0, places=6)
+        self.assertAlmostEqual(result.components["tech_fee"], 7.0, places=6)
+        self.assertIn("infra_fee", result.components)
+        self.assertIn("技术支持费", [entry.label for entry in result.trace])
+
+    def test_fee_trace_survives_an_incomplete_quote(self):
+        """缺字段时更该看得见费用构成，而不是整块被吞掉。"""
+        result = self.engine.quote(CostInputs(market="TH", price_local=500.0))
+        self.assertEqual(result.status, INCOMPLETE)
+        labels = [entry.label for entry in result.trace]
+        self.assertIn("平台基础设施费", labels)
+        self.assertIn("技术支持费", labels)
+
+    def test_missing_param_is_not_silently_zero(self):
+        """参数整个不存在时不能当成 0——那是另一类错误。"""
+        engine = CostEngine(self.spec, today="2026-10-03")
+        engine.spec = spec_without(self.spec, "P-INFRA-FEE")
+        rate = engine.per_order_fee("TH")
+        self.assertIsNone(rate.value)
+
+    def test_listed_market_with_unreadable_value_counts_as_missing(self):
+        """列表里有这个站点却取不到值 → 缺字段，不是 0。"""
+        broken = {"P-INFRA-FEE": {"value": {"by_market": {"TH": None}}, "evidence_level": "A"}}
+        from shopee_ledger.verified import as_override_rows
+
+        spec = self.spec.with_overrides(as_override_rows({"params": broken}))
+        result = CostEngine(spec).quote(CostInputs(market="TH", price_local=500.0))
+        self.assertIn("infra_fee", result.missing)
+
+
+def spec_without(spec, param_id):
+    """去掉某个参数的 Spec 副本——用来测"参数不存在"的分支。"""
+    import copy
+
+    clone = copy.copy(spec)
+    clone.params = {pid: param for pid, param in spec.params.items() if pid != param_id}
+    return clone
+
+
 class OfficialSettlementStructureTest(unittest.TestCase):
     """对齐官方订单结算口径（#25770 附录2）。
 

@@ -25,10 +25,19 @@ class SpecLoadTest(unittest.TestCase):
         cls.spec = Spec.load(SPEC_ROOT)
 
     def test_counts_match_declared(self):
-        self.assertEqual(len(self.spec.params), 52)
+        # 54 = 原 52 + 两个曾被漏掉的真实平台费用（P-INFRA-FEE 平台基础设施费、
+        # P-TECH-FEE 技术支持费）。Shopee 自己的定价模拟器都提示要考虑技术支持费。
+        self.assertEqual(len(self.spec.params), 54)
         self.assertEqual(len(self.spec.rules), 46)
         self.assertEqual(len(self.spec.tasks), 48)
         self.assertEqual(len(self.spec.modes), 3)
+
+    def test_the_two_missed_platform_fees_exist(self):
+        """这两项是真实支出，掉了就会系统性高估利润。"""
+        for param_id in ("P-INFRA-FEE", "P-TECH-FEE"):
+            param = self.spec.params[param_id]
+            self.assertEqual(param.evidence_level, "A", param_id)
+            self.assertIn("by_market", param.value or {}, param_id)
 
     def test_no_self_check_problems(self):
         self.assertEqual(self.spec.problems, [], "\n".join(self.spec.problems))
