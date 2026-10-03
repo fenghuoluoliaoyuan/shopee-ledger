@@ -24,6 +24,7 @@ from shopee_ledger.sources import (
     Source,
     extract_value,
     fetch_source,
+    find_source,
     ingest_text,
     load_sources,
     page_key,
@@ -34,10 +35,19 @@ from shopee_ledger.web import _ingest_payload
 
 REAL_PAGE = """
 <html><body>
-  <h1>跨境卖家费率说明</h1>
-  <p>成交服务费（佣金）为 14%，交易手续费 2.5%。</p>
+  <h1>部分站点佣金及交易手续费等费率调整通知</h1>
+  <p>六、Shopee台湾站点调整：</p>
+  <p>跨境直邮店铺佣金费率统一调整为14%（含税率），交易手续费率统一调整为2.5%（含税率）。</p>
+  <p>七、常见问题</p>
 </body></html>
 """
+
+TAIWAN_ANCHOR = ("六、Shopee台湾站点调整：", "七、常见问题")
+
+
+def inside_taiwan(phrase: str) -> str:
+    """把一句话放进台湾那一段里——否则作用域锚点找不到，测试会因为"没匹配上"而假通过。"""
+    return TAIWAN_ANCHOR[0] + phrase + TAIWAN_ANCHOR[1]
 
 SHELL_PAGE = "<html><body><div id='app'></div><script src='/x.js'></script></body></html>"
 
@@ -51,6 +61,23 @@ PROMO_PAGE = """
 三、佣金激励生效时间 佣金激励生效时间以卖家首店激活销售权的时间为准。
 1、我可以在哪里查询订单佣金的减免情况？ 系统将自动为您扣除相应的佣金费用。
 4、佣金激励政策仅针对首开店铺的佣金进行减免，交易手续费和平台服务费等费用仍按标准收取。
+"""
+
+# shopee.cn/edu/article/26620 的真实结构：一页六个站点。
+# 「14%」在这页上出现两次（新加坡的 MY-SG 项目 + 台湾的跨境直邮）。
+# 下面的站点数字是页面原文；新加坡/马来两段用来验证"作用域必须锁住台湾那一段"。
+MULTI_SITE_PAGE = """
+Shopee部分站点佣金及交易手续费等费率调整通知 2025-12-22
+自2026年1月1日起，平台将对新加坡、马来西亚、泰国、越南、菲律宾及台湾站点的佣金、交易手续费及预售商品订单服务费率进行调整。
+一、Shopee新加坡站点调整：
+自2026年1月1日（北京时间）起，Shopee新加坡站点跨境直邮及三方仓店铺佣金费率统一调整为16%（含税率），官方海外仓店铺佣金费率统一调整为11%（含税率），MY-SG项目（即马来西亚直送新加坡）官方海外仓店铺佣金费率统一调整为14%（含税率）。
+二、Shopee马来西亚站点调整：
+自2026年1月1日（北京时间）起，Shopee马来西亚站点官方海外仓店铺佣金费率统一调整为15.12%（含税率）。
+六、Shopee台湾站点调整：
+自2026年1月1日（北京时间）起，Shopee台湾站点免运服务（以下简称"FSS"）将并入至平台基础服务，所有店铺将免费享受FSS相关权益；跨境直邮店铺佣金费率统一调整为14%（含税率），交易手续费率统一调整为2.5%（含税率），预售商品订单服务费统一调整为3%（含税率）。
+注：1.新费率仅适用于在生效日期（即北京时间2026年1月1日）后生成的订单
+七、常见问题
+1、佣金如何计算？ 佣金=（商品售价+Shopee提供的商品补贴-卖家优惠折扣）（不含订单运费）*佣金费率。
 """
 
 
@@ -76,25 +103,62 @@ class ExtractTest(unittest.TestCase):
         self.assertIsNone(extract_value({"kind": "manual"}, REAL_PAGE))
 
     # ---- 误抓回归：推广语不是费率 --------------------------------------
+    def test_commission_recipe_rejects_promo_sentence_inside_scope(self):
+        """真实抓过一次：把「佣金直减10%」当成了佣金率。作用域内也必须拒掉。"""
+        rule = self._rule("P-TW-COMMISSION")
+        for phrase in ("自动免除前三个月的佣金或佣金直减10%！",
+                       "店铺可享受佣金激励10%",
+                       "佣金减免30%",
+                       "三、佣金激励生效时间 佣金激励生效时间以卖家首店激活销售权的时间为准"):
+            self.assertIsNone(extract_value(rule, inside_taiwan(phrase)),
+                              "推广语在作用域内也不能当费率：%s" % phrase)
+
     def test_commission_recipe_rejects_promo_page(self):
-        """真实抓过一次：把「佣金直减10%」当成了佣金率。"""
-        rule = next(item.extract for item in load_sources()
-                    if item.param_id == "P-TW-COMMISSION")
-        self.assertIsNone(extract_value(rule, PROMO_PAGE),
-                          "免佣政策页上没有佣金率，必须抓不到而不是抓个 10% 出来")
+        rule = self._rule("P-TW-COMMISSION")
+        self.assertIsNone(extract_value(rule, PROMO_PAGE))
 
     def test_commission_recipe_still_reads_real_phrasings(self):
-        rule = next(item.extract for item in load_sources()
-                    if item.param_id == "P-TW-COMMISSION")
-        for text in ("本店佣金为 14%。", "佣金费率：2.5%", "跨境直邮佣金 14%"):
-            self.assertAlmostEqual(extract_value(rule, text), 0.14
-                                   if "14" in text else 0.025, places=9)
+        rule = self._rule("P-TW-COMMISSION")
+        for phrase, expected in (("跨境直邮店铺佣金费率统一调整为14%（含税率）", 0.14),
+                                 ("佣金费率：2.5%", 0.025),
+                                 ("佣金为 14%", 0.14),
+                                 ("佣金 14%", 0.14)):
+            self.assertAlmostEqual(extract_value(rule, inside_taiwan(phrase)), expected, places=9,
+                                   msg=phrase)
 
-    def test_commission_recipe_rejects_other_promo_words(self):
-        rule = next(item.extract for item in load_sources()
-                    if item.param_id == "P-TW-COMMISSION")
-        self.assertIsNone(extract_value(rule, "佣金激励10%"))
-        self.assertIsNone(extract_value(rule, "佣金减免30%"))
+    # ---- 作用域：一页六个站点，必须锁住台湾那一段 -----------------------
+    def _rule(self, param_id: str) -> dict:
+        return next(item.extract for item in load_sources() if item.param_id == param_id)
+
+    def test_scope_picks_the_taiwan_section_not_the_first_match(self):
+        """没有作用域时，正则会命中新加坡那一段（16%）——数字抓对是运气。"""
+        rule = self._rule("P-TW-COMMISSION")
+        naive = dict(rule)
+        naive.pop("scope")
+        self.assertAlmostEqual(extract_value(rule, MULTI_SITE_PAGE), 0.14, places=9)
+        self.assertAlmostEqual(extract_value(naive, MULTI_SITE_PAGE), 0.16, places=9,
+                               msg="去掉作用域就会抓到新加坡的 16%")
+
+    def test_all_three_taiwan_rates_from_one_page(self):
+        """真实页面原文：佣金 14% / 交易手续费 2.5% / 预售服务费 3%。"""
+        self.assertAlmostEqual(extract_value(self._rule("P-TW-COMMISSION"), MULTI_SITE_PAGE), 0.14, places=9)
+        self.assertAlmostEqual(extract_value(self._rule("P-TW-TXN-FEE"), MULTI_SITE_PAGE), 0.025, places=9)
+        self.assertAlmostEqual(extract_value(self._rule("P-TW-PRESALE-FEE"), MULTI_SITE_PAGE), 0.03, places=9)
+
+    def test_missing_anchor_fails_instead_of_falling_back_to_whole_page(self):
+        rule = {"kind": "regex", "scope": {"after": "不存在的段落"},
+                "expr": "佣金[^0-9%]{0,10}([0-9.]+)\\s*%", "group": 1, "scale": 0.01}
+        self.assertIsNone(extract_value(rule, MULTI_SITE_PAGE),
+                          "锚点找不到必须报失败，不能退化成全页匹配")
+
+    def test_scope_window_limits_bleed(self):
+        """before 锚点若消失，window 要兜住，别把后面几段一起圈进来。"""
+        text = "甲段 " + ("填充" * 50) + " 佣金 9% 乙段 佣金 3%"
+        rule = {"kind": "regex", "scope": {"after": "甲段", "window": 20},
+                "expr": "佣金[^0-9%]{0,10}([0-9.]+)\\s*%", "group": 1, "scale": 0.01}
+        self.assertIsNone(extract_value(rule, text), "窗口内没有数字就该失败")
+        rule["scope"]["window"] = 200
+        self.assertAlmostEqual(extract_value(rule, text), 0.09)
 
 
 class FetchTest(unittest.TestCase):
@@ -167,6 +231,23 @@ class IngestTest(unittest.TestCase):
         self.assertEqual(capture.status, STATUS_OK)
         self.assertAlmostEqual(capture.value, 0.14)
         self.assertEqual(capture.channel, "userscript")
+
+    def test_three_recipes_sharing_one_url_do_not_collide(self):
+        """一页三个费率、三条配方共用同一个 URL。按 URL 找会全部命中第一条。"""
+        url = "https://shopee.cn/edu/article/26620"
+        for param_id, expected in (("P-TW-COMMISSION", 0.14),
+                                   ("P-TW-TXN-FEE", 0.025),
+                                   ("P-TW-PRESALE-FEE", 0.03)):
+            capture = ingest_text(MULTI_SITE_PAGE, param_id=param_id, url=url,
+                                  sources=self.sources, snapshot_dir=self.snaps)
+            self.assertEqual(capture.status, STATUS_OK, param_id)
+            self.assertAlmostEqual(capture.value, expected, places=9, msg=param_id)
+            self.assertEqual(capture.source_id, "SRC-" + param_id[2:], param_id)
+
+    def test_find_source_prefers_param_id_over_url(self):
+        found = find_source(self.sources, param_id="P-TW-TXN-FEE",
+                            url="https://shopee.cn/edu/article/26620")
+        self.assertEqual(found.id, "SRC-TW-TXN-FEE")
 
     def test_ingest_without_recipe_reports_it(self):
         capture = ingest_text("随便一段文本", param_id="P-NOT-EXIST",

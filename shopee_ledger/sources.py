@@ -114,11 +114,44 @@ def load_sources(path: Path | str = DEFAULT_SOURCES) -> list[Source]:
     ) for item in doc.get("sources") or []]
 
 
+def scope_text(text: str, scope: dict[str, Any] | None) -> str:
+    """先锁定页面里的那一段，再在里面提取。
+
+    为什么必须有这一步：shopee.cn/edu/article/26620 一页写了 6 个站点，
+    「14%」在新加坡（MY-SG 项目）和台湾各出现一次。只在整页上跑正则，
+    抓对是运气，抓错是常态。作用域把"哪一段"这件事显式写进配方。
+
+    ``after`` 找不到 → 返回空串（提取必然失败）。宁可报失败，也不要退化成全页匹配。
+    """
+    if not scope:
+        return text
+    start = 0
+    after = scope.get("after")
+    if after:
+        index = text.find(after)
+        if index < 0:
+            return ""
+        start = index + len(after)
+    end = len(text)
+    before = scope.get("before")
+    if before:
+        index = text.find(before, start)
+        if index > 0:
+            end = index
+    window = scope.get("window")
+    if window:
+        end = min(end, start + int(window))
+    return text[start:end]
+
+
 def extract_value(rule: dict[str, Any], text: str) -> Any:
     """按配方提取。提取不到就返回 None——绝不返回一个"看起来对"的默认值。"""
     kind = (rule or {}).get("kind")
     if kind == "regex":
-        match = re.search(rule["expr"], text, re.S)
+        scoped = scope_text(text, rule.get("scope"))
+        if not scoped:
+            return None
+        match = re.search(rule["expr"], scoped, re.S)
         if not match:
             return None
         raw = match.group(rule.get("group", 1)).replace(",", "").strip()
@@ -211,11 +244,20 @@ def fetch_all(
 
 def find_source(sources: list[Source], *, param_id: str | None = None,
                 url: str | None = None) -> Source | None:
-    for source in sources:
-        if param_id and source.param_id == param_id:
-            return source
-        if url and source.url.rstrip("/") == url.rstrip("/"):
-            return source
+    """先按参数 ID 精确匹配，URL 只作兜底。
+
+    顺序不能反：一页可以登记多条配方（shopee.cn/edu/article/26620 一页就有佣金、
+    交易手续费、预售服务费三条，URL 完全相同）。先按 URL 匹配会让后两条都命中第一条，
+    于是三个参数全变成佣金率——测过，真的会。
+    """
+    if param_id:
+        for source in sources:
+            if source.param_id == param_id:
+                return source
+    if url:
+        for source in sources:
+            if page_key(source.url) == page_key(url):
+                return source
     return None
 
 
