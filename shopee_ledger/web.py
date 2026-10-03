@@ -853,9 +853,15 @@ def _ingest_payload(raw_body: bytes, db_path: str) -> dict:
         ledger.init()
         candidate_id = ledger.record_capture(capture)
         if candidate_id is None:
+            hints = {
+                "url_mismatch": "把浏览器切到 %s 再点一次；或给当前页面单独加一条配方"
+                                % (capture.expected_url or "配方登记的页面"),
+                "extract_failed": "提取失败不等于没有收获：快照已存，去修 spec/sources.json 的规则",
+            }
             return {"ok": False, "status": capture.status, "param_id": capture.param_id,
                     "message": capture.message, "snapshot_ref": capture.snapshot_ref,
-                    "hint": "提取失败不等于没有收获：快照已存，去修 spec/sources.json 的规则"}
+                    "expected_url": capture.expected_url,
+                    "hint": hints.get(capture.status, "未产出候选值")}
         current = ledger.spec.params.get(capture.param_id)
         return {"ok": True, "status": capture.status, "param_id": capture.param_id,
                 "value": capture.value, "candidate_id": candidate_id,

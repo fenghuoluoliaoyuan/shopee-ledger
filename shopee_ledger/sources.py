@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SOURCES = ROOT / "spec" / "sources.json"
@@ -38,6 +39,16 @@ STATUS_HTTP_ERROR = "http_error"
 STATUS_NEEDS_LOGIN = "needs_login"
 STATUS_MANUAL = "manual_required"
 STATUS_NO_RECIPE = "no_recipe"
+STATUS_URL_MISMATCH = "url_mismatch"
+
+
+def page_key(url: str) -> tuple[str, str]:
+    """把 URL 归一成 (主机, 路径) 用于比对，忽略 www 和结尾斜杠。"""
+    parsed = urlsplit(url or "")
+    host = parsed.netloc.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return host, parsed.path.rstrip("/")
 
 
 @dataclass
@@ -70,6 +81,7 @@ class Capture:
     raw_length: int = 0
     captured_at: str = ""
     message: str = ""
+    expected_url: str | None = None   # 配方登记的页面；与 url 不同即视为证据链不成立
 
     def __post_init__(self) -> None:
         if not self.captured_at:
@@ -228,17 +240,31 @@ def ingest_text(
         return Capture(param_id or url or "?", param_id or "?",
                        url or "", STATUS_NO_RECIPE,
                        channel=channel, message="spec/sources.json 里没有对应配方，未提取")
+
+    page_url = (url or source.url).strip() or source.url
     snapshot_ref, digest = save_snapshot(text, source.id, snapshot_dir)
-    value = extract_value(source.extract, text)
-    if value is None:
-        return Capture(source.id, source.param_id, source.url, STATUS_EXTRACT_FAILED,
+
+    # 证据链检查：文本必须来自配方登记的那个页面。
+    # 少了这一步，在 A 页面抓的文本会被记成"来自 B 页面"——审计就指向了错误的来源。
+    if url and page_key(url) != page_key(source.url):
+        return Capture(source.id, source.param_id, page_url, STATUS_URL_MISMATCH,
                        channel=channel, snapshot_ref=snapshot_ref, raw_sha256=digest,
                        raw_length=len(text), captured_at=captured_at or "",
+                       expected_url=source.url,
+                       message="你打开的页面是这个，但配方是给 %s 写的；这里不提取。"
+                               "要抓这个页面，就给它单独加一条配方。" % source.url)
+
+    value = extract_value(source.extract, text)
+    if value is None:
+        return Capture(source.id, source.param_id, page_url, STATUS_EXTRACT_FAILED,
+                       channel=channel, snapshot_ref=snapshot_ref, raw_sha256=digest,
+                       raw_length=len(text), captured_at=captured_at or "",
+                       expected_url=source.url,
                        message="渲染后的文本里也没匹配上配方；快照已存，去修规则或人工抄")
-    return Capture(source.id, source.param_id, source.url, STATUS_OK,
+    return Capture(source.id, source.param_id, page_url, STATUS_OK,
                    channel=channel, value=value, snapshot_ref=snapshot_ref,
                    raw_sha256=digest, raw_length=len(text), captured_at=captured_at or "",
-                   message="来自浏览器渲染后的页面")
+                   expected_url=source.url, message="来自浏览器渲染后的页面")
 
 
 def sources_payload(sources: list[Source] | None = None) -> list[dict[str, Any]]:

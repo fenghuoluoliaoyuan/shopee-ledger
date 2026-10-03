@@ -1,6 +1,6 @@
 {
   "layer": "sources",
-  "note": "抓取配方。access=public 的可以服务端直接抓；access=login 的必须由油猴脚本在已登录的浏览器里抓，再 POST 到本机 /ingest。提取失败一律报错，绝不猜值。",
+  "note": "抓取配方。access=public 的可以服务端直接抓；access=login 的必须由油猴脚本在已登录的浏览器里抓，再 POST 到本机 /ingest。提取失败一律报错，绝不猜值。 规则宁紧勿松：宁可抓不到报失败，也不能把推广语当费率——「佣金直减10%」这类短语曾经把佣金率误抓成 10%。",
   "snapshot_dir": "data/snapshots",
   "sources": [
     {
@@ -10,7 +10,12 @@
       "access": "public",
       "review_cycle": "quarterly",
       "note": "A 级来源，重点做变更检测：平台改佣金率是低频但致命的事件",
-      "extract": { "kind": "regex", "expr": "佣金[率]?[^0-9]{0,12}([0-9]+(?:\\.[0-9]+)?)\\s*%", "group": 1, "scale": 0.01 }
+      "extract": {
+        "kind": "regex",
+        "expr": "佣金[^0-9%直减励]{0,4}([0-9]+(?:\\.[0-9]+)?)\\s*%",
+        "group": 1,
+        "scale": 0.01
+      }
     },
     {
       "id": "SRC-TW-TXN-FEE",
@@ -18,7 +23,12 @@
       "url": "https://shopee.cn/edu/article/26620",
       "access": "public",
       "review_cycle": "quarterly",
-      "extract": { "kind": "regex", "expr": "交易手续费[^0-9]{0,12}([0-9]+(?:\\.[0-9]+)?)\\s*%", "group": 1, "scale": 0.01 }
+      "extract": {
+        "kind": "regex",
+        "expr": "交易手续费[^0-9%直减励]{0,4}([0-9]+(?:\\.[0-9]+)?)\\s*%",
+        "group": 1,
+        "scale": 0.01
+      }
     },
     {
       "id": "SRC-TW-PRESALE-FEE",
@@ -26,7 +36,12 @@
       "url": "https://shopee.cn/edu/article/26620",
       "access": "public",
       "review_cycle": "quarterly",
-      "extract": { "kind": "regex", "expr": "预售[^0-9]{0,12}([0-9]+(?:\\.[0-9]+)?)\\s*%", "group": 1, "scale": 0.01 }
+      "extract": {
+        "kind": "regex",
+        "expr": "预售[^0-9%直减励]{0,4}([0-9]+(?:\\.[0-9]+)?)\\s*%",
+        "group": 1,
+        "scale": 0.01
+      }
     },
     {
       "id": "SRC-TW-TAX-THRESHOLD",
@@ -34,7 +49,12 @@
       "url": "https://help.shopee.tw/portal/4/article/80088",
       "access": "public",
       "review_cycle": "quarterly",
-      "extract": { "kind": "regex", "expr": "新台幣\\s*([0-9,]+)\\s*元?以下", "group": 1, "scale": 1 }
+      "extract": {
+        "kind": "regex",
+        "expr": "新台幣\\s*([0-9,]+)\\s*元?以下",
+        "group": 1,
+        "scale": 1
+      }
     },
     {
       "id": "SRC-TH-VAT",
@@ -43,7 +63,12 @@
       "access": "public",
       "review_cycle": "quarterly",
       "note": "政府原文。目前只有行业转述，抓到官方数字后才能从 E 升到 A",
-      "extract": { "kind": "regex", "expr": "增值税[^0-9]{0,12}([0-9]+(?:\\.[0-9]+)?)\\s*%", "group": 1, "scale": 0.01 }
+      "extract": {
+        "kind": "regex",
+        "expr": "增值税[^0-9%直减励]{0,4}([0-9]+(?:\\.[0-9]+)?)\\s*%",
+        "group": 1,
+        "scale": 0.01
+      }
     },
     {
       "id": "SRC-TW-FX",
@@ -52,7 +77,10 @@
       "access": "login",
       "review_cycle": "weekly",
       "note": "结算汇率要看本店账单，公开页没有。由油猴脚本抓，或每周手工抄一次",
-      "extract": { "kind": "manual", "expr": "结算页的汇率数字" }
+      "extract": {
+        "kind": "manual",
+        "expr": "结算页的汇率数字"
+      }
     },
     {
       "id": "SRC-TW-SLS-TIERS",
@@ -61,7 +89,10 @@
       "access": "login",
       "review_cycle": "quarterly",
       "note": "物流页的运费分档表。抓不到就人工抄，别猜",
-      "extract": { "kind": "manual", "expr": "重量区间 + 对应运费" }
+      "extract": {
+        "kind": "manual",
+        "expr": "重量区间 + 对应运费"
+      }
     },
     {
       "id": "SRC-TW-DTS",
@@ -70,7 +101,10 @@
       "access": "login",
       "review_cycle": "quarterly",
       "note": "DTS 定义通常写在下单/发货页的提示里",
-      "extract": { "kind": "manual", "expr": "出货天数说明" }
+      "extract": {
+        "kind": "manual",
+        "expr": "出货天数说明"
+      }
     }
   ]
 }

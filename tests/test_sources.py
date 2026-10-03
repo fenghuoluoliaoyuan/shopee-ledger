@@ -20,11 +20,13 @@ from shopee_ledger.sources import (
     STATUS_NEEDS_LOGIN,
     STATUS_NO_RECIPE,
     STATUS_OK,
+    STATUS_URL_MISMATCH,
     Source,
     extract_value,
     fetch_source,
     ingest_text,
     load_sources,
+    page_key,
     save_snapshot,
 )
 from shopee_ledger.store import Ledger
@@ -38,6 +40,18 @@ REAL_PAGE = """
 """
 
 SHELL_PAGE = "<html><body><div id='app'></div><script src='/x.js'></script></body></html>"
+
+# 用户实际抓到的「2026年Shopee免佣政策通知」(shopee.cn/edu/article/26619) 原文片段。
+# 页面里每一处「佣金」都不是佣金率——它是免佣政策说明。曾经的宽松规则把
+# 「自动免除佣金或佣金直减10%」里的 10% 抓成了佣金率，这条测试就是钉住那个 bug。
+PROMO_PAGE = """
+2026年Shopee免佣政策通知 2026-09-03
+自2026年1月1日（北京时间）起，Shopee将对卖家在台湾站点成功开通的首个店铺，
+自动免除前三个月的佣金或佣金直减10%！每月免佣订单数量上限为500单。
+三、佣金激励生效时间 佣金激励生效时间以卖家首店激活销售权的时间为准。
+1、我可以在哪里查询订单佣金的减免情况？ 系统将自动为您扣除相应的佣金费用。
+4、佣金激励政策仅针对首开店铺的佣金进行减免，交易手续费和平台服务费等费用仍按标准收取。
+"""
 
 
 class ExtractTest(unittest.TestCase):
@@ -60,6 +74,27 @@ class ExtractTest(unittest.TestCase):
 
     def test_manual_kind_extracts_nothing(self):
         self.assertIsNone(extract_value({"kind": "manual"}, REAL_PAGE))
+
+    # ---- 误抓回归：推广语不是费率 --------------------------------------
+    def test_commission_recipe_rejects_promo_page(self):
+        """真实抓过一次：把「佣金直减10%」当成了佣金率。"""
+        rule = next(item.extract for item in load_sources()
+                    if item.param_id == "P-TW-COMMISSION")
+        self.assertIsNone(extract_value(rule, PROMO_PAGE),
+                          "免佣政策页上没有佣金率，必须抓不到而不是抓个 10% 出来")
+
+    def test_commission_recipe_still_reads_real_phrasings(self):
+        rule = next(item.extract for item in load_sources()
+                    if item.param_id == "P-TW-COMMISSION")
+        for text in ("本店佣金为 14%。", "佣金费率：2.5%", "跨境直邮佣金 14%"):
+            self.assertAlmostEqual(extract_value(rule, text), 0.14
+                                   if "14" in text else 0.025, places=9)
+
+    def test_commission_recipe_rejects_other_promo_words(self):
+        rule = next(item.extract for item in load_sources()
+                    if item.param_id == "P-TW-COMMISSION")
+        self.assertIsNone(extract_value(rule, "佣金激励10%"))
+        self.assertIsNone(extract_value(rule, "佣金减免30%"))
 
 
 class FetchTest(unittest.TestCase):
@@ -144,6 +179,29 @@ class IngestTest(unittest.TestCase):
                               sources=self.sources, snapshot_dir=self.snaps)
         self.assertEqual(capture.status, STATUS_EXTRACT_FAILED)
         self.assertIsNone(capture.value)
+
+    # ---- 证据链：文本必须来自配方登记的那一页 ---------------------------
+    def test_ingest_from_another_page_is_refused(self):
+        """真实踩过：在 26619（免佣政策）点抓，快照却登记成 26620（费率页）。"""
+        capture = ingest_text(PROMO_PAGE, param_id="P-TW-COMMISSION",
+                              url="https://shopee.cn/edu/article/26619",
+                              sources=self.sources, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_URL_MISMATCH)
+        self.assertIsNone(capture.value)
+        self.assertEqual(capture.expected_url, "https://shopee.cn/edu/article/26620")
+        self.assertEqual(capture.url, "https://shopee.cn/edu/article/26619",
+                         "证据必须记实际来源，不能记配方期望的页面")
+        self.assertTrue(capture.snapshot_ref, "不符也要留快照，写新配方时用得上")
+
+    def test_ingest_from_matching_page_passes(self):
+        capture = ingest_text(REAL_PAGE, param_id="P-TW-COMMISSION",
+                              url="https://shopee.cn/edu/article/26620/",
+                              sources=self.sources, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_OK, "结尾斜杠不该算不同页面")
+
+    def test_page_key_normalises_host_and_slash(self):
+        self.assertEqual(page_key("https://www.x.com/a/"), page_key("https://x.com/a"))
+        self.assertNotEqual(page_key("https://x.com/a"), page_key("https://x.com/b"))
 
 
 class CandidateStoreTest(unittest.TestCase):
@@ -236,12 +294,23 @@ class IngestEndpointTest(unittest.TestCase):
         self.assertIn("text 为空", result["error"])
 
     def test_endpoint_reports_extract_failure_with_snapshot(self):
-        body = json.dumps({"param_id": "P-TW-COMMISSION", "url": "https://x.test",
+        body = json.dumps({"param_id": "P-TW-COMMISSION",
+                           "url": "https://shopee.cn/edu/article/26620",
                            "text": SHELL_PAGE}).encode()
         result = _ingest_payload(body, self.db)
         self.assertFalse(result["ok"])
         self.assertEqual(result["status"], STATUS_EXTRACT_FAILED)
         self.assertIn("快照已存", result["hint"])
+
+    def test_endpoint_surfaces_url_mismatch_with_the_expected_page(self):
+        body = json.dumps({"param_id": "P-TW-COMMISSION",
+                           "url": "https://shopee.cn/edu/article/26619",
+                           "text": PROMO_PAGE}).encode()
+        result = _ingest_payload(body, self.db)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["status"], STATUS_URL_MISMATCH)
+        self.assertIn("26620", result["expected_url"])
+        self.assertIn("26620", result["hint"], "提示里要写明该打开哪一页")
 
 
 if __name__ == "__main__":
