@@ -914,7 +914,8 @@ def _ingest_listing(payload: dict, db_path: str) -> dict:
     ledger = Ledger(db_path)
     try:
         ledger.init()
-        result = ledger.record_listing(watch_id, entries, page_url=url)
+        result = ledger.record_listing(watch_id, entries, page_url=url,
+                                       api_calls=payload.get("api_calls") or [])
         result.update({"ok": True, "watch_id": watch_id,
                        "known_watch": bool(known),
                        "hint": "列表页只做发现。正文要另点一次「抓这一页」，且仍需你确认"})

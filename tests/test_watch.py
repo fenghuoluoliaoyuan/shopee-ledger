@@ -16,12 +16,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from http.server import ThreadingHTTPServer  # noqa: E402
 
+from shopee_ledger.sources import ingest_text, load_sources  # noqa: E402
 from shopee_ledger.store import Ledger  # noqa: E402
 from shopee_ledger.watch import (  # noqa: E402
     diff_entries,
     entries_from_links,
     load_watches,
     normalize_date,
+    parse_api_calls,
 )
 from shopee_ledger.web import Handler, _ingest_payload  # noqa: E402
 
@@ -247,6 +249,125 @@ class WatchHttpTest(unittest.TestCase):
         result = json.loads(response.read().decode())
         self.assertTrue(result["ok"])
         self.assertAlmostEqual(result["value"], 0.14)
+
+
+class ApiDiscoveryTest(unittest.TestCase):
+    """列表页是 SPA，接口藏在混淆 JS 里。让浏览器把真实请求报回来。"""
+
+    CALLS = [
+        "https://shopee.cn/seh/api/v1/article/list/?cat_id=1066&page=1",
+        "https://deo.shopeesz.com/shopee/edu/app.js",
+        "https://shopee.cn/edu/static/main.css",
+        "https://shopee.cn/seh/api/v1/cat/list/",
+        "https://shopee.cn/seh/api/v1/article/list/?cat_id=1066&page=2",
+        "https://shopee.cn/track/report",
+    ]
+
+    def test_keeps_only_data_endpoints(self):
+        kept = parse_api_calls(self.CALLS)
+        self.assertIn("https://shopee.cn/seh/api/v1/article/list/?cat_id=1066&page=1", kept)
+        self.assertIn("https://shopee.cn/seh/api/v1/cat/list/", kept)
+        self.assertNotIn("https://deo.shopeesz.com/shopee/edu/app.js", kept)
+        self.assertNotIn("https://shopee.cn/edu/static/main.css", kept)
+
+    def test_ignores_non_http_and_duplicates(self):
+        kept = parse_api_calls(["javascript:void(0)", "", None] + self.CALLS)
+        self.assertEqual(len(kept), len(set(kept)))
+
+    def test_records_and_surfaces_discovered_apis(self):
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        ledger = Ledger(Path(tmp.name) / "l.sqlite")
+        ledger.init()
+        try:
+            ledger.record_listing("WATCH-TEST", entries_from_links(LISTING_LINKS),
+                                  api_calls=self.CALLS)
+            ledger.record_listing("WATCH-TEST", entries_from_links(LISTING_LINKS),
+                                  api_calls=self.CALLS)
+            apis = ledger.discovered_apis()
+            self.assertTrue(apis)
+            self.assertIn("article/list", apis[0]["url"])
+            self.assertEqual(apis[0]["hits"], 2, "同一接口出现两次要累计")
+        finally:
+            ledger.close()
+            tmp.cleanup()
+
+    def test_endpoint_returns_discovered_apis(self):
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        db = str(Path(tmp.name) / "l.sqlite")
+        body = json.dumps({"url": "https://shopee.cn/edu/category?sub_cat_id=1066",
+                           "links": LISTING_LINKS, "api_calls": self.CALLS}).encode()
+        result = _ingest_payload(body, db, snapshot_dir=Path(tmp.name) / "s")
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["api_calls"])
+        tmp.cleanup()
+
+
+class ConflictTest(unittest.TestCase):
+    """多篇文档写了不同的值：系统排序、标最新，**绝不替人选**。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger.init()
+        self.snaps = Path(self.tmp.name) / "snapshots"
+        self.url = "https://shopee.cn/edu/article/26620"
+
+    def tearDown(self):
+        try:
+            self.ledger.close()
+        except Exception:
+            pass
+        self.tmp.cleanup()
+
+    def _capture(self, percent: str, captured_at: str) -> int:
+        text = REAL_PAGE.replace("14%", percent + "%").replace("2.5%", "9.9%") \
+            if "14%" in REAL_PAGE else REAL_PAGE
+        capture = ingest_text(text, param_id="P-TW-COMMISSION", url=self.url,
+                              captured_at=captured_at, sources=load_sources(),
+                              snapshot_dir=self.snaps)
+        return self.ledger.record_capture(capture)
+
+    def test_two_documents_produce_a_conflict(self):
+        self._capture("15", "2026-10-01T00:00:00+00:00")
+        self._capture("16", "2026-11-01T00:00:00+00:00")
+        conflicts = self.ledger.candidate_conflicts()
+        self.assertEqual(len(conflicts), 1)
+        self.assertEqual(conflicts[0]["param_id"], "P-TW-COMMISSION")
+        self.assertEqual(len(conflicts[0]["candidates"]), 2)
+
+    def test_newest_is_marked_not_chosen(self):
+        old = self._capture("15", "2026-10-01T00:00:00+00:00")
+        new = self._capture("16", "2026-11-01T00:00:00+00:00")
+        rows = {row["id"]: row for row in self.ledger.pending_candidates()}
+        self.assertFalse(rows[old]["is_newest"])
+        self.assertEqual(rows[old]["superseded_by"], new)
+        self.assertTrue(rows[new]["is_newest"])
+        self.assertIsNone(rows[new]["superseded_by"])
+
+    def test_conflicting_param_sorts_first(self):
+        self._capture("15", "2026-10-01T00:00:00+00:00")
+        self._capture("16", "2026-11-01T00:00:00+00:00")
+        self.assertEqual(self.ledger.pending_candidates()[0]["conflict_count"], 2)
+
+    def test_approving_the_older_one_is_refused(self):
+        old = self._capture("15", "2026-10-01T00:00:00+00:00")
+        new = self._capture("16", "2026-11-01T00:00:00+00:00")
+        with self.assertRaises(ValueError) as ctx:
+            self.ledger.approve_candidate(old, "A", note="手滑")
+        self.assertIn("#%d" % new, str(ctx.exception), "报错要指出是哪条更新的")
+        self.assertAlmostEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, 0.14, places=6)
+
+    def test_force_allows_the_older_one(self):
+        old = self._capture("15", "2026-10-01T00:00:00+00:00")
+        self._capture("16", "2026-11-01T00:00:00+00:00")
+        self.ledger.approve_candidate(old, "A", note="确认旧的才对", force=True)
+        self.assertAlmostEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, 0.15, places=6)
+
+    def test_approving_the_newest_needs_no_force(self):
+        self._capture("15", "2026-10-01T00:00:00+00:00")
+        new = self._capture("16", "2026-11-01T00:00:00+00:00")
+        self.ledger.approve_candidate(new, "A", note="用最新的")
+        self.assertAlmostEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, 0.16, places=6)
 
 
 if __name__ == "__main__":

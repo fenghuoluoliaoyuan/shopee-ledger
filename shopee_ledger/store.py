@@ -642,27 +642,58 @@ class Ledger:
         return candidate_id
 
     def pending_candidates(self) -> list[dict[str, Any]]:
-        """待确认的候选值，带上当前生效值——变了没有要一眼看出来。"""
+        """待确认的候选值，带当前生效值，**并标出同一参数的多条候选**。
+
+        多篇文档可能各自写了一个值（10 月通知 14%、11 月通知 16%）。
+        系统只负责把它们排好、标出哪条最新，**绝不替人选**。
+        """
+        rows = self.storage.list("ParamCandidate", limit=500,
+                                 where="status = ?", args=("pending",))
+        by_param: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            by_param.setdefault(row["param_id"], []).append(row)
+        # 同参数按抓取时间升序 → 最后一条最新
+        for group in by_param.values():
+            group.sort(key=lambda item: (item.get("captured_at") or "", item["id"]))
         out = []
-        for row in self.storage.list("ParamCandidate", limit=500,
-                                     where="status = ?", args=("pending",)):
-            param = self.spec.params.get(row["param_id"])
-            out.append(dict(
-                row,
-                param_name=(param.name if param else row["param_id"]),
-                current_value=(param.value if param else None),
-                current_level=(param.evidence_level if param else None),
-                changed=bool(param is not None and param.value != row.get("value")),
-            ))
-        out.sort(key=lambda item: (not item["changed"], item["param_id"]))
+        for param_id, group in by_param.items():
+            param = self.spec.params.get(param_id)
+            newest = group[-1] if group else None
+            for row in group:
+                out.append(dict(
+                    row,
+                    param_name=(param.name if param else param_id),
+                    current_value=(param.value if param else None),
+                    current_level=(param.evidence_level if param else None),
+                    changed=bool(param is not None and param.value != row.get("value")),
+                    conflict_count=len(group),
+                    is_newest=(row is newest),
+                    superseded_by=(None if row is newest else newest["id"]),
+                ))
+        # 有冲突的排最前，然后判过时的靠后；同组内最新的靠前
+        out.sort(key=lambda item: (-item["conflict_count"], not item["is_newest"],
+                                   item["param_id"], item["captured_at"] or ""))
         return out
+
+    def candidate_conflicts(self) -> list[dict[str, Any]]:
+        """同一参数有多条待确认候选的，单独列出来。"""
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for row in self.pending_candidates():
+            grouped.setdefault(row["param_id"], []).append(row)
+        return [{"param_id": param_id, "candidates": items}
+                for param_id, items in grouped.items() if len(items) > 1]
 
     def capture_history(self, limit: int = 500) -> list[dict[str, Any]]:
         return self.storage.list("ParamCandidate", limit=limit)
 
     def approve_candidate(self, candidate_id: int, grade: str, *,
-                          operator: str = "cli", note: str | None = None) -> None:
-        """确认一条候选：写覆盖值 + 标记 approved。**等级由人给，不由抓取器给。**"""
+                          operator: str = "cli", note: str | None = None,
+                          force: bool = False) -> None:
+        """确认一条候选：写覆盖值 + 标记 approved。**等级由人给，不由抓取器给。**
+
+        如果同一参数有更晚抓到的候选，默认拒绝——不然"手滑确认了旧值"会被静默接受，
+        而那正是这套系统要防的事。确实要用旧的，显式 --force。
+        """
         row = self.storage.get("ParamCandidate", candidate_id)
         if row is None:
             raise ValueError("找不到候选 #%s" % candidate_id)
@@ -670,6 +701,19 @@ class Ledger:
             raise ValueError("候选 #%s 已经是 %s，不能重复确认" % (candidate_id, row["status"]))
         if row.get("value") is None:
             raise ValueError("候选 #%s 没有值（%s），不能确认" % (candidate_id, row.get("message") or "抓取失败"))
+
+        newer = [item for item in self.pending_candidates()
+                 if item["param_id"] == row["param_id"]
+                 and item["id"] != candidate_id
+                 and (item.get("captured_at") or "") > (row.get("captured_at") or "")]
+        if newer and not force:
+            latest = max(newer, key=lambda item: item.get("captured_at") or "")
+            raise ValueError(
+                "同一参数有更晚抓到的候选 #%s（%s → %s，抓于 %s）；"
+                "确认旧的会把旧值写进决策依据。要确认旧的请加 --force"
+                % (latest["id"], latest.get("current_value"), latest.get("value"),
+                   latest.get("captured_at")))
+
         self._write_override(
             row["param_id"], row["value"], grade,
             source=note or ("抓取确认" if row.get("channel") == "fetch" else "截图确认"),
@@ -679,7 +723,8 @@ class Ledger:
             "status": "approved", "decided_at": _now(), "decided_by": operator})
         self.storage.record_audit("capture.approve", "Param", row["param_id"], result=grade,
                                   detail={"candidate_id": candidate_id, "value": row["value"],
-                                          "source_url": row.get("source_url")})
+                                          "source_url": row.get("source_url"),
+                                          "forced": bool(newer and force)})
 
     def reject_candidate(self, candidate_id: int, reason: str, *, operator: str = "cli") -> None:
         row = self.storage.get("ParamCandidate", candidate_id)
@@ -693,18 +738,20 @@ class Ledger:
                                   detail={"candidate_id": candidate_id, "reason": reason})
 
     # ---- 列表页监控：只做发现 -------------------------------------------
-    def record_listing(self, watch_id: str, entries: list[Any], *, page_url: str = "") -> dict[str, Any]:
+    def record_listing(self, watch_id: str, entries: list[Any], *, page_url: str = "",
+                       api_calls: list[str] | None = None) -> dict[str, Any]:
         """记一次列表页抓取，返回**新增/标题变化/消失**。
 
         刻意不产出参数值：列表页没有正文，而"多篇文档提到同一参数"的新旧冲突
         必须有人判断。这里只回答"该去看哪篇"。
         """
-        from shopee_ledger.watch import STATUS_NEW, STATUS_SEEN, diff_entries
+        from shopee_ledger.watch import STATUS_NEW, STATUS_SEEN, diff_entries, parse_api_calls
 
         previous = {row["article_id"]: row
                     for row in self.storage.list("WatchEntry", limit=5000,
                                                  where="watch_id = ?", args=(watch_id,))}
         diff = diff_entries(previous, entries)
+        apis = parse_api_calls(api_calls or [])
         now = _now()
         for entry in entries:
             known = previous.get(entry.article_id)
@@ -723,13 +770,32 @@ class Ledger:
             detail={"page_url": page_url, "total": len(entries),
                     "new": [entry.article_id for entry in diff["new"]],
                     "changed": [entry.article_id for entry in diff["changed"]],
-                    "gone": diff["gone"]})
+                    "gone": diff["gone"], "api_calls": apis})
         return {
             "total": diff["total"],
             "new": [dict(entry.as_row(), watch_id=watch_id) for entry in diff["new"]],
             "changed_titles": [dict(entry.as_row()) for entry in diff["changed"]],
             "gone": diff["gone"],
+            "api_calls": apis,
         }
+
+    def discovered_apis(self, watch_id: str | None = None) -> list[dict[str, Any]]:
+        """从审计里翻出浏览器报回来的数据接口。
+
+        用途很实际：拿到接口地址后，翻页与定时抓取可以放回服务端（那时抓的是 JSON），
+        不必依赖浏览器。
+        """
+        seen: dict[str, dict[str, Any]] = {}
+        for row in self.storage.list("AuditLog", limit=2000):
+            if row["action"] != "watch.listing":
+                continue
+            if watch_id and str(row["object_id"]) != str(watch_id):
+                continue
+            for url in (row["detail"] or {}).get("api_calls") or []:
+                item = seen.setdefault(url, {"url": url, "first_seen_at": row["at"], "hits": 0})
+                item["hits"] += 1
+                item["last_seen_at"] = row["at"]
+        return sorted(seen.values(), key=lambda item: -item["hits"])
 
     def watch_entries(self, watch_id: str | None = None, *,
                       only_new: bool = False) -> list[dict[str, Any]]:

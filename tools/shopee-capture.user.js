@@ -125,12 +125,32 @@
     return { watch: hit, result: result };
   }
 
+  // 把页面真实发出的数据请求报回去。
+  // 列表页是 SPA，HTML 里没有文章链接；接口地址藏在混淆过的 JS 包里（试过 24 种组合全 404）。
+  // 但浏览器已经在调它了——performance entries 里就是真实 URL。与其猜，不如让它自己报。
+  function discoverApiCalls() {
+    try {
+      return performance
+        .getEntriesByType('resource')
+        .filter((entry) => ['xmlhttprequest', 'fetch'].includes(entry.initiatorType))
+        .map((entry) => entry.name)
+        .filter((url, index, all) => all.indexOf(url) === index)
+        .slice(0, 20);
+    } catch (err) {
+      return [];
+    }
+  }
+
   async function sendListing() {
     const res = await request({
       method: 'POST',
       url: APP + '/ingest',
       headers: { 'Content-Type': 'application/json' },
-      data: JSON.stringify({ url: location.href, links: collectLinks() }),
+      data: JSON.stringify({
+        url: location.href,
+        links: collectLinks(),
+        api_calls: discoverApiCalls(),
+      }),
     });
     return JSON.parse(res.responseText);
   }
@@ -186,6 +206,10 @@
             ? '🆕 新出现 ' + result.new.length + ' 篇：\n' + fresh
             : '（没有新文档）') +
           (result.gone && result.gone.length ? '\n⚠️ 消失 ' + result.gone.length + ' 篇（可能翻页变化）' : '') +
+          (result.api_calls && result.api_calls.length
+            ? '\n\n🔌 顺手记下 ' + result.api_calls.length + ' 个数据接口（可用于服务端翻页）：\n' +
+              result.api_calls.slice(0, 3).map((u) => '  ' + u.slice(0, 78)).join('\n')
+            : '') +
           '\n\n只发现，不取值。要取值就点进文章，切到对应参数再点「抓这一页」。'
         );
       } catch (err) {

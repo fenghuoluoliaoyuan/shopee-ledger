@@ -122,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     appr.add_argument("--id", type=int, required=True)
     appr.add_argument("--grade", required=True, choices=("A", "B", "C"))
     appr.add_argument("--note", help="备注；A 级必须能说明依据")
+    appr.add_argument("--force", action="store_true",
+                      help="同一参数已有更晚候选时仍确认这一条（默认拒绝）")
     rej = sub.add_parser("reject", help="驳回候选值（不改参数）")
     rej.add_argument("--id", type=int, required=True)
     rej.add_argument("--reason", required=True)
@@ -301,27 +303,42 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         fresh = len([row for row in rows if row.get("status") == "new"])
         print("\n共 %d 篇；🆕 %d 篇未读（标记已读：watch --seen <#id>）" % (len(rows), fresh))
         print("新文档只是线索——正文要打开后点「抓这一页」，值仍要你确认。")
+        apis = ledger.discovered_apis()
+        if apis:
+            print("\n浏览器报回来的数据接口（拿到它就能把翻页与定时搬到服务端）：")
+            for item in apis:
+                print("  %-3s 次  %s" % (item["hits"], item["url"][:110]))
+        else:
+            print("\n还没发现数据接口——打开列表页时会自动记录（脚本会上报 performance 里的真实请求）。")
         return 0
     if args.cmd == "review":
         rows = ledger.pending_candidates()
         if not rows:
             print("没有待确认的候选值")
             return 0
+        conflicts = ledger.candidate_conflicts()
+        if conflicts:
+            print("⚠️ 有 %d 个参数存在多条候选（新旧不一）——系统只标哪条最新，不替选：\n"
+                  % len(conflicts))
         for row in rows:
-            print("#%s %s  %s  当前 %s → 抓到 %s   [%s %s]" % (
-                row["id"], row["param_id"], "**变了**" if row["changed"] else "未变",
-                row["current_value"], row["value"], row["captured_at"], row.get("channel") or ""))
-            if row.get("source_url"):
-                print("     来源 %s" % row["source_url"])
+            marks = []
+            if row["conflict_count"] > 1:
+                marks.append("最新" if row["is_newest"]
+                             else "旧，已被 #%s 覆盖" % row["superseded_by"])
+            if row["changed"]:
+                marks.append("与当前值不同")
+            print("#%-4s %-22s 当前 %-11s → 抓到 %-11s %s" % (
+                row["id"], row["param_id"], row["current_value"], row["value"],
+                " ".join("[%s]" % mark for mark in marks)))
+            print("      抓于 %s  %s" % (row["captured_at"], row.get("source_url") or ""))
             if row.get("snapshot_ref"):
-                print("     快照 %s" % row["snapshot_ref"])
-            if row.get("message"):
-                print("     备注 %s" % row["message"])
-        print("\n确认：approve --id N --grade A|B|C    驳回：reject --id N --reason ...")
+                print("      快照 %s" % row["snapshot_ref"])
+        print("\n确认：approve --id N --grade A|B|C [--force]    驳回：reject --id N --reason ...")
+        print("有更晚候选时，确认旧的会被拒——要确认旧的必须显式 --force。")
         return 0
     if args.cmd == "approve":
         try:
-            ledger.approve_candidate(args.id, args.grade, note=args.note)
+            ledger.approve_candidate(args.id, args.grade, note=args.note, force=args.force)
         except ValueError as exc:
             print("未确认：%s" % exc)
             return 1

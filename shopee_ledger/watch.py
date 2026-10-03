@@ -108,3 +108,31 @@ def diff_entries(previous: dict[str, dict[str, Any]],
                and (previous[entry.article_id].get("title") or "") != entry.title]
     gone = [article_id for article_id in previous if article_id not in current_ids]
     return {"new": new, "changed": changed, "gone": gone, "total": len(current)}
+
+
+# 看起来像数据接口的路径特征
+API_HINTS = ("/api/", "/seh/", "article/list", "cat/list", "search", "list?")
+
+
+def parse_api_calls(urls: list[str], limit: int = 20) -> list[str]:
+    """从浏览器报回来的真实请求里挑出数据接口。
+
+    为什么要这一步：列表页是 SPA，HTML 里没有文章链接，接口地址藏在混淆过的 JS 包里
+    （试过 24 种 base+path 组合，全 404）。但浏览器**已经在调那个接口**了，
+    performance entries 里就有真实 URL。与其继续猜，不如让它自己报出来。
+
+    拿到接口之后，翻页和定时抓取都能放回服务端做——因为那时抓的是 JSON，不是渲染。
+    """
+    out: list[str] = []
+    for url in urls or []:
+        text = str(url or "").strip()
+        if not text.startswith(("http://", "https://")):
+            continue
+        lowered = text.lower()
+        if not any(hint in lowered for hint in API_HINTS):
+            continue
+        if text not in out:
+            out.append(text)
+        if len(out) >= limit:
+            break
+    return out
