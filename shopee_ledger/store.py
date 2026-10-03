@@ -606,6 +606,73 @@ class Ledger:
             return None
         return ((now or datetime.now(timezone.utc)) - started).total_seconds() / 3600.0
 
+    def calibration_items(self) -> list[Any]:
+        """KPI 校准：把实测值与参数值对照。
+
+        数据来源都是**已经存下来的**，不新增采集：
+        · Order.actual_rate ← 账单实付重算出的净利率 → 校准净利润率阈值
+        · 审计 order.actual 的明细（佣金/交易手续费）÷ 订单商品价 → 反算实际费率
+        · Candidate.return_rate ← 实测退货率
+
+        没有数据时**如实报"数据不足"并说清还缺多少**——这个输出本身有用：
+        它告诉你为了校准该去攒什么。绝不拿两三个样本去改阈值。
+        """
+        from shopee_ledger.calibrate import compare_rate, compare_threshold
+
+        items: list[Any] = []
+
+        # 1) 净利率阈值：实测净利率分布
+        margins = [float(row["actual_rate"]) for row in self.storage.list("Order", limit=1000)
+                   if row.get("actual_rate") is not None]
+        param = self.spec.params.get("P-TW-MARGIN-TH")
+        if param is not None:
+            items.append(compare_threshold(
+                param.id, getattr(param, "name", param.id), param.value, margins,
+                needs="需要 ≥5 单带账单实付（record_actual）的已完成订单"))
+
+        # 2) 结算费率：账单实付反算的实际费率
+        orders = {row["id"]: row for row in self.storage.list("Order", limit=1000)}
+        commission_samples: list[float] = []
+        txn_samples: list[float] = []
+        for row in self.storage.list("AuditLog", limit=5000):
+            if row["action"] != "order.actual":
+                continue
+            order = orders.get(int(row["object_id"] or 0))
+            if not order or not order.get("candidate_id"):
+                continue
+            candidate = self._candidate(int(order["candidate_id"]))
+            price = candidate.get("price_local")
+            if not price:
+                continue
+            detail = row.get("detail") or {}
+            if detail.get("commission") is not None:
+                commission_samples.append(float(detail["commission"]) / float(price))
+            if detail.get("transaction_fee") is not None:
+                txn_samples.append(float(detail["transaction_fee"]) / float(price))
+
+        for param_id, samples, label in (
+            ("P-TW-COMMISSION", commission_samples, "佣金率"),
+            ("P-TW-TXN-FEE", txn_samples, "交易手续费率"),
+        ):
+            param = self.spec.params.get(param_id)
+            if param is None or not isinstance(param.value, (int, float)):
+                continue
+            items.append(compare_rate(
+                param.id, "%s（%s）" % (getattr(param, "name", param.id), label),
+                float(param.value), samples,
+                needs="需要 ≥5 单的账单佣金/手续费明细（record_actual）"))
+
+        # 3) 退货率
+        returns = [float(row["return_rate"]) for row in self.storage.list("ProductCandidate", limit=1000)
+                   if row.get("return_rate") is not None]
+        param = self.spec.params.get("P-RETURN-RATE")
+        if param is not None:
+            items.append(compare_threshold(
+                param.id, getattr(param, "name", param.id), param.value, returns,
+                needs="需要 ≥5 款候选品的实测退货率（不是预留值）"))
+
+        return items
+
     def dts_ready(self) -> bool:
         """发货时限参数是否已升到 A/B——未升级前不生成倒计时（P-TW-DTS 的 note 要求）。"""
         param = self.spec.params.get("P-TW-DTS")

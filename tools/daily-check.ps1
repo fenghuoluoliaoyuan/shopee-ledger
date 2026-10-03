@@ -63,4 +63,9 @@ Invoke-Step 'associate' @('-m', 'shopee_ledger', 'associate')
 # 6) Alerts. Exit code 1 means a P1 alert is open.
 Invoke-Step 'alert' @('-m', 'shopee_ledger', 'alert')
 
+# 7) Calibration: compares measured values against the D-level guesses.
+#    Mostly says "not enough samples" until orders start flowing - that output is the
+#    reminder of what data to collect.
+Invoke-Step 'calibrate' @('-m', 'shopee_ledger', 'calibrate')
+
 Write-Log '=== end ==='

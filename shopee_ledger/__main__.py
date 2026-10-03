@@ -150,6 +150,9 @@ def main(argv: list[str] | None = None) -> int:
     land.add_argument("--fx-loss-rate", type=float, default=0.0)
     land.add_argument("--return-rate", type=float, default=0.0)
 
+    sub.add_parser("calibrate",
+                   help="KPI 校准：拿实测值对照经验值（只报告，不自动改阈值）")
+
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
@@ -605,6 +608,16 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                        channel_filter=args.channel)
         print(render(rows, target_margin=args.target_margin, purchase_cny=args.purchase,
                      domestic_cny=args.domestic, weight_g=args.weight_g))
+        return 0
+    if args.cmd == "calibrate":
+        from shopee_ledger.calibrate import render
+
+        ledger.init()
+        items = ledger.calibration_items()
+        if not items:
+            print("没有可校准的参数")
+            return 0
+        print(render(items))
         return 0
     if args.cmd == "check-sources":
         import urllib.error
