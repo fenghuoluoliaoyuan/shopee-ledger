@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shopee 台账 · 参数采集
 // @namespace    shopee-ledger
-// @version      0.4.0
+// @version      0.5.0
 // @description  在 Shopee 页面上把渲染后的正文送回本机台账，产出「候选值」等人工确认。本脚本不会直接修改任何参数。
 // @author       shopee-ledger
 // @match        https://shopee.cn/edu/*
@@ -45,7 +45,7 @@
 
   const APP = 'http://127.0.0.1:8765';
   const PANEL_ID = 'shopee-ledger-capture';
-  const VERSION = '0.4.0';   // 改脚本就改这里：console 一眼看出装的是哪版
+  const VERSION = '0.5.0';   // 改脚本就改这里：console 一眼看出装的是哪版
 
   function log(...args) {
     console.log('[台账采集 v' + VERSION + ']', ...args);
@@ -64,6 +64,16 @@
         ontimeout: () => reject(new Error('本机台账无响应')),
       });
     });
+  }
+
+  async function loadTargets() {
+    try {
+      const res = await request({ url: APP + '/targets.json' });
+      if (res.status !== 200) return [];
+      return JSON.parse(res.responseText);
+    } catch (err) {
+      return [];   // 拿不到就退回只列有配方的，不能让面板整个不出现
+    }
   }
 
   async function loadSources() {
@@ -237,7 +247,7 @@
     return JSON.parse(res.responseText);
   }
 
-  function buildPanel(sources) {
+  function buildPanel(sources, targets) {
     const box = document.createElement('div');
     box.id = PANEL_ID;
     box.style.cssText = [
@@ -247,9 +257,17 @@
       'box-shadow:0 8px 24px rgba(0,0,0,.35)',
     ].join(';');
 
-    const options = sources
-      .map((s) => `<option value="${s.param_id}">${s.param_id} · ${s.access === 'login' ? '需登录' : '公开'}</option>`)
-      .join('');
+    // 下拉框列**所有参数**，不只那些有配方的。登录门禁的参数（入驻须知、当单页字段…）
+    // 写不出配方，但恰恰最需要人工取证——只列有配方的会让它们根本选不到。
+    const options = targets && targets.length
+      ? targets.map((t) => {
+          const tag = t.has_recipe ? '有配方' : '待人工读数';
+          const star = t.level === 'E' ? ' ★' : '';
+          return `<option value="${t.param_id}">${t.param_id} · ${tag}${star} · ${t.name}</option>`;
+        }).join('')
+      : sources.map((s) =>
+          `<option value="${s.param_id}">${s.param_id} · ${s.access === 'login' ? '需登录' : '公开'}</option>`
+        ).join('');
 
     box.innerHTML = `
       <div style="font-weight:600;margin-bottom:8px">台账采集 <span style="color:#a1a1aa;font-weight:400">· 只产出候选</span></div>
@@ -351,9 +369,11 @@
   (async function main() {
     try {
       const sources = await loadSources();
+      const targets = await loadTargets();
       if (Array.isArray(sources) && sources.length > 0) {
-        buildPanel(sources);
-        log('已加载 ' + sources.length + ' 条配方；当前页 ' + location.href);
+        buildPanel(sources, targets);
+        log('已加载 ' + sources.length + ' 条配方、' + targets.length
+            + ' 个参数候选；当前页 ' + location.href);
       } else {
         log('配方清单为空，面板未注入');
       }

@@ -67,6 +67,31 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
 
+        if parsed.path == "/targets.json":
+            # 脚本下拉框的完整候选：**所有参数**，不只那些有配方的。
+            # 登录门禁的参数（入驻须知、当单页字段…）写不出配方，但正是最需要
+            # 人工取证的那些——只列有配方的会让它们根本选不到。
+            from shopee_ledger.sources import load_sources
+
+            with_recipe = {item.param_id for item in load_sources()}
+            ledger_targets = Ledger(self.db_path)
+            try:
+                ledger_targets.init()
+                payload = [{
+                    "param_id": pid,
+                    "name": getattr(param, "name", "") or pid,
+                    "level": param.evidence_level,
+                    "state": param.effective_state(),
+                    "has_recipe": pid in with_recipe,
+                    "task_ref": (param.raw or {}).get("task_ref") or "",
+                } for pid, param in sorted(ledger_targets.spec.params.items())]
+            finally:
+                ledger_targets.close()
+            # 没配方的排前面：它们才是需要人工取证的
+            payload.sort(key=lambda item: (item["has_recipe"], item["param_id"]))
+            self._send_json(payload)
+            return
+
         if parsed.path == "/sources.json":
             # 给油猴脚本的配方清单——下拉框据此生成，脚本里不重复写一份
             from shopee_ledger.sources import sources_payload

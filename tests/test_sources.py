@@ -18,6 +18,7 @@ from shopee_ledger.sources import (
     STATUS_EXTRACT_FAILED,
     STATUS_HTTP_ERROR,
     STATUS_NEEDS_LOGIN,
+    STATUS_MANUAL,
     STATUS_NO_RECIPE,
     STATUS_OK,
     STATUS_URL_MISMATCH,
@@ -214,6 +215,80 @@ class FetchTest(unittest.TestCase):
         self.assertEqual(len(list(Path(self.snaps).iterdir())), 1)
 
 
+class ManualQueueTest(unittest.TestCase):
+    """登录门禁页面的闭环：正文留档 → 排队待读数。
+
+    为什么这条闭环重要：那 6 个登录门禁任务（入驻须知、当单页字段、配送时效…）
+    配方写不出来——它们是散文不是数字。但如果**正文留了档**，读数就不需要用户在
+    浏览器前：他登录一次、点一下，剩下的我来读。丢掉正文等于把他唯一能提供的
+    东西扔了（实测踩过：没有配方时直接 return，一个字都没存）。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.snaps = Path(self.tmp.name) / "snapshots"
+        self.ledger = Ledger(Path(self.tmp.name) / "l.sqlite", verified_path=None)
+        self.ledger.init()
+
+    def tearDown(self):
+        self.ledger.close()
+        self.tmp.cleanup()
+
+    def test_text_without_a_recipe_is_still_archived(self):
+        capture = ingest_text("入驻须知正文。" * 40, param_id="P-ONB-ENTRY",
+                              url="https://seller.shopee.cn/portal/webform/x",
+                              sources=[], snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_MANUAL)
+        self.assertTrue(capture.snapshot_ref, "没有配方也必须留档")
+        path = Path(capture.snapshot_ref)
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[1] / capture.snapshot_ref
+        self.assertTrue(path.exists(), "留档说的是真存了文件")
+        self.assertIn("入驻须知正文", path.read_text(encoding="utf-8"))
+
+    def test_archived_text_lands_in_the_manual_queue(self):
+        capture = ingest_text("入驻须知正文。" * 40, param_id="P-ONB-ENTRY",
+                              url="https://seller.shopee.cn/portal/webform/x",
+                              sources=[], snapshot_dir=self.snaps)
+        self.ledger.record_capture(capture)
+        queue = self.ledger.manual_queue()
+        self.assertEqual(len(queue), 1)
+        self.assertEqual(queue[0]["param_id"], "P-ONB-ENTRY")
+        self.assertIn("seller.shopee.cn", queue[0]["url"])
+        self.assertTrue(queue[0]["snapshot_ref"])
+
+    def test_queue_keeps_only_the_latest_per_param(self):
+        for text in ("第一版。" * 40, "第二版，更完整。" * 60):
+            self.ledger.record_capture(ingest_text(
+                text, param_id="P-ONB-ENTRY", url="https://a.test/x",
+                sources=[], snapshot_dir=self.snaps))
+        queue = self.ledger.manual_queue()
+        self.assertEqual(len(queue), 1, "同一参数只列最新那条")
+
+    def test_page_without_a_param_does_not_enter_the_queue(self):
+        """没说是哪个参数的页面：正文留着，但不知道该读成什么，不进队列。"""
+        capture = ingest_text("随便一页。" * 40, sources=[], snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_NO_RECIPE)
+        self.assertTrue(capture.snapshot_ref)
+        self.ledger.record_capture(capture)
+        self.assertEqual(self.ledger.manual_queue(), [])
+
+    def test_recipe_still_wins_when_one_exists(self):
+        """有配方时走原路，不要因为这条改动把自动提取带偏。"""
+        capture = ingest_text(REAL_PAGE, param_id="P-TW-COMMISSION",
+                              sources=load_sources(), snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_OK)
+        self.assertAlmostEqual(capture.value, 0.14)
+
+    def test_manual_capture_does_not_create_a_pending_candidate(self):
+        """没有值就不该进 review 列表——否则真正的变更会被灌满的失败项淹掉。"""
+        capture = ingest_text("正文。" * 60, param_id="P-ONB-ENTRY",
+                              sources=[], snapshot_dir=self.snaps)
+        candidate_id = self.ledger.record_capture(capture)
+        self.assertIsNone(candidate_id)
+        self.assertEqual(self.ledger.pending_candidates(), [])
+
+
 class IngestTest(unittest.TestCase):
     """浏览器送回来的渲染后文本 —— 与命令行抓取走同一份配方。"""
 
@@ -249,11 +324,24 @@ class IngestTest(unittest.TestCase):
                             url="https://shopee.cn/edu/article/26620")
         self.assertEqual(found.id, "SRC-TW-TXN-FEE")
 
-    def test_ingest_without_recipe_reports_it(self):
+    def test_ingest_without_recipe_archives_and_asks_for_a_reading(self):
+        """没有配方**不是**失败：正文留档，值等人工读。
+
+        改这条的缘由：原来直接返回 no_recipe 且一个字都不存。但登录门禁的页面
+        （入驻须知、当单页字段）根本写不出配方——它们是散文。用户的全部工作
+        就是登录后点一下，读数不该再让他做。
+        """
         capture = ingest_text("随便一段文本", param_id="P-NOT-EXIST",
                               sources=self.sources, snapshot_dir=self.snaps)
-        self.assertEqual(capture.status, STATUS_NO_RECIPE)
+        self.assertEqual(capture.status, STATUS_MANUAL)
         self.assertIsNone(capture.value)
+        self.assertTrue(capture.snapshot_ref, "没配方也要留档")
+
+    def test_ingest_without_recipe_and_without_param_stays_no_recipe(self):
+        """连是哪个参数都没说：只能如实报不知道读成什么（正文仍留着）。"""
+        capture = ingest_text("随便一段文本", sources=self.sources, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_NO_RECIPE)
+        self.assertTrue(capture.snapshot_ref)
 
     def test_ingest_shell_text_still_fails_honestly(self):
         capture = ingest_text(SHELL_PAGE, param_id="P-TW-COMMISSION",

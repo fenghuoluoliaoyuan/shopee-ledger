@@ -150,6 +150,9 @@ def main(argv: list[str] | None = None) -> int:
     land.add_argument("--fx-loss-rate", type=float, default=0.0)
     land.add_argument("--return-rate", type=float, default=0.0)
 
+    sub.add_parser("manual",
+                   help="待人工读数的留档：浏览器抓到了正文但没配方，值要人来读")
+
     sub.add_parser("calibrate",
                    help="KPI 校准：拿实测值对照经验值（只报告，不自动改阈值）")
 
@@ -626,6 +629,35 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                        channel_filter=args.channel)
         print(render(rows, target_margin=args.target_margin, purchase_cny=args.purchase,
                      domestic_cny=args.domestic, weight_g=args.weight_g))
+        return 0
+    if args.cmd == "manual":
+        ledger.init()
+        queue = ledger.manual_queue()
+        if not queue:
+            print("没有待读数的留档。")
+            print("登录 Shopee 后打开目标页面 → 面板里选好参数 → 点「抓这一页」，")
+            print("正文会留档进这里；读数由我（或你）来做，不需要你抄字。")
+            return 0
+        print("待读数的留档 %d 条：\n" % len(queue))
+        for item in queue:
+            param = ledger.spec.params.get(item["param_id"])
+            print("  %s" % item["param_id"])
+            if param is not None:
+                print("     参数：%s（当前 %s 级）"
+                      % (getattr(param, "name", ""), param.evidence_level))
+            print("     页面：%s" % (item["url"] or "（没记 URL）"))
+            path = Path(item["snapshot_ref"])
+            if not path.is_absolute():
+                path = Path(__file__).resolve().parent.parent / item["snapshot_ref"]
+            if path.exists():
+                text = path.read_text(encoding="utf-8", errors="replace")
+                print("     正文：%s（%d 字）" % (item["snapshot_ref"], len(text)))
+            else:
+                print("     正文：%s（**文件不在了**）" % item["snapshot_ref"])
+            print("     抓于：%s" % item["at"])
+            print()
+        print("下一步：读这些正文得出值，再 approve 到对应参数。")
+        print("读数不需要原页面——正文已经在这里了。")
         return 0
     if args.cmd == "calibrate":
         from shopee_ledger.calibrate import render

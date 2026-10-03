@@ -333,9 +333,22 @@ def ingest_text(
     items = sources if sources is not None else load_sources()
     source = find_source(items, param_id=param_id, url=url)
     if source is None:
-        return Capture(param_id or url or "?", param_id or "?",
-                       url or "", STATUS_NO_RECIPE,
-                       channel=channel, message="spec/sources.json 里没有对应配方，未提取")
+        # 没有配方也要**把正文留档**。登录门禁的页面（入驻须知、当单页字段、打款规则等）
+        # 配方写不出来——它们是散文不是数字，但正文本身就是证据。
+        # 丢掉它等于把用户唯一能提供的东西扔了：他登录一次不容易，
+        # 而"读数"这件事不需要他在场。
+        snapshot_ref, digest = save_snapshot(text, param_id or "unmapped", snapshot_dir)
+        if param_id:
+            return Capture(param_id, param_id, url or "", STATUS_MANUAL,
+                           channel=channel, snapshot_ref=snapshot_ref,
+                           raw_sha256=digest, raw_length=len(text),
+                           captured_at=captured_at or "",
+                           message="已留档正文 %d 字，但没有配方——需要人工读数（或补一条配方）"
+                                   % len(text))
+        return Capture("?", "?", url or "", STATUS_NO_RECIPE, channel=channel,
+                       snapshot_ref=snapshot_ref, raw_sha256=digest, raw_length=len(text),
+                       captured_at=captured_at or "",
+                       message="没说这是哪个参数的页面；正文已留档，但不知道该读成什么")
 
     page_url = (url or source.url).strip() or source.url
     snapshot_ref, digest = save_snapshot(text, source.id, snapshot_dir)

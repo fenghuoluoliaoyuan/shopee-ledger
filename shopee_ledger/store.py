@@ -673,6 +673,30 @@ class Ledger:
 
         return items
 
+    def manual_queue(self) -> list[dict[str, Any]]:
+        """待人工读数的留档：抓到了正文但没有配方，值要人来读。
+
+        为什么单独排队：这类页面（入驻须知、当单页字段）配方写不出来——它们是散文不是
+        数字。**用户的全部工作就是登录后点一下**，正文留档之后读数不需要他在场。
+        同一参数留了多次档时只列最新那条（后面的通常更完整）。
+        """
+        latest: dict[str, dict[str, Any]] = {}
+        for row in self.storage.list("AuditLog", limit=5000):
+            if row.get("action") != "capture.manual_required":
+                continue
+            detail = row.get("detail") or {}
+            param_id = str(row.get("object_id") or "")
+            if not param_id or not detail.get("snapshot_ref"):
+                continue
+            latest[param_id] = {
+                "param_id": param_id,
+                "url": detail.get("url") or "",
+                "snapshot_ref": detail.get("snapshot_ref") or "",
+                "at": row.get("at") or "",
+                "message": detail.get("message") or "",
+            }
+        return sorted(latest.values(), key=lambda item: item["param_id"])
+
     def dts_ready(self) -> bool:
         """发货时限参数是否已升到 A/B——未升级前不生成倒计时（P-TW-DTS 的 note 要求）。"""
         param = self.spec.params.get("P-TW-DTS")

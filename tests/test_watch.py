@@ -238,7 +238,6 @@ class WatchHttpTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_serves_the_userscript_for_auto_update(self):
-        """脚本由本机托管，Tampermonkey 按 @updateURL 自动更新——不用再手工粘贴。"""
         body = urlopen(self.base + "/shopee-capture.user.js", timeout=10).read().decode("utf-8")
         self.assertIn("@updateURL", body)
         self.assertIn("http://127.0.0.1:8765/shopee-capture.user.js", body)
@@ -267,6 +266,33 @@ class WatchHttpTest(unittest.TestCase):
         result = json.loads(response.read().decode())
         self.assertTrue(result["ok"])
         self.assertAlmostEqual(result["value"], 0.14)
+
+    def test_targets_endpoint_lists_all_params_not_just_recipes(self):
+        """/targets.json 必须列**全部参数**。
+
+        只列有配方的会让登录门禁的参数根本选不到——而它们恰恰最需要人工取证
+        （写不出配方：入驻须知、当单页字段这些都是散文不是数字）。
+        """
+        data = json.loads(urlopen(self.base + "/targets.json", timeout=10).read().decode())
+        ids = {item["param_id"] for item in data}
+        self.assertGreater(len(ids), 40)
+        for param_id in ("P-ONB-ENTRY", "P-TW-WH-ADDR-FMT", "P-TW-HOME-DELIV-W"):
+            self.assertIn(param_id, ids, "登录门禁的参数也要能选到")
+        entry = next(item for item in data if item["param_id"] == "P-ONB-ENTRY")
+        self.assertFalse(entry["has_recipe"], "它就是没有配方的那类")
+        self.assertFalse(data[0]["has_recipe"], "没配方的排前面——它们才需要人工取证")
+
+    def test_ingest_without_recipe_over_http_archives_and_asks_for_a_reading(self):
+        """端到端：登录门禁页面抓回来 → 留档 → 进待读数队列，不需要用户抄字。"""
+        payload = {"param_id": "P-ONB-ENTRY",
+                   "url": "https://seller.shopee.cn/portal/webform/entry",
+                   "text": "入驻须知正文：个体工商户可以入驻，首站可选台湾。" * 30}
+        response = urlopen(Request(self.base + "/ingest", data=json.dumps(payload).encode(),
+                                   headers={"Content-Type": "application/json"}), timeout=15)
+        result = json.loads(response.read().decode())
+        self.assertEqual(result["status"], "manual_required")
+        self.assertTrue(result.get("snapshot_ref"))
+        self.assertIn("留档", result.get("message", ""))
 
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "listing-page.html"
