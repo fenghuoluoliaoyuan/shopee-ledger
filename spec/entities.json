@@ -311,6 +311,18 @@
         {"name": "decided_at", "type": "string", "required": false},
         {"name": "decided_by", "type": "string", "required": false}
       ]
+    },
+    { "id": "WatchEntry", "layer": "platform", "key": "entry_id", "note": "列表页监控到的文档条目。只回答「该看哪篇」，不存任何参数值",
+      "fields": [
+        {"name": "watch_id", "type": "string", "required": true},
+        {"name": "article_id", "type": "string", "required": true},
+        {"name": "title", "type": "string", "required": true},
+        {"name": "url", "type": "string", "required": true},
+        {"name": "published_at", "type": "string", "required": false},
+        {"name": "first_seen_at", "type": "string", "required": true},
+        {"name": "last_seen_at", "type": "string", "required": true},
+        {"name": "status", "type": "enum", "values": ["new", "seen"], "required": true}
+      ]
     }
   ]
 }

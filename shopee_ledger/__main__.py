@@ -115,6 +115,9 @@ def main(argv: list[str] | None = None) -> int:
     fetch.add_argument("--param", help="只抓某个参数")
     fetch.add_argument("--include-login", action="store_true", help="连需登录的来源也走一遍（只会报状态）")
     sub.add_parser("review", help="列出待确认的候选值（改了没有一眼看出）")
+    watch = sub.add_parser("watch", help="列表页监控：列出已记录的文档")
+    watch.add_argument("--new", action="store_true", help="只看还没看过的新文档")
+    watch.add_argument("--seen", type=int, metavar="ENTRY_ID", help="把某条标记为已读")
     appr = sub.add_parser("approve", help="确认候选值 → 写进覆盖层")
     appr.add_argument("--id", type=int, required=True)
     appr.add_argument("--grade", required=True, choices=("A", "B", "C"))
@@ -281,6 +284,24 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         print("\n抓到 %d 条候选，失败 %d 条；待确认共 %d 条（用 review / approve）"
               % (len(todo) - failed, failed, len(pending)))
         return 1 if failed else 0
+    if args.cmd == "watch":
+        if args.seen:
+            ledger.mark_watch_seen(args.seen)
+            print("已标记 #%s 为已读" % args.seen)
+            return 0
+        rows = ledger.watch_entries(only_new=args.new)
+        if not rows:
+            print("还没有列表页记录。用油猴面板的「这是列表页」按钮抓一次，"
+                  "或在 spec/sources.json 的 watch 段里填好列表页地址。")
+            return 0
+        for row in rows:
+            mark = "🆕" if row.get("status") == "new" else "  "
+            print("%s #%-4s %-12s %-8s %s" % (mark, row["id"], row.get("published_at") or "日期未知",
+                                              row["article_id"], row["title"][:60]))
+        fresh = len([row for row in rows if row.get("status") == "new"])
+        print("\n共 %d 篇；🆕 %d 篇未读（标记已读：watch --seen <#id>）" % (len(rows), fresh))
+        print("新文档只是线索——正文要打开后点「抓这一页」，值仍要你确认。")
+        return 0
     if args.cmd == "review":
         rows = ledger.pending_candidates()
         if not rows:

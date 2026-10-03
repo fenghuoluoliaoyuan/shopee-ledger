@@ -355,6 +355,8 @@ class IngestEndpointTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.db = str(Path(self.tmp.name) / "ledger.sqlite")
+        # 必须注入临时目录：不然跑测试就往真实 data/snapshots 里塞固件快照
+        self.snaps = Path(self.tmp.name) / "snapshots"
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -362,7 +364,7 @@ class IngestEndpointTest(unittest.TestCase):
     def test_endpoint_records_candidate_only(self):
         body = json.dumps({"param_id": "P-TW-COMMISSION", "url": "https://shopee.cn/edu/article/26620",
                            "text": REAL_PAGE, "captured_at": "2026-10-03T12:00:00+00:00"}).encode()
-        result = _ingest_payload(body, self.db)
+        result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
         self.assertTrue(result["ok"])
         self.assertAlmostEqual(result["value"], 0.14)
         self.assertFalse(result["changed"])
@@ -370,7 +372,7 @@ class IngestEndpointTest(unittest.TestCase):
 
     def test_endpoint_rejects_empty_text(self):
         result = _ingest_payload(json.dumps({"param_id": "P-TW-COMMISSION", "text": "  "}).encode(),
-                                 self.db)
+                                 self.db, snapshot_dir=self.snaps)
         self.assertFalse(result["ok"])
         self.assertIn("text 为空", result["error"])
 
@@ -378,16 +380,17 @@ class IngestEndpointTest(unittest.TestCase):
         body = json.dumps({"param_id": "P-TW-COMMISSION",
                            "url": "https://shopee.cn/edu/article/26620",
                            "text": SHELL_PAGE}).encode()
-        result = _ingest_payload(body, self.db)
+        result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
         self.assertFalse(result["ok"])
         self.assertEqual(result["status"], STATUS_EXTRACT_FAILED)
         self.assertIn("快照已存", result["hint"])
+        self.assertEqual(len(list(self.snaps.iterdir())), 1, "快照要落在注入的目录里")
 
     def test_endpoint_surfaces_url_mismatch_with_the_expected_page(self):
         body = json.dumps({"param_id": "P-TW-COMMISSION",
                            "url": "https://shopee.cn/edu/article/26619",
                            "text": PROMO_PAGE}).encode()
-        result = _ingest_payload(body, self.db)
+        result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
         self.assertFalse(result["ok"])
         self.assertEqual(result["status"], STATUS_URL_MISMATCH)
         self.assertIn("26620", result["expected_url"])

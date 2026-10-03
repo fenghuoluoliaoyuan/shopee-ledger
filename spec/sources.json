@@ -121,5 +121,18 @@
         "expr": "出货天数说明"
       }
     }
+  ],
+  "watch": [
+    {
+      "id": "WATCH-EDU-POLICY",
+      "url": "请把「政策与物流」列表页的地址填这里",
+      "note": "费率/物流通知都从这里发出；新增一篇通常意味着某项政策变了",
+      "access": "public",
+      "covers": [
+        "P-TW-COMMISSION",
+        "P-TW-TXN-FEE",
+        "P-TW-PRESALE-FEE"
+      ]
+    }
   ]
 }

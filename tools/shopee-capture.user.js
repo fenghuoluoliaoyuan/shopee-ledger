@@ -79,6 +79,31 @@
     return JSON.parse(res.responseText);
   }
 
+  // 列表页：把 <a> 和它所在条目的文字（含日期）一起送回去。
+  // 链接和日期只存在于 DOM 里，innerText 拿不到——所以列表要走结构化通道。
+  function collectLinks() {
+    const found = [];
+    document.querySelectorAll('a[href*="/article/"]').forEach((anchor) => {
+      const box = anchor.closest('li, tr, article, div') || anchor.parentElement;
+      found.push({
+        href: anchor.href,
+        text: (anchor.innerText || '').trim(),
+        date: ((box && box.innerText) || '').slice(0, 200),
+      });
+    });
+    return found;
+  }
+
+  async function sendListing() {
+    const res = await request({
+      method: 'POST',
+      url: APP + '/ingest',
+      headers: { 'Content-Type': 'application/json' },
+      data: JSON.stringify({ url: location.href, links: collectLinks() }),
+    });
+    return JSON.parse(res.responseText);
+  }
+
   function buildPanel(sources) {
     const box = document.createElement('div');
     box.id = PANEL_ID;
@@ -98,6 +123,7 @@
       <select id="sl-param" style="width:100%;padding:6px;border-radius:6px;margin-bottom:6px">${options}</select>
       <div style="color:#a1a1aa;margin-bottom:8px">默认发整页正文；按住 <b>Alt</b> 再点只发选中部分。</div>
       <button id="sl-send" style="width:100%;padding:8px;border:0;border-radius:6px;background:#1d4ed8;color:#fff;cursor:pointer">抓这一页</button>
+      <button id="sl-list" style="width:100%;margin-top:6px;padding:6px;border:1px solid #3f3f46;border-radius:6px;background:transparent;color:#d4d4d8;cursor:pointer">这是列表页 → 只看有哪些新文档</button>
       <pre id="sl-out" style="white-space:pre-wrap;margin:8px 0 0;color:#a1a1aa;max-height:180px;overflow:auto"></pre>
       <div id="sl-toggle" style="margin-top:6px;color:#52525b;cursor:pointer;text-align:right">收起</div>
     `;
@@ -105,11 +131,36 @@
 
     const out = box.querySelector('#sl-out');
     const button = box.querySelector('#sl-send');
+    const listButton = box.querySelector('#sl-list');
     const select = box.querySelector('#sl-param');
 
     function show(text) {
       out.textContent = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
     }
+
+    listButton.addEventListener('click', async () => {
+      show('读取列表…');
+      try {
+        const result = await sendListing();
+        if (!result.ok) {
+          show('❌ ' + (result.error || result.status || '未解析出条目'));
+          return;
+        }
+        const fresh = (result.new || [])
+          .map((item) => '  · ' + (item.published_at || '日期未知') + '  ' + item.title)
+          .join('\n');
+        show(
+          '📄 这个列表共 ' + result.total + ' 篇（已有记录 ' + (result.total - (result.new || []).length) + ' 篇）\n' +
+          (result.new && result.new.length
+            ? '🆕 新出现 ' + result.new.length + ' 篇：\n' + fresh
+            : '（没有新文档）') +
+          (result.gone && result.gone.length ? '\n⚠️ 消失 ' + result.gone.length + ' 篇（可能翻页变化）' : '') +
+          '\n\n只发现，不取值。要取值就点进文章，切到对应参数再点「抓这一页」。'
+        );
+      } catch (err) {
+        show('❌ ' + err.message);
+      }
+    });
 
     button.addEventListener('click', async (event) => {
       const paramId = select.value;
@@ -140,6 +191,7 @@
       const hidden = out.style.display === 'none';
       out.style.display = hidden ? 'block' : 'none';
       button.style.display = hidden ? 'block' : 'none';
+      listButton.style.display = hidden ? 'block' : 'none';
       select.style.display = hidden ? 'block' : 'none';
       box.querySelector('#sl-toggle').textContent = hidden ? '收起' : '展开';
     });

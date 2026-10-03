@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from html import escape
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -829,12 +830,16 @@ def checklist_page(ledger: Ledger) -> str:
 <section class="card"><table>{''.join(rows)}</table></section>"""
 
 
-def _ingest_payload(raw_body: bytes, db_path: str) -> dict:
+def _ingest_payload(raw_body: bytes, db_path: str,
+                    snapshot_dir: Path | str | None = None) -> dict:
     """处理油猴脚本送来的渲染后页面文本。
 
     流程与命令行 fetch 完全一致：解析配方 → 提取 → 存快照 → 只产出**候选值**。
     这里是本机端点，没有鉴权——但它只写候选（pending），不直接改参数，
     所以最坏情况也只是多一条待你确认的记录。
+
+    snapshot_dir 只为测试注入：不传就落到 data/snapshots。测试必须能隔离，
+    否则跑一次测试就往真实数据目录里塞一堆固件快照。
     """
     from shopee_ledger.sources import ingest_text
 
@@ -842,12 +847,18 @@ def _ingest_payload(raw_body: bytes, db_path: str) -> dict:
         payload = json.loads(raw_body.decode("utf-8"))
     except (ValueError, UnicodeDecodeError) as exc:
         return {"ok": False, "error": "请求体不是合法 JSON：%s" % exc}
+
+    # 列表页：脚本送回的是结构化条目（链接 + 标题 + 日期），不是正文
+    if payload.get("links"):
+        return _ingest_listing(payload, db_path)
+
     text = payload.get("text") or ""
     if not text.strip():
         return {"ok": False, "error": "text 为空；请把页面正文一起发过来"}
+    kwargs = {"snapshot_dir": snapshot_dir} if snapshot_dir else {}
     capture = ingest_text(
         text, param_id=payload.get("param_id"), url=payload.get("url"),
-        captured_at=payload.get("captured_at"), channel="userscript")
+        captured_at=payload.get("captured_at"), channel="userscript", **kwargs)
     ledger = Ledger(db_path)
     try:
         ledger.init()
@@ -869,6 +880,33 @@ def _ingest_payload(raw_body: bytes, db_path: str) -> dict:
                 "current_value": (current.value if current else None),
                 "snapshot_ref": capture.snapshot_ref,
                 "hint": "已记为候选，未生效。回终端跑 review / approve"}
+    finally:
+        ledger.close()
+
+
+def _ingest_listing(payload: dict, db_path: str) -> dict:
+    """列表页只做**发现**：记下有哪些文档、哪个是新的。不从这里提取任何数值。
+
+    理由：列表页没有正文。而"新文档出现了"本身是有用的信号——
+    费率变更通常是**新发一篇通知**，不是改旧文章。
+    """
+    from shopee_ledger.sources import page_key
+    from shopee_ledger.watch import entries_from_links, load_watches
+
+    url = payload.get("url") or ""
+    known = next((item for item in load_watches() if page_key(item.url) == page_key(url)), None)
+    watch_id = payload.get("watch_id") or (known.id if known else "WATCH-MANUAL")
+    entries = entries_from_links(payload.get("links") or [], base_url=url)
+    if not entries:
+        return {"ok": False, "error": "没解析出任何条目；请确认这是列表页（链接里要含 /article/ 编号）"}
+    ledger = Ledger(db_path)
+    try:
+        ledger.init()
+        result = ledger.record_listing(watch_id, entries, page_url=url)
+        result.update({"ok": True, "watch_id": watch_id,
+                       "known_watch": bool(known),
+                       "hint": "列表页只做发现。正文要另点一次「抓这一页」，且仍需你确认"})
+        return result
     finally:
         ledger.close()
 

@@ -692,6 +692,62 @@ class Ledger:
         self.storage.record_audit("capture.reject", "Param", row["param_id"], result="rejected",
                                   detail={"candidate_id": candidate_id, "reason": reason})
 
+    # ---- 列表页监控：只做发现 -------------------------------------------
+    def record_listing(self, watch_id: str, entries: list[Any], *, page_url: str = "") -> dict[str, Any]:
+        """记一次列表页抓取，返回**新增/标题变化/消失**。
+
+        刻意不产出参数值：列表页没有正文，而"多篇文档提到同一参数"的新旧冲突
+        必须有人判断。这里只回答"该去看哪篇"。
+        """
+        from shopee_ledger.watch import STATUS_NEW, STATUS_SEEN, diff_entries
+
+        previous = {row["article_id"]: row
+                    for row in self.storage.list("WatchEntry", limit=5000,
+                                                 where="watch_id = ?", args=(watch_id,))}
+        diff = diff_entries(previous, entries)
+        now = _now()
+        for entry in entries:
+            known = previous.get(entry.article_id)
+            if known:
+                self.storage.update("WatchEntry", known["id"],
+                                    {"last_seen_at": now, "title": entry.title})
+            else:
+                self.storage.insert("WatchEntry", dict(
+                    entry.as_row(), watch_id=watch_id, first_seen_at=now, last_seen_at=now,
+                    status=STATUS_NEW))
+        for article_id in diff["gone"]:
+            self.storage.update("WatchEntry", previous[article_id]["id"],
+                                {"status": STATUS_SEEN})
+        self.storage.record_audit(
+            "watch.listing", "Watch", watch_id, result="PASS",
+            detail={"page_url": page_url, "total": len(entries),
+                    "new": [entry.article_id for entry in diff["new"]],
+                    "changed": [entry.article_id for entry in diff["changed"]],
+                    "gone": diff["gone"]})
+        return {
+            "total": diff["total"],
+            "new": [dict(entry.as_row(), watch_id=watch_id) for entry in diff["new"]],
+            "changed_titles": [dict(entry.as_row()) for entry in diff["changed"]],
+            "gone": diff["gone"],
+        }
+
+    def watch_entries(self, watch_id: str | None = None, *,
+                      only_new: bool = False) -> list[dict[str, Any]]:
+        where, args = [], []
+        if watch_id:
+            where.append("watch_id = ?")
+            args.append(watch_id)
+        if only_new:
+            where.append("status = ?")
+            args.append("new")
+        clause = " AND ".join(where) or None
+        rows = self.storage.list("WatchEntry", limit=5000, where=clause, args=args)
+        rows.sort(key=lambda row: (row.get("published_at") or "", row["article_id"]), reverse=True)
+        return rows
+
+    def mark_watch_seen(self, entry_id: int) -> None:
+        self.storage.update("WatchEntry", entry_id, {"status": "seen"})
+
     # ---- 核实任务 -------------------------------------------------------
     def checklist_rows(self) -> list[dict[str, Any]]:
         rows = self.storage.list("VerificationTask", limit=500)
