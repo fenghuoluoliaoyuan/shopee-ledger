@@ -739,19 +739,60 @@ class Ledger:
         **只有真的拿到了值才产生候选行**——抓失败不产出"待确认的值"，
         否则 review 列表会被失败项灌满，真正的变更反而看不见。
         失败仍然写审计，留痕不丢。
+
+        **值没变也不产生候选行**：每日任务会反复抓同一批来源，抓到相同值就排队
+        等于让队列按天无限增长（实测：跑了几次 fetch 就攒了 18 条，其中大半是同值重复），
+        真正的变更会被淹掉。没变仍然写审计——"我今天查过了"也是信息。
         """
         row = capture.as_row()
         if channel:
             row["channel"] = channel
         candidate_id = None
+        status = capture.status
         if capture.value is not None:
-            candidate_id = self.storage.insert("ParamCandidate", row)
+            if self._value_unchanged(capture.param_id, capture.value):
+                status = "unchanged"
+            else:
+                candidate_id = self.storage.insert("ParamCandidate", row)
         self.storage.record_audit(
-            "capture." + capture.status, "Param", capture.param_id, result=capture.status,
+            "capture." + status, "Param", capture.param_id, result=status,
             detail={"candidate_id": candidate_id, "url": capture.url,
                     "snapshot_ref": capture.snapshot_ref, "value": capture.value,
                     "message": capture.message})
         return candidate_id
+
+    def capture_decision(self, capture: Any) -> str:
+        """这次采集该怎么算：``queued``（进待确认）/ ``unchanged`` / ``failed``。
+
+        为什么单独拿出来：``record_capture`` 返回 None 有两种完全不同的含义——
+        抓失败、和值没变。网页原先把它们混成一句"未产出候选值"，
+        用户看到"值没变"却以为抓错了。
+        """
+        if capture.value is None:
+            return "failed"
+        return "unchanged" if self._value_unchanged(capture.param_id, capture.value) else "queued"
+
+    def _value_unchanged(self, param_id: str, value: Any) -> bool:
+        """抓到的值与当前生效值是否相同（相同就不必再进 review）。"""
+        param = self.spec.params.get(param_id)
+        if param is None or param.value is None:
+            return False
+        current, incoming = param.value, value
+        if isinstance(current, (int, float)) and isinstance(incoming, (int, float)):
+            return abs(float(current) - float(incoming)) < 1e-9
+        # 形状混合：参数存的是结构化记录（如 {rate: 0.07, ...}），而配方只抓出数字。
+        # 不加这条的话每次抓取都会产生一条"变了"的假候选。
+        if isinstance(current, dict) and isinstance(incoming, (int, float)):
+            for key in ("rate", "value", "rate_incl_tax", "min_combined"):
+                stored = current.get(key)
+                if isinstance(stored, (int, float)) and abs(float(stored) - float(incoming)) < 1e-9:
+                    return True
+            return False
+        if isinstance(current, dict) and isinstance(incoming, dict):
+            # 结构化值：只比抓取器能给出的那部分键，避免因为新增说明字段就误报"变了"
+            keys = [key for key in incoming if key in current]
+            return bool(keys) and all(current.get(key) == incoming.get(key) for key in keys)
+        return current == incoming
 
     def pending_candidates(self) -> list[dict[str, Any]]:
         """待确认的候选值，带当前生效值，**并标出同一参数的多条候选**。

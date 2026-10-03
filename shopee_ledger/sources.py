@@ -253,16 +253,28 @@ def fetch_source(
             rendered = ""
             if not text:
                 return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
-                               message="直取与渲染都失败：%s" % exc)
+                               message="渲染失败：%s" % exc)
         if rendered:
-            # 关键：渲染回来的是 HTML，提取正则是在**纯文本**上写的。
-            # 实测 #26620 的 HTML 里标签插在「佣金费率统一调整为」和「16%」之间，
-            # 直接在 HTML 上跑正则永远匹配不上。
-            from shopee_ledger.watch import article_text
+            # 浏览器会把网络错误也渲染成页面，先认出错误页：
+            # "Chrome 返回了 HTML" 不等于 "页面加载成功"。
+            from shopee_ledger.browser import render_failed
 
-            rendered_text = article_text(rendered)
-            if extract_value(source.extract, rendered_text) is not None:
-                text, via = rendered_text, "浏览器渲染"
+            failure = render_failed(rendered)
+            if failure and not text:
+                return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
+                               message="浏览器也没打开这页：%s" % failure)
+            if not failure:
+                # 关键：渲染回来的是 HTML，提取正则是在**纯文本**上写的。
+                # 实测 #26620 的 HTML 里标签插在「佣金费率统一调整为」和「16%」之间，
+                # 直接在 HTML 上跑正则永远匹配不上。
+                from shopee_ledger.watch import article_text
+
+                rendered_text = article_text(rendered)
+                # **渲染成功就用它的文本，不管提取成不成功**。
+                # 之前这里是「提取成功才采纳」，于是提取失败时渲染成果被整个丢掉：
+                # 快照不存、状态还误报成 http_error——明明拿到了页面。
+                if rendered_text.strip():
+                    text, via = rendered_text, "浏览器渲染"
 
     if not text:
         return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,

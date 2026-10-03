@@ -77,12 +77,13 @@
       "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
       "access": "public",
       "review_cycle": "quarterly",
-      "note": "政府原文。目前只有行业转述，抓到官方数字后才能从 E 升到 A",
+      "note": "政府原文。2026-10-03 已用无头浏览器读到全文（urllib 因证书链验证失败读不到）；该页同时是 P-TH-VAT / P-TH-IMPORT-DUTY / P-TH-IMPORT-THRESHOLD / P-TH-MIN-EFFECTIVE-TAX / P-TH-PLATFORM-WITHHOLD 的 A 级来源。",
       "extract": {
         "kind": "regex",
-        "expr": "增值税[^0-9%直减励]{0,4}([0-9]+(?:\\.[0-9]+)?)\\s*%",
+        "expr": "增值税方面[^0-9%]{0,8}?([0-9]+(?:\\.[0-9]+)?)\\s*%",
         "group": 1,
-        "scale": 0.01
+        "scale": 0.01,
+        "note": "锚点必须唯一。关键字「增值税」在本页出现两次：前文「进口关税和增值税，两项税负合计不低于17%」、后文「增值税方面。统一适用7%」。只用「增值税」会匹配到前一处，把 17%（关税+增值税合计）当成增值税率——实测踩过。"
       }
     },
     {

@@ -419,12 +419,22 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                 for index, entry in enumerate(entries, 1):
                     try:
                         chrome.open(entry["url"], wait_seconds=5.0)
-                        text = article_text(chrome.html())
+                        html = chrome.html()
                     except BrowserError as exc:
                         print("  [%d/%d] %s 失败：%s" % (index, len(entries),
                                                         entry["article_id"], exc))
                         failed += 1
                         continue
+                    # 浏览器连不上时会把错误页也渲染出来——别把它当正文存下来
+                    from shopee_ledger.browser import render_failed
+
+                    failure = render_failed(html)
+                    if failure:
+                        print("  [%d/%d] %s 浏览器打不开这页：%s"
+                              % (index, len(entries), entry["article_id"], failure))
+                        failed += 1
+                        continue
+                    text = article_text(html)
                     if len(text) < 200:
                         print("  [%d/%d] %s 正文太短（%d 字）"
                               % (index, len(entries), entry["article_id"], len(text)))
@@ -776,8 +786,9 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                 if not capture.ok:
                     failed += 1
         pending = ledger.pending_candidates()
-        print("\n抓到 %d 条候选，失败 %d 条；待确认共 %d 条（用 review / approve）"
+        print("\n成功 %d 条，失败 %d 条；待确认共 %d 条（用 review / approve）"
               % (len(todo) - failed, failed, len(pending)))
+        print("注：抓到与当前值相同的不会进待确认——不然每日任务会按天把队列灌满。")
         return 1 if failed else 0
     if args.cmd == "watch":
         if args.from_file:

@@ -215,6 +215,81 @@ class FetchTest(unittest.TestCase):
         self.assertEqual(len(list(Path(self.snaps).iterdir())), 1)
 
 
+class UnchangedValueTest(unittest.TestCase):
+    """抓到与当前值相同时不进待确认队列。
+
+    每日任务会反复抓同一批来源。如果每次都产生候选，队列会按天无限增长
+    （实测跑了几次 fetch 就攒了 18 条，其中大半是同值重复），真正的变更被淹掉。
+    **没变仍然写审计**——"我今天查过了"也是信息。
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.snaps = Path(self.tmp.name) / "snapshots"
+        self.ledger = Ledger(Path(self.tmp.name) / "l.sqlite", verified_path=None)
+        self.ledger.init()
+
+    def tearDown(self):
+        self.ledger.close()
+        self.tmp.cleanup()
+
+    def _capture(self, value):
+        from shopee_ledger.sources import Capture, STATUS_OK
+
+        return Capture("SRC-X", "P-TW-COMMISSION", "https://a.test/x", STATUS_OK, value=value)
+
+    def test_same_value_does_not_queue(self):
+        self.ledger.set_param_value("P-TW-COMMISSION", 0.14, "A")
+        self.assertIsNone(self.ledger.record_capture(self._capture(0.14)))
+        self.assertEqual(self.ledger.pending_candidates(), [])
+
+    def test_different_value_queues(self):
+        self.ledger.set_param_value("P-TW-COMMISSION", 0.14, "A")
+        self.assertIsNotNone(self.ledger.record_capture(self._capture(0.16)))
+        self.assertEqual(len(self.ledger.pending_candidates()), 1)
+
+    def test_unchanged_is_still_audited(self):
+        self.ledger.set_param_value("P-TW-COMMISSION", 0.14, "A")
+        self.ledger.record_capture(self._capture(0.14))
+        actions = [row["action"] for row in self.ledger.storage.list("AuditLog", limit=200)]
+        self.assertIn("capture.unchanged", actions)
+
+    def test_number_settles_against_a_structured_param(self):
+        """参数存的是 {rate: 0.07, …}，配方只抓出数字 0.07——这不算"变了"。
+
+        不加这条的话，每次抓取都会产生一条假候选（实测 P-TH-VAT 就是这样）。
+        """
+        self.ledger.set_param_value("P-TH-VAT", {"rate": 0.07, "basis": "CIF + 关税"}, "A")
+        from shopee_ledger.sources import Capture, STATUS_OK
+
+        capture = Capture("SRC-Y", "P-TH-VAT", "https://a.test/y", STATUS_OK, value=0.07)
+        self.assertIsNone(self.ledger.record_capture(capture))
+
+    def test_a_real_change_in_a_structured_param_still_queues(self):
+        self.ledger.set_param_value("P-TH-VAT", {"rate": 0.07}, "A")
+        from shopee_ledger.sources import Capture, STATUS_OK
+
+        capture = Capture("SRC-Y", "P-TH-VAT", "https://a.test/y", STATUS_OK, value=0.10)
+        self.assertIsNotNone(self.ledger.record_capture(capture))
+
+    def test_structured_value_with_a_changed_key_queues(self):
+        self.ledger.set_param_value("P-TW-COMMISSION", {"a": 1, "b": 2}, "A")
+        from shopee_ledger.sources import Capture, STATUS_OK
+
+        capture = Capture("SRC-Z", "P-TW-COMMISSION", "https://a.test/z", STATUS_OK,
+                          value={"a": 1, "b": 3})
+        self.assertIsNotNone(self.ledger.record_capture(capture))
+
+    def test_structured_value_with_only_new_keys_does_not_queue(self):
+        """抓取器补了说明字段，但可比的那部分没变——不该报"变了"。"""
+        self.ledger.set_param_value("P-TW-COMMISSION", {"a": 1}, "A")
+        from shopee_ledger.sources import Capture, STATUS_OK
+
+        capture = Capture("SRC-Z", "P-TW-COMMISSION", "https://a.test/z", STATUS_OK,
+                          value={"a": 1, "note": "新加的说明"})
+        self.assertIsNone(self.ledger.record_capture(capture))
+
+
 class ManualQueueTest(unittest.TestCase):
     """登录门禁页面的闭环：正文留档 → 排队待读数。
 
@@ -411,22 +486,29 @@ class CandidateStoreTest(unittest.TestCase):
                          "抓失败不该产出待确认项，否则真正的变更会被淹没")
 
     def test_capture_does_not_touch_the_param(self):
+        # 用变了的值：同值现在不进队列（见 UnchangedValueTest）
         before = self.ledger.spec.params["P-TW-COMMISSION"].value
-        candidate_id = self.ledger.record_capture(self._capture())
+        candidate_id = self.ledger.record_capture(self._capture(REAL_PAGE.replace("14%", "15%")))
         self.assertIsNotNone(candidate_id)
         self.assertEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, before,
                          "候选值绝不能自动生效")
         self.assertEqual(len(self.ledger.pending_candidates()), 1)
 
     def test_pending_marks_whether_value_changed(self):
-        same = self.ledger.record_capture(self._capture())
-        row = [item for item in self.ledger.pending_candidates() if item["id"] == same][0]
-        self.assertFalse(row["changed"], "抓到的值与当前一致")
+        """changed 标志仍然有意义：抓到时值不同，之后参数被人改成同值，这条就该显示"没变"。
 
+        同值不再进队列（见 UnchangedValueTest），所以不能再靠"抓两次同值"造出这种行——
+        改成"抓完再改参数"。
+        """
         changed_text = REAL_PAGE.replace("14%", "15%")
-        self.ledger.record_capture(self._capture(changed_text))
-        rows = self.ledger.pending_candidates()
-        self.assertTrue(rows[0]["changed"], "变了的那条要排在最前")
+        candidate_id = self.ledger.record_capture(self._capture(changed_text))
+        row = [item for item in self.ledger.pending_candidates() if item["id"] == candidate_id][0]
+        self.assertTrue(row["changed"], "刚抓到时与当前值不同")
+
+        # 事后把参数改成 0.15（比如人工已确认）——这条候选就变成"没变"了
+        self.ledger.set_param_value("P-TW-COMMISSION", 0.15, "A")
+        row = [item for item in self.ledger.pending_candidates() if item["id"] == candidate_id][0]
+        self.assertFalse(row["changed"], "参数已经是这个值了")
 
     def test_approve_writes_override_and_unlocks(self):
         text = REAL_PAGE.replace("14%", "15%")
@@ -445,7 +527,10 @@ class CandidateStoreTest(unittest.TestCase):
         self.assertEqual(self.ledger.storage.get("ParamCandidate", candidate_id)["status"], "rejected")
 
     def test_cannot_approve_twice(self):
-        candidate_id = self.ledger.record_capture(self._capture())
+        # 用变了的值——同值现在不进队列（见 UnchangedValueTest），拿不到候选就没法测"批两次"
+        changed = ingest_text(REAL_PAGE.replace("14%", "15%"), param_id="P-TW-COMMISSION",
+                              sources=load_sources(), snapshot_dir=self.snaps)
+        candidate_id = self.ledger.record_capture(changed)
         self.ledger.approve_candidate(candidate_id, "B")
         with self.assertRaises(ValueError):
             self.ledger.approve_candidate(candidate_id, "B")
@@ -462,13 +547,33 @@ class IngestEndpointTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_endpoint_records_candidate_only(self):
+        """变了的值：进候选，**但绝不自动生效**。"""
+        changed = REAL_PAGE.replace("14%", "15%")
+        body = json.dumps({"param_id": "P-TW-COMMISSION", "url": "https://shopee.cn/edu/article/26620",
+                           "text": changed, "captured_at": "2026-10-03T12:00:00+00:00"}).encode()
+        result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
+        self.assertTrue(result["ok"])
+        self.assertAlmostEqual(result["value"], 0.15)
+        self.assertTrue(result["changed"])
+        self.assertIn("未生效", result["hint"])
+        # 候选绝不自动生效
+        ledger = Ledger(self.db, verified_path=None)
+        ledger.init()
+        try:
+            self.assertAlmostEqual(ledger.spec.params["P-TW-COMMISSION"].value, 0.14, places=6)
+        finally:
+            ledger.close()
+
+    def test_endpoint_says_unchanged_is_not_a_failure(self):
+        """抓到同值：要回 ok + "没有变化"，不能和"抓失败"混成一句"未产出候选值"。"""
         body = json.dumps({"param_id": "P-TW-COMMISSION", "url": "https://shopee.cn/edu/article/26620",
                            "text": REAL_PAGE, "captured_at": "2026-10-03T12:00:00+00:00"}).encode()
         result = _ingest_payload(body, self.db, snapshot_dir=self.snaps)
-        self.assertTrue(result["ok"])
-        self.assertAlmostEqual(result["value"], 0.14)
+        self.assertTrue(result["ok"], "值没变不是失败")
+        self.assertEqual(result["status"], "unchanged")
         self.assertFalse(result["changed"])
-        self.assertIn("未生效", result["hint"])
+        self.assertIsNone(result["candidate_id"])
+        self.assertIn("无需确认", result["hint"])
 
     def test_endpoint_rejects_empty_text(self):
         result = _ingest_payload(json.dumps({"param_id": "P-TW-COMMISSION", "text": "  "}).encode(),

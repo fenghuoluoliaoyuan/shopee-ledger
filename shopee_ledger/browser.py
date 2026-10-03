@@ -19,6 +19,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import socket
 import struct
 import subprocess
@@ -224,6 +225,51 @@ def find_browser() -> str | None:
     for path in CHROME_CANDIDATES:
         if Path(path).exists():
             return path
+    return None
+
+
+# 浏览器会把**网络错误也渲染成一个页面**——"Chrome 返回了 HTML" ≠ "页面加载成功"。
+# 实测：help.shopee.tw 连不上时，Chrome 返回 367 字的错误页，被当成"抓到了页面"，
+# 于是报 extract_failed（配方没匹配）而不是"这页根本打不开"，方向完全错了。
+BROWSER_ERROR_MARKERS = (
+    "ERR_CONNECTION_REFUSED", "ERR_CONNECTION_TIMED_OUT", "ERR_CONNECTION_CLOSED",
+    "ERR_NAME_NOT_RESOLVED", "ERR_SSL_PROTOCOL_ERROR", "ERR_CERT_",
+    "ERR_EMPTY_RESPONSE", "ERR_INTERNET_DISCONNECTED", "ERR_ADDRESS_UNREACHABLE",
+    "ERR_TIMED_OUT", "ERR_BLOCKED_BY_CLIENT",
+    "无法访问此网站", "拒绝了我们的连接请求", "响应时间过长",
+)
+# 去掉标签后的可见文本超过这个长度就不当成错误页（讲排障的文章会提到 ERR_ 码）
+ERROR_PAGE_MAX_LENGTH = 3000
+
+_TAG_RE = re.compile(r"<[^>]+>")
+# <style> 里的 CSS 与 <script> 里的 JS 都是**文本内容**，去标签去不掉，必须整块先删。
+# 否则 Chrome 错误页那 187KB 内联 CSS 会被算进"可见文本"，长度判断永远不成立
+# （第二次踩这个坑：以为去标签就够了）。
+_NOISE_RE = re.compile(r"(?is)<(script|style)\b[^>]*>.*?</\1\s*>")
+
+
+def visible_text(html: str) -> str:
+    """粗略的可见文本：先删 script/style 整块，再去标签。"""
+    return _TAG_RE.sub(" ", _NOISE_RE.sub(" ", html or ""))
+
+
+def render_failed(html: str) -> str | None:
+    """浏览器返回的是不是错误页。是的话返回错误码，否则返回 None。
+
+    两个坑，都踩过：
+    1. **不能只看开头**：Chrome 错误页前面塞了 187KB 的内联 base64 CSS，错误码在文档后半段。
+       只看 ``html[:4000]`` 会漏掉（第一次就是这么写的，检测形同虚设）。
+    2. **不能只去标签**：CSS/JS 是文本内容，不去掉整块的话"可见文本"有十几万字。见 ``_NOISE_RE``。
+    另外还要求**可见文本很短**——错误页只有几百字，而讲排障的文章会正常提到 ERR_ 码。
+    """
+    if not html:
+        return "EMPTY"
+    visible = visible_text(html)
+    if len(visible) > ERROR_PAGE_MAX_LENGTH:
+        return None
+    for marker in BROWSER_ERROR_MARKERS:
+        if marker in visible:
+            return marker
     return None
 
 

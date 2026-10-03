@@ -1048,12 +1048,26 @@ def _ingest_payload(raw_body: bytes, db_path: str,
     ledger = Ledger(db_path)
     try:
         ledger.init()
+        decision = ledger.capture_decision(capture)
         candidate_id = ledger.record_capture(capture)
+        if decision == "unchanged":
+            # 抓到与当前值相同：不是失败，是"没有变化"。必须说清这一点——
+            # candidate_id 为 None 有两种完全不同的含义，混成一句"未产出候选值"
+            # 会让用户以为抓错了。
+            target = ledger.spec.params.get(capture.param_id)
+            return {"ok": True, "status": "unchanged", "param_id": capture.param_id,
+                    "value": capture.value, "candidate_id": None, "changed": False,
+                    "current_value": (target.value if target else None),
+                    "snapshot_ref": capture.snapshot_ref,
+                    "message": "抓到 %s，与当前生效值一致" % (capture.value,),
+                    "hint": "没有变化，无需确认（已记账）"}
         if candidate_id is None:
             hints = {
                 "url_mismatch": "把浏览器切到 %s 再点一次；或给当前页面单独加一条配方"
                                 % (capture.expected_url or "配方登记的页面"),
                 "extract_failed": "提取失败不等于没有收获：快照已存，去修 spec/sources.json 的规则",
+                "manual_required": "正文已留档，但没有配方——读数由系统来做，不用你抄字",
+                "no_recipe": "正文已留档，但没说是哪个参数的页面；下拉框里选一个参数再点",
             }
             return {"ok": False, "status": capture.status, "param_id": capture.param_id,
                     "message": capture.message, "snapshot_ref": capture.snapshot_ref,

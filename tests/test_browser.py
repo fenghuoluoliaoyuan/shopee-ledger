@@ -133,5 +133,59 @@ class FrameTest(unittest.TestCase):
         self.assertIn("真正的正文在这里", article_text(html))
 
 
+class RenderFailedTest(unittest.TestCase):
+    """浏览器把网络错误也渲染成页面——"Chrome 返回了 HTML" ≠ "页面加载成功"。
+
+    实测踩过两次：
+    1. 只看 html[:4000]——Chrome 错误页前面塞了 187KB 内联 base64 CSS，错误码在后面，检测形同虚设；
+    2. 改成全文之后又只看"去标签"，而 style 里的 CSS 是**文本内容**，去标签去不掉，
+       "可见文本"有十几万字，长度判断永远不成立。
+    """
+
+    def _error_page(self) -> str:
+        css = "<style>" + "a{color:red}" * 20000 + "</style>"
+        body = ("<body><h1>无法访问此网站</h1><p>help.shopee.tw 拒绝了我们的连接请求。</p>"
+                "<span>ERR_CONNECTION_REFUSED</span></body>")
+        return "<html><head>" + css + "</head>" + body + "</html>"
+
+    def test_detects_an_error_page_with_a_huge_inline_stylesheet(self):
+        from shopee_ledger.browser import render_failed
+
+        self.assertEqual(render_failed(self._error_page()), "ERR_CONNECTION_REFUSED")
+
+    def test_style_and_script_content_is_not_counted_as_visible_text(self):
+        from shopee_ledger.browser import visible_text
+
+        html = ("<html><head><style>" + "x" * 5000 + "</style>"
+                "<script>" + "y" * 5000 + "</script></head><body>真正的正文</body></html>")
+        self.assertEqual(visible_text(html).strip(), "真正的正文")
+
+    def test_a_long_troubleshooting_article_is_not_an_error_page(self):
+        """讲排障的文章会正常提到 ERR_ 码，不能因此判成错误页。"""
+        from shopee_ledger.browser import render_failed
+
+        article = "<html><body>" + "排查连接问题的方法。" * 400 + "ERR_CONNECTION_REFUSED</body></html>"
+        self.assertIsNone(render_failed(article))
+
+    def test_a_normal_long_page_is_not_an_error_page(self):
+        from shopee_ledger.browser import render_failed
+
+        self.assertIsNone(render_failed("<html><body>" + "正文" * 3000 + "</body></html>"))
+
+    def test_empty_html_is_reported_as_empty(self):
+        from shopee_ledger.browser import render_failed
+
+        self.assertEqual(render_failed(""), "EMPTY")
+        self.assertEqual(render_failed(None), "EMPTY")
+
+    def test_various_error_codes(self):
+        from shopee_ledger.browser import render_failed
+
+        for code in ("ERR_CONNECTION_TIMED_OUT", "ERR_NAME_NOT_RESOLVED",
+                     "ERR_EMPTY_RESPONSE", "ERR_SSL_PROTOCOL_ERROR"):
+            html = "<html><body>无法访问此网站 %s</body></html>" % code
+            self.assertEqual(render_failed(html), code)
+
+
 if __name__ == "__main__":
     unittest.main()
