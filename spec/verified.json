@@ -166,10 +166,11 @@
     },
     "P-MY-SLS-TIERS": {
       "checked_at": "2026-10-03",
-      "created_at": "2026-10-03T09:30:25+00:00",
+      "created_at": "2026-10-03T10:58:45+00:00",
       "evidence_level": "A",
       "operator": "cli",
       "param_id": "P-MY-SLS-TIERS",
+      "snapshot_ref": "spec/reference/sls-site-config-2026-10-03.json",
       "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
       "value": {
         "algorithm_source": "模拟器前端 app.bb24a38e.js 的 ke() 函数（按重量累加口径）",
@@ -479,10 +480,11 @@
     },
     "P-TW-BUYER-SHIP": {
       "checked_at": "2026-10-03",
-      "created_at": "2026-10-03T09:30:25+00:00",
+      "created_at": "2026-10-03T10:58:46+00:00",
       "evidence_level": "A",
       "operator": "cli",
       "param_id": "P-TW-BUYER-SHIP",
+      "snapshot_ref": "spec/reference/sls-site-config-2026-10-03.json",
       "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
       "value": {
         "benchmark_used_before": "行业估计「店配 60-80 TWD」实际接近 7-11/全家的买家固定运费 60 TWD",
@@ -681,10 +683,11 @@
     },
     "P-TW-SHIPPING-FEE-RANGE": {
       "checked_at": "2026-10-03",
-      "created_at": "2026-10-03T09:30:26+00:00",
+      "created_at": "2026-10-03T10:58:46+00:00",
       "evidence_level": "A",
       "operator": "cli",
       "param_id": "P-TW-SHIPPING-FEE-RANGE",
+      "snapshot_ref": "spec/reference/sls-site-config-2026-10-03.json",
       "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
       "value": {
         "buyer_side_twd": {
@@ -802,10 +805,11 @@
     },
     "P-TW-SLS-TIERS": {
       "checked_at": "2026-10-03",
-      "created_at": "2026-10-03T09:16:51+00:00",
+      "created_at": "2026-10-03T10:58:45+00:00",
       "evidence_level": "A",
       "operator": "cli",
       "param_id": "P-TW-SLS-TIERS",
+      "snapshot_ref": "spec/reference/sls-site-config-2026-10-03.json",
       "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
       "value": {
         "caveat_from_official": "模拟器页面自述：若此表与「藏价与运费计算工具」有差异，以企业微信那个为准（https://shopee.cn/edu/article/5091）。",

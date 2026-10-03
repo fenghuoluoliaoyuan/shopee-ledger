@@ -68,4 +68,9 @@ Invoke-Step 'alert' @('-m', 'shopee_ledger', 'alert')
 #    reminder of what data to collect.
 Invoke-Step 'calibrate' @('-m', 'shopee_ledger', 'calibrate')
 
+# 8) Evidence health: every A-level parameter's snapshot must exist AND be tracked by git.
+#    A reference string alone is not evidence - if the file is not in the repo the chain
+#    is broken for anyone who clones it.
+Invoke-Step 'check-snapshots' @('-m', 'shopee_ledger', 'check-snapshots')
+
 Write-Log '=== end ==='

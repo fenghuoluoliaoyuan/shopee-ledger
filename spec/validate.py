@@ -27,6 +27,13 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+# 快照体检：文件在不在、进没进版本库。INV-003 的加固靠它。
+# 放在这里 import 而不是把它写进 spec/ ——spec/ 是配置，不是代码。
+from shopee_ledger.snapshots import check as snapshot_health  # noqa: E402
 
 LEVELS = ("A", "B", "C", "D", "E")
 HARD_OK = ("A", "B", "C")
@@ -129,6 +136,17 @@ def check_param(bag, param, rel, file_scope):
     snapshot = source.get("snapshot_ref") or (verified.get(pid) or {}).get("snapshot_ref")
     if level == "A" and not snapshot:
         warn("INV-003 待补: %s 为 A 级但 snapshot_ref 为空（spec 与 verified.json 里都没有）" % pid)
+    elif level == "A" and snapshot:
+        # **引用字符串在 ≠ 证据在。** 这条加固是补一个真实漏洞：
+        # .gitignore 曾经忽略整个 data/，32 个 A 级参数里有 22 个的快照根本
+        # 没进版本库，而这里只查 ref 字符串，于是一路绿灯——clone 出来证据链是断的。
+        health = snapshot_health(snapshot, ROOT)
+        if not health.exists:
+            err("INV-003 违反: %s 的 snapshot_ref 指向不存在的文件：%s"
+                % (pid, health.ref))
+        elif health.tracked is False:
+            err("INV-003 违反: %s 的快照 %s 没进版本库——clone 出来就断了（见 .gitignore）"
+                % (pid, health.ref))
 
     # 交叉验证条目格式
     for item in param.get("corroboration") or []:

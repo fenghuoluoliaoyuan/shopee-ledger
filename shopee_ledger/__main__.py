@@ -172,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("calibrate",
                    help="KPI 校准：拿实测值对照经验值（只报告，不自动改阈值）")
 
+    sub.add_parser("check-snapshots",
+                   help="体检 A 级参数的快照：文件在不在、进没进版本库")
     sub.add_parser("check-sources", help="检查各参数来源 URL 是否真的打得开（A 级的定义就是可打开）")
     harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
     harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
@@ -666,8 +668,11 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                      domestic_cny=args.domestic, weight_g=args.weight_g))
         return 0
     if args.cmd == "delivery":
-        from datetime import date as _date
-
+        # **不要在这里 `from datetime import date as _date`。**
+        # 模块顶层已经有 `import datetime as _date`，函数内的同名 import 会把
+        # 整个 _run 里的 _date 变成局部变量——于是同一函数里靠后的 freight 分支
+        # 一访问就 UnboundLocalError（实测：freight --check 直接崩）。
+        # Python 的规则是"函数里只要有一次对某名字的赋值，它就是全程局部"。
         from shopee_ledger.delivery import (BUSINESS_DAY_MARKETS, SOURCE_URL, deadlines,
                                             verify_samples)
 
@@ -712,12 +717,26 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("要给 --order-date YYYY-MM-DD，或者用 --verify 只回验规则")
             return 1
         try:
-            order_day = _date.fromisoformat(args.order_date)
+            order_day = _date.date.fromisoformat(args.order_date)
         except ValueError:
             print("--order-date 应当是 YYYY-MM-DD，收到 %r" % args.order_date)
             return 1
-        result = deadlines(order_day, market=args.market, dts_days=args.dts)
+        # 校验站点：只有 TH/BR/AR 走"发货日"口径，拼错会静默套用另一种规则。
+        # 界限用计算器覆盖的 9 站，而不是项目当前的 5 个市场维度——
+        # 数据是官方给全的，没必要因为维度还没扩就不让算。
+        from shopee_ledger.delivery import CALCULATOR_MARKETS
+
+        try:
+            result = deadlines(order_day, market=args.market, dts_days=args.dts,
+                               known_markets=CALCULATOR_MARKETS)
+        except ValueError as exc:
+            print(exc)
+            return 1
         print(result.render())
+        active = {m.get("code") for m in (ledger.spec.registry.get("markets") or [])}
+        if result.market not in active:
+            print("\n注：%s 不在项目当前的市场维度（%s）里，所以订单与账目还用不上它；"
+                  "这里只是能算。" % (result.market, "、".join(sorted(c for c in active if c))))
         print("\n发货日 = 非周日、非节假日（**周六算工作日**，实测）；"
               "自然日站点的扫描截止只看日历，不顺延。")
         print("按发货日推扫描截止的站点：%s" % "、".join(sorted(BUSINESS_DAY_MARKETS)))
@@ -761,6 +780,32 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("没有可校准的参数")
             return 0
         print(render(items))
+        return 0
+    if args.cmd == "check-snapshots":
+        from shopee_ledger.snapshots import audit
+
+        ledger.init()
+        items = audit(ledger.spec.params)
+        usable = [item for item in items if item.usable]
+        missing = [item for item in items if not item.ref]
+        broken = [item for item in items if item.ref and not item.usable]
+        print("A 级参数的快照体检：%d 个" % len(items))
+        print("  可用            %d" % len(usable))
+        print("  没写 snapshot_ref %d" % len(missing))
+        print("  写了但不可用     %d" % len(broken))
+        for item in missing:
+            print("     %-26s 需要补 snapshot_ref（来源本身打不开的话，是已知缺口）"
+                  % (item.param_id or "?"))
+        for item in broken:
+            print("     %-26s %s" % (item.param_id or "?", item.ref))
+            print("        %s" % item.detail)
+        if broken:
+            print("\n**引用字符串在 ≠ 证据在**：文件没进版本库的话，clone 出来证据链就是断的。")
+            return 1
+        if missing:
+            print("\n没写引用的这些是已知缺口（来源本身打不开）。")
+        else:
+            print("\n全部可用。")
         return 0
     if args.cmd == "check-sources":
         import urllib.error

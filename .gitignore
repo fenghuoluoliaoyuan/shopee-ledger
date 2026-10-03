@@ -6,9 +6,14 @@ data/*.sqlite
 data/*.sqlite-journal
 .env
 
-data/snapshots/
+# 快照**必须**进版本库。它不是派生物：那是外部页面在某一时刻的抓取，
+# 页面改版或下线之后就再也拿不回来了——它是 A 级参数的原始证据。
+# 之前这里忽略了整个 data/，结果 32 个 A 级参数里有 22 个的 snapshot_ref
+# 指向一个没进仓库的文件。INV-003 只查"引用字符串在不在"，所以一路绿灯，
+# 但 clone 出来证据链是断的。见 shopee_ledger/snapshots.py 与那条体检测试。
+#   data/snapshots/   <-- 不要取消注释
 
 data/*.log
 
+# 附件下载缓存。原件已入库到 spec/evidence/attachments/ 并记了 sha256。
 data/attachments/
-

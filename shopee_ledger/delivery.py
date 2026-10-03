@@ -32,6 +32,11 @@ DEFAULT_REFERENCE = ROOT / "spec" / "reference"
 
 # 扫描截止按「发货日」而不是自然日推进的站点（官方明确点名泰/巴/阿）
 BUSINESS_DAY_MARKETS = frozenset({"TH", "BR", "AR"})
+
+# 发货时间计算器覆盖的跨境站点（9 个）。
+# 比项目当前的 5 个市场维度更宽——**数据是官方给全的，没必要因为维度还没扩就不让算**。
+# 这个集合只用来拦住拼错的站点代码，不是"项目支持的市场"列表。
+CALCULATOR_MARKETS = frozenset({"TW", "MY", "PH", "SG", "TH", "VN", "BR", "MX", "AR"})
 # 备货时长默认 1 天——官方计算器页面默认值也是 1
 DEFAULT_DTS_DAYS = 1
 SCAN_GRACE_DAYS = 3
@@ -163,10 +168,11 @@ def order_day_of(created_at: str | datetime) -> date:
 def deadlines_at(created_at: str | datetime, *, market: str = "TW",
                  dts_days: int = DEFAULT_DTS_DAYS,
                  holidays: dict[date, str] | None = None,
-                 reference: Path | str | None = None) -> DeliveryDeadline:
+                 reference: Path | str | None = None,
+                 known_markets: set[str] | None = None) -> DeliveryDeadline:
     """按订单创建时间算截止。"""
     return deadlines(order_day_of(created_at), market=market, dts_days=dts_days,
-                     holidays=holidays, reference=reference)
+                     holidays=holidays, reference=reference, known_markets=known_markets)
 
 
 def end_of_day_iso(day: date) -> str:
@@ -193,15 +199,26 @@ def hours_until(moment_iso: str, now: datetime | None = None) -> float | None:
 
 def deadlines(order_day: date, *, market: str = "TW", dts_days: int = DEFAULT_DTS_DAYS,
               holidays: dict[date, str] | None = None,
-              reference: Path | str | None = None) -> DeliveryDeadline:
-    """算出一个订单的最迟发货时间与最迟到仓扫描时间。"""
+              reference: Path | str | None = None,
+              known_markets: set[str] | None = None) -> DeliveryDeadline:
+    """算出一个订单的最迟发货时间与最迟到仓扫描时间。
+
+    ``known_markets`` 默认取计算器覆盖的 9 个站点。**必须校验**：只有 TH/BR/AR 走
+    「发货日」口径，其他都走自然日——站点拼错的话会**静默套用另一种规则**，
+    算出一个看起来正常其实错的日期。实测 `delivery --market ZZ` 就真的算出了结果。
+    """
+    code = market.upper()
+    allowed = CALCULATOR_MARKETS if known_markets is None else known_markets
+    if code not in allowed:
+        raise ValueError("未知站点 %r；计算器覆盖：%s"
+                         % (market, "、".join(sorted(allowed))))
     table = load_holidays(reference) if holidays is None else holidays
     dts_day = add_shipping_days(order_day, max(0, dts_days), table)
-    scan_day = add_scan_days(dts_day, market, table)
+    scan_day = add_scan_days(dts_day, code, table)
     note = ""
     if not table:
         note = "没有豁免日期表，只按非周日推进——节假日顺延可能不准"
-    return DeliveryDeadline(market=market.upper(), order_day=order_day, dts_days=dts_days,
+    return DeliveryDeadline(market=code, order_day=order_day, dts_days=dts_days,
                             dts_day=dts_day, scan_day=scan_day,
                             holidays_hit=holidays_between(order_day, scan_day, table),
                             note=note)
