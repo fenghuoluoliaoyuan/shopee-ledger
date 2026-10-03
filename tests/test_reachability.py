@@ -119,5 +119,76 @@ class AccessGateTest(unittest.TestCase):
         self.assertIn("pricing-simulator", (raw.get("source") or {}).get("api", ""))
 
 
+class CorroborationTest(unittest.TestCase):
+    """互证（cross_verified）的格式契约。
+
+    互证比单一来源强，但只有"两个独立来源都给同一个值"才算。
+    这里钉住格式，避免出现"标了 cross_verified 却只有一条来源"这种假互证。
+    """
+
+    def setUp(self):
+        from shopee_ledger.spec import default_spec
+
+        self.params = default_spec().params
+
+    def test_every_cross_verified_param_has_an_independent_source(self):
+        """互证 = 主来源（source.url）之外还有独立来源。
+
+        不要求条数 ≥2——governance.json 只把 corroboration 定义为"快照之外的补充证据"，
+        并没有规定条数。凭空加一条"必须两条"会让已有数据无端违规。
+        但**至少要有一条是 exact 匹配**（有原文引用），只标 contextual 不算互证。
+        """
+        for param_id, param in self.params.items():
+            raw = param.raw or {}
+            if raw.get("verification_status") != "cross_verified":
+                continue
+            items = raw.get("corroboration") or []
+            self.assertGreaterEqual(len(items), 1,
+                                    "%s 标了 cross_verified 却没有独立来源" % param_id)
+            self.assertTrue(any(item.get("match") == "exact" for item in items),
+                            "%s 的互证里没有 exact 匹配，只有 contextual 不算互证" % param_id)
+
+    def test_each_corroboration_entry_carries_a_url_and_quote(self):
+        for param_id, param in self.params.items():
+            if (param.raw or {}).get("verification_status") != "cross_verified":
+                continue
+            for item in (param.raw or {}).get("corroboration") or []:
+                self.assertTrue(item.get("publisher"), param_id)
+                self.assertTrue(item.get("url"), "%s 的互证缺 url" % param_id)
+                self.assertTrue(item.get("quote"), "%s 的互证缺原文引用" % param_id)
+                self.assertTrue(item.get("checked_at"), "%s 的互证缺查询日期" % param_id)
+
+    def test_store_to_store_limit_is_cross_verified_and_resolves_the_conflict(self):
+        """台湾店配限制：两个官方来源一致给 10kg，spec 里 10kg/5kg 的二说冲突得解。"""
+        raw = self.params["P-TW-SHOPEE-SHIP-W"].raw or {}
+        self.assertEqual(raw.get("verification_status"), "cross_verified")
+        self.assertIn("10kg", raw.get("resolution_note", ""))
+        publishers = [item.get("publisher", "") for item in raw.get("corroboration") or []]
+        self.assertEqual(len(publishers), 2)
+        self.assertTrue(all("Shopee 官方" in name for name in publishers),
+                        "两条互证都应当是官方来源：%s" % publishers)
+
+    def test_channel_limits_reference_file_is_present_and_consistent(self):
+        """按站点的渠道限制表要与互证过的台湾值一致。"""
+        import json
+
+        path = Path(__file__).resolve().parents[1] / "spec" / "reference" / "channel-limits.json"
+        self.assertTrue(path.exists(), "缺 spec/reference/channel-limits.json")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        tw = data["channels"]["TW"]
+        self.assertEqual(tw["dims_cm"], [45, 30, 30])
+        self.assertEqual(tw["max_weight_kg"], 10)
+        for site in ("VN", "TH", "PH", "MY", "SG", "TW"):
+            self.assertIn(site, data["channels"])
+
+    def test_home_delivery_gap_is_recorded_with_the_attempts(self):
+        """找不到的也要写成结论——把"待办"变成"已确认的缺口"，别让人重复白找。"""
+        raw = self.params["P-TW-HOME-DELIV-W"].raw or {}
+        self.assertTrue(raw.get("access_gate"))
+        note = raw.get("access_note") or ""
+        self.assertIn("没找到", note)
+        self.assertIn("不可替代", note, "邻近渠道的数据要写明不能替代")
+
+
 if __name__ == "__main__":
     unittest.main()

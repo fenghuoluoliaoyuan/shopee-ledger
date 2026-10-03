@@ -38,6 +38,15 @@
           "match": "contextual",
           "quote": "Shopee2026年大幅上调多站点商家佣金及服务费率，上调最高达20.33%",
           "note": "标题级印证同批次费率上调；20.33% 对应同批公告中的泰国商城店铺"
+        },
+        {
+          "publisher": "Shopee 官方（定价模拟器接口）",
+          "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+          "published_at": "2026-10-03",
+          "checked_at": "2026-10-03",
+          "match": "exact",
+          "quote": "/api/site 返回 TW: platform_commission=14.00, handling_fee=2.50",
+          "note": "官方工具自己的接口，与公告文章相互独立；原件见 spec/reference/site-fees.json"
         }
       ],
       "evidence_level": "A",
@@ -77,6 +86,15 @@
           "match": "exact",
           "quote": "中国台湾站……跨境直邮佣金调整为14%，交易手续费为2.5%，预售服务费为3%。",
           "note": "费率已交叉验证；计算基数仍无来源，仍为 E 级待核实"
+        },
+        {
+          "publisher": "Shopee 官方（定价模拟器接口）",
+          "url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+          "published_at": "2026-10-03",
+          "checked_at": "2026-10-03",
+          "match": "exact",
+          "quote": "/api/site 返回 TW: platform_commission=14.00, handling_fee=2.50",
+          "note": "官方工具自己的接口，与公告文章相互独立；原件见 spec/reference/site-fees.json"
         }
       ],
       "applies_from": "2026-01-01",

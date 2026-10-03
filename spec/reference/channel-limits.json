@@ -1,0 +1,43 @@
+{
+  "note": "各站点 N日达渠道的包裹尺寸与重量限制，来自官方 #19698「N日达-国际快速物流渠道」第三节「各站点发运要求」。用于门禁判断包裹是否超限。",
+  "source": "https://shopee.cn/edu/article/19698",
+  "captured_at": "2026-08-04",
+  "channels": {
+    "VN": {
+      "max_side_cm": 150,
+      "max_weight_kg": 15
+    },
+    "TH": {
+      "max_side_cm": 100,
+      "sum_of_sides_max_cm": 180,
+      "max_weight_kg": 20
+    },
+    "PH": {
+      "max_side_cm": 150,
+      "max_weight_kg": 20
+    },
+    "MY": {
+      "max_side_cm": 100,
+      "max_weight_kg": 30
+    },
+    "SG": {
+      "max_side_cm": 120,
+      "sum_of_sides_max_cm": 240,
+      "max_weight_kg": 20
+    },
+    "TW": {
+      "dims_cm": [
+        45,
+        30,
+        30
+      ],
+      "longest_side_max_cm": 45,
+      "other_sides_max_cm": 30,
+      "max_weight_kg": 10
+    }
+  },
+  "tw_channel_note": "台湾站点这一行是「蝦皮店到店」渠道（N日达），与 #26634《蝦皮海外五日到貨（蝦皮店到店）物流渠道 - 台湾站点》给的值完全一致：45cm*30cm*30cm、≤10KG。两个独立官方来源互证。",
+  "not_found": {
+    "P-TW-HOME-DELIV-W": "台湾站**宅配**（空運/海運）的重量与尺寸限制在公开语料里没找到。已尝试：(a) 搜「宅配 + 重量/尺寸/限制」的全部 110 篇；(b) 搜「20KG」附近含宅配/店配的片段。官网上标准宅配的限重很可能只在卖家中心或需登录页面。已知的邻近数据（**不是同一个渠道，不可替代**）：#26633 大件宅配（海運）重物渠道 100kg、长+宽+高≤350cm，且其转正式报关红线为 70kg / 两边长度>130cm。"
+  }
+}

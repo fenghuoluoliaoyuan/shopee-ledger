@@ -214,15 +214,38 @@
       "state": "to_verify",
       "gate_eligible": false,
       "source": {
-        "url": null,
-        "checked_at": null,
-        "recheck_status": "blocked",
-        "snapshot_ref": null
+        "url": "https://shopee.cn/edu/article/26634",
+        "checked_at": "2026-10-03",
+        "recheck_status": "scheduled",
+        "recheck_note": "渠道限制随渠道调整可能变化，季度复核",
+        "snapshot_ref": "data\\snapshots\\ARTICLE-26634-b5af9093e74e.txt"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
       "task_ref": "VT-016",
-      "note": "按区间建模：落在 safe_max 与 loose_max 之间时输出 WARN，不得 REJECT"
+      "note": "按区间建模：落在 safe_max 与 loose_max 之间时输出 WARN，不得 REJECT",
+      "verification_status": "cross_verified",
+      "corroboration": [
+        {
+          "publisher": "Shopee 官方（主来源）",
+          "url": "https://shopee.cn/edu/article/26634",
+          "published_at": "2025-12-24",
+          "checked_at": "2026-10-03",
+          "match": "exact",
+          "quote": "包裹尺寸限制：45cm*30cm*30cm（最长边≤45CM，其他两边均需≤30cm），且包裹重量≤10KG。",
+          "note": "虾皮海外五日到货（虾皮店到店）渠道 - 台湾站点"
+        },
+        {
+          "publisher": "Shopee 官方（独立互证）",
+          "url": "https://shopee.cn/edu/article/19698",
+          "published_at": "2026-08-04",
+          "checked_at": "2026-10-03",
+          "match": "exact",
+          "quote": "台湾站点（NTD）…45cm*30cm*30cm（最长边≤45CM，其他两边均需≤30CM）；且包裹重量≤10KG",
+          "note": "N日达-国际快速物流渠道 各站点发运要求。**两个来源都是官方**，比「官方 + 媒体」更强；且与 spec 里 10kg/5kg 的二说冲突相比，双方一致指向 10kg。"
+        }
+      ],
+      "resolution_note": "原 unverified_claim 里 10kg 与 5kg 二说并存；两个独立官方来源一致给 10kg，故 5kg 不成立。"
     },
     {
       "id": "P-TW-HOME-DELIV-W",
@@ -248,7 +271,10 @@
         "snapshot_ref": null
       },
       "review_cycle": "quarterly",
-      "next_review_at": "2027-01-03"
+      "next_review_at": "2027-01-03",
+      "access_gate": "seller_center_login",
+      "access_note": "台湾站**宅配**（空運/海運）的重量与尺寸限制在公开语料里没找到。已尝试：(a) 搜「宅配 + 重量/尺寸/限制」的全部 110 篇；(b) 搜「20KG」附近含宅配/店配的片段。官网上标准宅配的限重很可能只在卖家中心或需登录页面。已知的邻近数据（**不是同一个渠道，不可替代**）：#26633 大件宅配（海運）重物渠道 100kg、长+宽+高≤350cm，且其转正式报关红线为 70kg / 两边长度>130cm。",
+      "accessible_via": "卖家中心物流设置或需登录的渠道说明页"
     },
     {
       "id": "P-TW-LIQUID-ML",
