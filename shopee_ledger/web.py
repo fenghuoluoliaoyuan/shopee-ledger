@@ -48,6 +48,14 @@ class Handler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
         notice = _first(query, "notice")
         error = _first(query, "error")
+
+        if parsed.path == "/sources.json":
+            # 给油猴脚本的配方清单——下拉框据此生成，脚本里不重复写一份
+            from shopee_ledger.sources import sources_payload
+
+            self._send_json(sources_payload())
+            return
+
         ledger = Ledger(self.db_path)
         try:
             ledger.init()
@@ -62,7 +70,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         length = int(self.headers.get("Content-Length", "0"))
-        form = parse_qs(self.rfile.read(length).decode("utf-8"))
+        raw_body = self.rfile.read(length)
+
+        if parsed.path == "/ingest":
+            # 油猴脚本把浏览器渲染后的文本送到这里；本机用同一份 spec 配方提取
+            self._send_json(_ingest_payload(raw_body, self.db_path))
+            return
+
+        form = parse_qs(raw_body.decode("utf-8"))
         ledger = Ledger(self.db_path)
         try:
             ledger.init()
@@ -74,6 +89,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(303)
         self.send_header("Location", target)
         self.end_headers()
+
+    def _send_json(self, payload: object) -> None:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def log_message(self, fmt: str, *args) -> None:
         return
@@ -804,6 +827,44 @@ def checklist_page(ledger: Ledger) -> str:
 <p class="lead">阻塞第一单的排在最前（还剩 {remaining} 条）。A 级必须有可打开的 URL——没有凭据的 A 级等于自述。
 这条任务若绑定了解锁参数，填「抄到的值」会在保存的同时把它升到该等级，对应功能随即启用。</p>
 <section class="card"><table>{''.join(rows)}</table></section>"""
+
+
+def _ingest_payload(raw_body: bytes, db_path: str) -> dict:
+    """处理油猴脚本送来的渲染后页面文本。
+
+    流程与命令行 fetch 完全一致：解析配方 → 提取 → 存快照 → 只产出**候选值**。
+    这里是本机端点，没有鉴权——但它只写候选（pending），不直接改参数，
+    所以最坏情况也只是多一条待你确认的记录。
+    """
+    from shopee_ledger.sources import ingest_text
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError) as exc:
+        return {"ok": False, "error": "请求体不是合法 JSON：%s" % exc}
+    text = payload.get("text") or ""
+    if not text.strip():
+        return {"ok": False, "error": "text 为空；请把页面正文一起发过来"}
+    capture = ingest_text(
+        text, param_id=payload.get("param_id"), url=payload.get("url"),
+        captured_at=payload.get("captured_at"), channel="userscript")
+    ledger = Ledger(db_path)
+    try:
+        ledger.init()
+        candidate_id = ledger.record_capture(capture)
+        if candidate_id is None:
+            return {"ok": False, "status": capture.status, "param_id": capture.param_id,
+                    "message": capture.message, "snapshot_ref": capture.snapshot_ref,
+                    "hint": "提取失败不等于没有收获：快照已存，去修 spec/sources.json 的规则"}
+        current = ledger.spec.params.get(capture.param_id)
+        return {"ok": True, "status": capture.status, "param_id": capture.param_id,
+                "value": capture.value, "candidate_id": candidate_id,
+                "changed": bool(current and current.value != capture.value),
+                "current_value": (current.value if current else None),
+                "snapshot_ref": capture.snapshot_ref,
+                "hint": "已记为候选，未生效。回终端跑 review / approve"}
+    finally:
+        ledger.close()
 
 
 def _checklist_post(ledger: Ledger, form: dict) -> str:

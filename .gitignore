@@ -5,3 +5,6 @@ __pycache__/
 data/*.sqlite
 data/*.sqlite-journal
 .env
+
+data/snapshots/
+

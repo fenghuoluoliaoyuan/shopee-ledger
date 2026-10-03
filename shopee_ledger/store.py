@@ -178,7 +178,9 @@ class Ledger:
         """写一条覆盖值。证据出处必须一起落库——只写在审计里，配置页就说不清依据。"""
         if grade not in ("A", "B", "C"):
             raise ValueError("覆盖层只接受 A/B/C 级（实测或后台抄录）；%s 级请走核实任务升级路径" % grade)
-        if grade == "A" and not (source_url or "").strip() and not self.spec.params[param_id].source.get("url"):
+        param = self.spec.params.get(param_id)
+        spec_url = (param.source.get("url") if param else None) or ""
+        if grade == "A" and not (source_url or "").strip() and not spec_url:
             raise ValueError("A 级覆盖必须有可打开的 URL——没有凭据的 A 级等于自述")
         self.storage.insert("ParamOverride", {
             "param_id": param_id, "value": value, "evidence_level": grade,
@@ -617,6 +619,78 @@ class Ledger:
                 unlocks.append({"param_id": param_id, "name": name, "feature": feature,
                                 "level": param.evidence_level, "task_ref": param.task_ref})
         return unlocks
+
+    # ---- 候选值：抓取/截图 → 人工确认 → 覆盖值 --------------------------
+    def record_capture(self, capture: Any, *, channel: str | None = None) -> int | None:
+        """记一次采集。
+
+        **只有真的拿到了值才产生候选行**——抓失败不产出"待确认的值"，
+        否则 review 列表会被失败项灌满，真正的变更反而看不见。
+        失败仍然写审计，留痕不丢。
+        """
+        row = capture.as_row()
+        if channel:
+            row["channel"] = channel
+        candidate_id = None
+        if capture.value is not None:
+            candidate_id = self.storage.insert("ParamCandidate", row)
+        self.storage.record_audit(
+            "capture." + capture.status, "Param", capture.param_id, result=capture.status,
+            detail={"candidate_id": candidate_id, "url": capture.url,
+                    "snapshot_ref": capture.snapshot_ref, "value": capture.value,
+                    "message": capture.message})
+        return candidate_id
+
+    def pending_candidates(self) -> list[dict[str, Any]]:
+        """待确认的候选值，带上当前生效值——变了没有要一眼看出来。"""
+        out = []
+        for row in self.storage.list("ParamCandidate", limit=500,
+                                     where="status = ?", args=("pending",)):
+            param = self.spec.params.get(row["param_id"])
+            out.append(dict(
+                row,
+                param_name=(param.name if param else row["param_id"]),
+                current_value=(param.value if param else None),
+                current_level=(param.evidence_level if param else None),
+                changed=bool(param is not None and param.value != row.get("value")),
+            ))
+        out.sort(key=lambda item: (not item["changed"], item["param_id"]))
+        return out
+
+    def capture_history(self, limit: int = 500) -> list[dict[str, Any]]:
+        return self.storage.list("ParamCandidate", limit=limit)
+
+    def approve_candidate(self, candidate_id: int, grade: str, *,
+                          operator: str = "cli", note: str | None = None) -> None:
+        """确认一条候选：写覆盖值 + 标记 approved。**等级由人给，不由抓取器给。**"""
+        row = self.storage.get("ParamCandidate", candidate_id)
+        if row is None:
+            raise ValueError("找不到候选 #%s" % candidate_id)
+        if row["status"] != "pending":
+            raise ValueError("候选 #%s 已经是 %s，不能重复确认" % (candidate_id, row["status"]))
+        if row.get("value") is None:
+            raise ValueError("候选 #%s 没有值（%s），不能确认" % (candidate_id, row.get("message") or "抓取失败"))
+        self._write_override(
+            row["param_id"], row["value"], grade,
+            source=note or ("抓取确认" if row.get("channel") == "fetch" else "截图确认"),
+            source_url=row.get("source_url"), snapshot_ref=row.get("snapshot_ref"),
+            checked_at=(row.get("captured_at") or "")[:10] or None)
+        self.storage.update("ParamCandidate", candidate_id, {
+            "status": "approved", "decided_at": _now(), "decided_by": operator})
+        self.storage.record_audit("capture.approve", "Param", row["param_id"], result=grade,
+                                  detail={"candidate_id": candidate_id, "value": row["value"],
+                                          "source_url": row.get("source_url")})
+
+    def reject_candidate(self, candidate_id: int, reason: str, *, operator: str = "cli") -> None:
+        row = self.storage.get("ParamCandidate", candidate_id)
+        if row is None:
+            raise ValueError("找不到候选 #%s" % candidate_id)
+        if row["status"] != "pending":
+            raise ValueError("候选 #%s 已经是 %s" % (candidate_id, row["status"]))
+        self.storage.update("ParamCandidate", candidate_id, {
+            "status": "rejected", "decided_at": _now(), "decided_by": operator, "message": reason})
+        self.storage.record_audit("capture.reject", "Param", row["param_id"], result="rejected",
+                                  detail={"candidate_id": candidate_id, "reason": reason})
 
     # ---- 核实任务 -------------------------------------------------------
     def checklist_rows(self) -> list[dict[str, Any]]:

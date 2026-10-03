@@ -60,7 +60,24 @@ def sql_type(field: dict[str, Any]) -> str:
     return TYPE_MAP.get(raw, "TEXT")
 
 
-def _encode(value: Any) -> Any:
+JSON_TYPES = ("any", "object", "map", "json")
+
+
+def is_json_field(field: dict[str, Any] | None) -> bool:
+    """any / object / map / array 一律按 JSON 存。
+
+    不这么做会踩 SQLite 的列亲和性：TEXT 列插入数字会被悄悄转成字符串，
+    读回来 `"0.15" != 0.15`，于是"值没变"被判成"变了"。
+    """
+    if not field:
+        return False
+    raw = str(field.get("type") or "string")
+    return raw in JSON_TYPES or raw.startswith("array")
+
+
+def _encode(value: Any, field: dict[str, Any] | None = None) -> Any:
+    if field is not None and is_json_field(field):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
     if isinstance(value, bool):
         return 1 if value else 0
     if isinstance(value, (dict, list, tuple)):
@@ -71,6 +88,13 @@ def _encode(value: Any) -> Any:
 def _decode(raw: Any, field: dict[str, Any]) -> Any:
     if raw is None:
         return None
+    if is_json_field(field):
+        if not isinstance(raw, str):
+            return raw
+        try:
+            return json.loads(raw)
+        except ValueError:
+            return raw  # 旧数据可能是裸标量，读得回来就行
     if sql_type(field) == "TEXT" and isinstance(raw, str) and raw[:1] in "[{":
         try:
             return json.loads(raw)
@@ -207,8 +231,13 @@ class Storage:
     def insert(self, entity_id: str, data: dict[str, Any]) -> int:
         entity = self.entity(entity_id)
         table = table_for(entity_id)
-        field_cols = self._field_columns(entity_id)
-        pairs = [(name, _encode(data[name])) for name in field_cols if name in data]
+        fields = entity.get("fields") or []
+        field_cols = [column_for(field["name"]) for field in fields]
+        pairs = []
+        for field in fields:
+            name = column_for(field["name"])
+            if name in data:
+                pairs.append((name, _encode(data[name], field)))
         cols = [p[0] for p in pairs]
         values = [p[1] for p in pairs]
         if "created_at" not in field_cols:
@@ -229,8 +258,9 @@ class Storage:
     def update(self, entity_id: str, row_id: int, data: dict[str, Any]) -> None:
         if self.is_immutable(entity_id):
             raise ValueError("%s 是只增不改表，禁止 UPDATE（INV-007）" % entity_id)
-        allowed = set(self._columns(entity_id))
-        pairs = [(k, _encode(v)) for k, v in data.items() if k in allowed]
+        by_column = {column_for(field["name"]): field for field in self.entity(entity_id).get("fields") or []}
+        pairs = [(key, _encode(value, by_column.get(key)))
+                 for key, value in data.items() if key in by_column]
         if not pairs:
             return
         sql = 'UPDATE "%s" SET %s WHERE id = ?' % (

@@ -295,6 +295,22 @@
         {"name": "supplier_id", "type": "string", "required": true},
         {"name": "is_primary", "type": "boolean", "required": false}
       ]
+    },
+    { "id": "ParamCandidate", "layer": "platform", "key": "capture_id", "note": "抓取/截图来的候选值。approve 之后才写进 ParamOverride；本身不是决策依据",
+      "fields": [
+        {"name": "param_id", "type": "string", "required": true},
+        {"name": "value", "type": "any", "required": false},
+        {"name": "source_id", "type": "string", "required": false},
+        {"name": "source_url", "type": "string", "required": false},
+        {"name": "snapshot_ref", "type": "string", "required": false},
+        {"name": "raw_sha256", "type": "string", "required": false},
+        {"name": "captured_at", "type": "string", "required": true},
+        {"name": "channel", "type": "enum", "values": ["fetch", "userscript", "manual"], "required": true},
+        {"name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "required": true},
+        {"name": "message", "type": "string", "required": false},
+        {"name": "decided_at", "type": "string", "required": false},
+        {"name": "decided_by", "type": "string", "required": false}
+      ]
     }
   ]
 }

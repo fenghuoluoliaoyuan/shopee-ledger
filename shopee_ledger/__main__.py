@@ -110,6 +110,19 @@ def main(argv: list[str] | None = None) -> int:
     q2.add_argument("--free-window", action="store_true", help="处于免佣窗口内")
     q2.add_argument("--grant", type=int, help="不填则只打印；填候选品 id 则留档成本快照")
 
+    sub.add_parser("sources", help="列出抓取配方与访问方式")
+    fetch = sub.add_parser("fetch", help="抓公开来源，产出候选值（不直接改参数）")
+    fetch.add_argument("--param", help="只抓某个参数")
+    fetch.add_argument("--include-login", action="store_true", help="连需登录的来源也走一遍（只会报状态）")
+    sub.add_parser("review", help="列出待确认的候选值（改了没有一眼看出）")
+    appr = sub.add_parser("approve", help="确认候选值 → 写进覆盖层")
+    appr.add_argument("--id", type=int, required=True)
+    appr.add_argument("--grade", required=True, choices=("A", "B", "C"))
+    appr.add_argument("--note", help="备注；A 级必须能说明依据")
+    rej = sub.add_parser("reject", help="驳回候选值（不改参数）")
+    rej.add_argument("--id", type=int, required=True)
+    rej.add_argument("--reason", required=True)
+
     args = parser.parse_args(argv)
     ledger = Ledger(args.db)
     try:
@@ -237,6 +250,69 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         payload = ReadClient(ReadConfig.from_env()).get_escrow_detail(args.order_sn)
         mapped = ledger.apply_escrow(args.candidate, payload)
         print(json.dumps(mapped, ensure_ascii=False))
+        return 0
+    if args.cmd == "sources":
+        from shopee_ledger.sources import load_sources
+
+        for source in load_sources():
+            access = "公开" if source.access == "public" else "需登录"
+            print("%-22s %-26s %-6s %-11s %s" % (
+                source.id, source.param_id, access, source.review_cycle, source.url))
+        return 0
+    if args.cmd == "fetch":
+        from shopee_ledger.sources import fetch_source, load_sources
+
+        sources = load_sources()
+        if args.param:
+            sources = [item for item in sources if item.param_id == args.param]
+        todo = [item for item in sources if args.include_login or item.access == "public"]
+        if not todo:
+            print("没有可抓的配方（需登录的来源请用油猴脚本，或加 --include-login 看状态）")
+            return 0
+        ledger.init()
+        failed = 0
+        for source in todo:
+            capture = fetch_source(source)
+            ledger.record_capture(capture)
+            print("  " + capture.describe())
+            if not capture.ok:
+                failed += 1
+        pending = ledger.pending_candidates()
+        print("\n抓到 %d 条候选，失败 %d 条；待确认共 %d 条（用 review / approve）"
+              % (len(todo) - failed, failed, len(pending)))
+        return 1 if failed else 0
+    if args.cmd == "review":
+        rows = ledger.pending_candidates()
+        if not rows:
+            print("没有待确认的候选值")
+            return 0
+        for row in rows:
+            print("#%s %s  %s  当前 %s → 抓到 %s   [%s %s]" % (
+                row["id"], row["param_id"], "**变了**" if row["changed"] else "未变",
+                row["current_value"], row["value"], row["captured_at"], row.get("channel") or ""))
+            if row.get("source_url"):
+                print("     来源 %s" % row["source_url"])
+            if row.get("snapshot_ref"):
+                print("     快照 %s" % row["snapshot_ref"])
+            if row.get("message"):
+                print("     备注 %s" % row["message"])
+        print("\n确认：approve --id N --grade A|B|C    驳回：reject --id N --reason ...")
+        return 0
+    if args.cmd == "approve":
+        try:
+            ledger.approve_candidate(args.id, args.grade, note=args.note)
+        except ValueError as exc:
+            print("未确认：%s" % exc)
+            return 1
+        print("候选 #%s 已确认，参数升级到 %s 级（功能随之启用）" % (args.id, args.grade))
+        return 0
+    if args.cmd == "reject":
+        try:
+            ledger.reject_candidate(args.id, args.reason)
+        except ValueError as exc:
+            print("未驳回：%s" % exc)
+            return 1
+        print("候选 #%s 已驳回，参数未变" % args.id)
         return 0
     if args.cmd == "alert":
         alerts = ledger.order_alerts()

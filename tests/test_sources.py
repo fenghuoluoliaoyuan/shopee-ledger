@@ -1,0 +1,248 @@
+"""抓取与采集的契约测试。
+
+两条最要紧的：
+1. 抓不到就报抓不到 —— 提取失败**不许**产出任何值。
+2. 候选不等于生效 —— 抓到的值进 pending，没人工 approve 之前参数一动不动。
+"""
+
+import json
+import sys
+import tempfile
+import unittest
+import urllib.error
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from shopee_ledger.sources import (
+    STATUS_EXTRACT_FAILED,
+    STATUS_HTTP_ERROR,
+    STATUS_NEEDS_LOGIN,
+    STATUS_NO_RECIPE,
+    STATUS_OK,
+    Source,
+    extract_value,
+    fetch_source,
+    ingest_text,
+    load_sources,
+    save_snapshot,
+)
+from shopee_ledger.store import Ledger
+from shopee_ledger.web import _ingest_payload
+
+REAL_PAGE = """
+<html><body>
+  <h1>跨境卖家费率说明</h1>
+  <p>成交服务费（佣金）为 14%，交易手续费 2.5%。</p>
+</body></html>
+"""
+
+SHELL_PAGE = "<html><body><div id='app'></div><script src='/x.js'></script></body></html>"
+
+
+class ExtractTest(unittest.TestCase):
+    def test_regex_with_group_and_scale(self):
+        rule = {"kind": "regex", "expr": "佣金[率]?[^0-9]{0,12}([0-9]+(?:\\.[0-9]+)?)\\s*%",
+                "group": 1, "scale": 0.01}
+        self.assertAlmostEqual(extract_value(rule, REAL_PAGE), 0.14)
+
+    def test_thousands_separator(self):
+        rule = {"kind": "regex", "expr": "門檻\\s*([0-9,]+)", "group": 1, "scale": 1}
+        self.assertEqual(extract_value(rule, "門檻 2,000 元"), 2000)
+
+    def test_no_match_returns_none_never_a_default(self):
+        rule = {"kind": "regex", "expr": "佣金[^0-9]{0,12}([0-9.]+)", "group": 1, "scale": 0.01}
+        self.assertIsNone(extract_value(rule, SHELL_PAGE))
+
+    def test_json_path(self):
+        rule = {"kind": "json", "expr": "data.rate"}
+        self.assertEqual(extract_value(rule, '{"data": {"rate": 0.07}}'), 0.07)
+
+    def test_manual_kind_extracts_nothing(self):
+        self.assertIsNone(extract_value({"kind": "manual"}, REAL_PAGE))
+
+
+class FetchTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.snaps = Path(self.tmp.name) / "snapshots"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _source(self, **kwargs):
+        base = dict(id="SRC-X", param_id="P-TW-COMMISSION",
+                    url="https://example.test/a", access="public",
+                    extract={"kind": "regex", "expr": "佣金[率]?[^0-9]{0,12}([0-9.]+)\\s*%",
+                             "group": 1, "scale": 0.01})
+        base.update(kwargs)
+        return Source(**base)
+
+    def test_fetch_ok_saves_snapshot(self):
+        capture = fetch_source(self._source(), opener=lambda url: REAL_PAGE.encode(),
+                               snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_OK)
+        self.assertAlmostEqual(capture.value, 0.14)
+        self.assertTrue(capture.snapshot_ref)
+        self.assertTrue((Path(self.snaps)).exists())
+
+    def test_js_shell_reports_extract_failed_not_a_guess(self):
+        """shopee.cn/edu 就是这种：抓到了页面但内容是空的。绝不能编一个数字出来。"""
+        capture = fetch_source(self._source(), opener=lambda url: SHELL_PAGE.encode(),
+                               snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_EXTRACT_FAILED)
+        self.assertIsNone(capture.value)
+        self.assertTrue(capture.snapshot_ref, "失败也要留快照，否则没法修规则")
+
+    def test_login_source_is_not_fetched(self):
+        capture = fetch_source(self._source(access="login"), snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_NEEDS_LOGIN)
+        self.assertIsNone(capture.value)
+
+    def test_network_error_is_reported(self):
+        def boom(url):
+            raise urllib.error.URLError("timed out")
+
+        capture = fetch_source(self._source(), opener=boom, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_HTTP_ERROR)
+        self.assertIsNone(capture.value)
+
+    def test_snapshot_dedupes_by_content(self):
+        first, digest_one = save_snapshot(REAL_PAGE, "SRC-X", self.snaps)
+        second, digest_two = save_snapshot(REAL_PAGE, "SRC-X", self.snaps)
+        self.assertEqual(digest_one, digest_two)
+        self.assertEqual(first, second)
+        self.assertEqual(len(list(Path(self.snaps).iterdir())), 1)
+
+
+class IngestTest(unittest.TestCase):
+    """浏览器送回来的渲染后文本 —— 与命令行抓取走同一份配方。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.snaps = Path(self.tmp.name) / "snapshots"
+        self.sources = load_sources()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_ingest_uses_the_same_recipe(self):
+        capture = ingest_text(REAL_PAGE, param_id="P-TW-COMMISSION",
+                              sources=self.sources, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_OK)
+        self.assertAlmostEqual(capture.value, 0.14)
+        self.assertEqual(capture.channel, "userscript")
+
+    def test_ingest_without_recipe_reports_it(self):
+        capture = ingest_text("随便一段文本", param_id="P-NOT-EXIST",
+                              sources=self.sources, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_NO_RECIPE)
+        self.assertIsNone(capture.value)
+
+    def test_ingest_shell_text_still_fails_honestly(self):
+        capture = ingest_text(SHELL_PAGE, param_id="P-TW-COMMISSION",
+                              sources=self.sources, snapshot_dir=self.snaps)
+        self.assertEqual(capture.status, STATUS_EXTRACT_FAILED)
+        self.assertIsNone(capture.value)
+
+
+class CandidateStoreTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite")
+        self.ledger.init()
+        self.snaps = Path(self.tmp.name) / "snapshots"
+
+    def tearDown(self):
+        try:
+            self.ledger.close()
+        except Exception:
+            pass
+        self.tmp.cleanup()
+
+    def _capture(self, text=REAL_PAGE):
+        return ingest_text(text, param_id="P-TW-COMMISSION",
+                           sources=load_sources(), snapshot_dir=self.snaps)
+
+    def test_failed_capture_produces_no_candidate(self):
+        failed = ingest_text(SHELL_PAGE, param_id="P-TW-COMMISSION",
+                             sources=load_sources(), snapshot_dir=self.snaps)
+        self.assertIsNone(self.ledger.record_capture(failed))
+        self.assertEqual(self.ledger.pending_candidates(), [],
+                         "抓失败不该产出待确认项，否则真正的变更会被淹没")
+
+    def test_capture_does_not_touch_the_param(self):
+        before = self.ledger.spec.params["P-TW-COMMISSION"].value
+        candidate_id = self.ledger.record_capture(self._capture())
+        self.assertIsNotNone(candidate_id)
+        self.assertEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, before,
+                         "候选值绝不能自动生效")
+        self.assertEqual(len(self.ledger.pending_candidates()), 1)
+
+    def test_pending_marks_whether_value_changed(self):
+        same = self.ledger.record_capture(self._capture())
+        row = [item for item in self.ledger.pending_candidates() if item["id"] == same][0]
+        self.assertFalse(row["changed"], "抓到的值与当前一致")
+
+        changed_text = REAL_PAGE.replace("14%", "15%")
+        self.ledger.record_capture(self._capture(changed_text))
+        rows = self.ledger.pending_candidates()
+        self.assertTrue(rows[0]["changed"], "变了的那条要排在最前")
+
+    def test_approve_writes_override_and_unlocks(self):
+        text = REAL_PAGE.replace("14%", "15%")
+        candidate_id = self.ledger.record_capture(self._capture(text))
+        self.ledger.approve_candidate(candidate_id, "A", note="人工确认过了")
+        self.assertAlmostEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, 0.15, places=6)
+        self.assertEqual(self.ledger.pending_candidates(), [])
+        row = self.ledger.storage.get("ParamCandidate", candidate_id)
+        self.assertEqual(row["status"], "approved")
+
+    def test_reject_leaves_param_untouched(self):
+        before = self.ledger.spec.params["P-TW-COMMISSION"].value
+        candidate_id = self.ledger.record_capture(self._capture(REAL_PAGE.replace("14%", "99%")))
+        self.ledger.reject_candidate(candidate_id, "页面是旧版")
+        self.assertEqual(self.ledger.spec.params["P-TW-COMMISSION"].value, before)
+        self.assertEqual(self.ledger.storage.get("ParamCandidate", candidate_id)["status"], "rejected")
+
+    def test_cannot_approve_twice(self):
+        candidate_id = self.ledger.record_capture(self._capture())
+        self.ledger.approve_candidate(candidate_id, "B")
+        with self.assertRaises(ValueError):
+            self.ledger.approve_candidate(candidate_id, "B")
+
+
+class IngestEndpointTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.db = str(Path(self.tmp.name) / "ledger.sqlite")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_endpoint_records_candidate_only(self):
+        body = json.dumps({"param_id": "P-TW-COMMISSION", "url": "https://shopee.cn/edu/article/26620",
+                           "text": REAL_PAGE, "captured_at": "2026-10-03T12:00:00+00:00"}).encode()
+        result = _ingest_payload(body, self.db)
+        self.assertTrue(result["ok"])
+        self.assertAlmostEqual(result["value"], 0.14)
+        self.assertFalse(result["changed"])
+        self.assertIn("未生效", result["hint"])
+
+    def test_endpoint_rejects_empty_text(self):
+        result = _ingest_payload(json.dumps({"param_id": "P-TW-COMMISSION", "text": "  "}).encode(),
+                                 self.db)
+        self.assertFalse(result["ok"])
+        self.assertIn("text 为空", result["error"])
+
+    def test_endpoint_reports_extract_failure_with_snapshot(self):
+        body = json.dumps({"param_id": "P-TW-COMMISSION", "url": "https://x.test",
+                           "text": SHELL_PAGE}).encode()
+        result = _ingest_payload(body, self.db)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["status"], STATUS_EXTRACT_FAILED)
+        self.assertIn("快照已存", result["hint"])
+
+
+if __name__ == "__main__":
+    unittest.main()

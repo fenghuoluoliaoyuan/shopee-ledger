@@ -1,0 +1,161 @@
+// ==UserScript==
+// @name         Shopee 台账 · 参数采集
+// @namespace    shopee-ledger
+// @version      0.1
+// @description  在 Shopee 页面上把渲染后的正文送回本机台账，产出「候选值」等人工确认。本脚本不会直接修改任何参数。
+// @author       shopee-ledger
+// @match        https://shopee.cn/edu/*
+// @match        https://seller.shopee.cn/*
+// @match        https://help.shopee.tw/*
+// @match        https://seller.shopee.tw/*
+// @match        https://shopee.tw/*
+// @grant        GM_xmlhttpRequest
+// @connect      127.0.0.1
+// @run-at       document-idle
+// ==/UserScript==
+
+/*
+ * 为什么必须是浏览器脚本，而不是服务端抓取
+ * ------------------------------------------
+ * 实测（2026-10-03）服务端抓 4 个公开来源，0 成功：
+ *   · shopee.cn/edu 是 JS 空壳 —— 服务端拿到骨架，内容靠浏览器渲染
+ *   · help.shopee.tw 超时
+ *   · chinatax.gov.cn SSL 证书链不全
+ *   · seller.shopee.cn 需要登录态
+ * 浏览器正好补上这三点：执行 JS、带登录态、有完整证书链。
+ * 提取规则仍然只写在 spec/sources.json 里一份，这里只负责"把渲染后的文本送回去"。
+ *
+ * 安全边界
+ * --------
+ * · 只发到 127.0.0.1（本机），不外发。
+ * · 默认发整页正文；按住 Alt 再点，只发你选中的那段（更省、更干净）。
+ * · 本机端点只写「候选值」，不直接改参数——最坏情况是多一条待确认记录。
+ */
+
+(function () {
+  'use strict';
+
+  const APP = 'http://127.0.0.1:8765';
+  const PANEL_ID = 'shopee-ledger-capture';
+
+  function log(...args) {
+    console.log('[台账采集]', ...args);
+  }
+
+  function request(options) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: options.method || 'GET',
+        url: options.url,
+        headers: options.headers,
+        data: options.data,
+        timeout: 20000,
+        onload: (res) => resolve(res),
+        onerror: () => reject(new Error('连不上本机台账：' + APP + '。先运行 python -m shopee_ledger web')),
+        ontimeout: () => reject(new Error('本机台账无响应')),
+      });
+    });
+  }
+
+  async function loadSources() {
+    const res = await request({ url: APP + '/sources.json' });
+    if (res.status !== 200) throw new Error('配方清单读取失败：HTTP ' + res.status);
+    return JSON.parse(res.responseText);
+  }
+
+  async function sendCapture(paramId, text) {
+    const body = JSON.stringify({
+      param_id: paramId,
+      url: location.href,
+      text: text,
+      captured_at: new Date().toISOString(),
+    });
+    const res = await request({
+      method: 'POST',
+      url: APP + '/ingest',
+      headers: { 'Content-Type': 'application/json' },
+      data: body,
+    });
+    return JSON.parse(res.responseText);
+  }
+
+  function buildPanel(sources) {
+    const box = document.createElement('div');
+    box.id = PANEL_ID;
+    box.style.cssText = [
+      'position:fixed', 'right:16px', 'bottom:16px', 'z-index:2147483647',
+      'width:320px', 'padding:12px', 'border-radius:10px',
+      'background:#18181b', 'color:#fafafa', 'font:12px/1.5 system-ui,sans-serif',
+      'box-shadow:0 8px 24px rgba(0,0,0,.35)',
+    ].join(';');
+
+    const options = sources
+      .map((s) => `<option value="${s.param_id}">${s.param_id} · ${s.access === 'login' ? '需登录' : '公开'}</option>`)
+      .join('');
+
+    box.innerHTML = `
+      <div style="font-weight:600;margin-bottom:8px">台账采集 <span style="color:#a1a1aa;font-weight:400">· 只产出候选</span></div>
+      <select id="sl-param" style="width:100%;padding:6px;border-radius:6px;margin-bottom:6px">${options}</select>
+      <div style="color:#a1a1aa;margin-bottom:8px">默认发整页正文；按住 <b>Alt</b> 再点只发选中部分。</div>
+      <button id="sl-send" style="width:100%;padding:8px;border:0;border-radius:6px;background:#1d4ed8;color:#fff;cursor:pointer">抓这一页</button>
+      <pre id="sl-out" style="white-space:pre-wrap;margin:8px 0 0;color:#a1a1aa;max-height:180px;overflow:auto"></pre>
+      <div id="sl-toggle" style="margin-top:6px;color:#52525b;cursor:pointer;text-align:right">收起</div>
+    `;
+    document.body.appendChild(box);
+
+    const out = box.querySelector('#sl-out');
+    const button = box.querySelector('#sl-send');
+    const select = box.querySelector('#sl-param');
+
+    function show(text) {
+      out.textContent = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+    }
+
+    button.addEventListener('click', async (event) => {
+      const paramId = select.value;
+      const selection = String(window.getSelection() || '').trim();
+      const useSelection = event.altKey && selection.length > 0;
+      const text = useSelection ? selection : document.body.innerText;
+      show('发送中…（' + (useSelection ? '选中部分 ' : '整页 ') + text.length + ' 字）');
+      try {
+        const result = await sendCapture(paramId, text);
+        if (result.ok) {
+          show(
+            '✅ 已记为候选 #' + result.candidate_id + '\n' +
+            '参数 ' + result.param_id + '\n' +
+            '抓到 ' + JSON.stringify(result.value) + '\n' +
+            '当前 ' + JSON.stringify(result.current_value) + '\n' +
+            (result.changed ? '⚠️ 与当前值不同\n' : '（与当前值一致）\n') +
+            '快照 ' + (result.snapshot_ref || '—') + '\n\n' + result.hint
+          );
+        } else {
+          show('❌ ' + result.status + '\n' + (result.message || result.error) + '\n\n' + (result.hint || ''));
+        }
+      } catch (err) {
+        show('❌ ' + err.message);
+      }
+    });
+
+    box.querySelector('#sl-toggle').addEventListener('click', () => {
+      const hidden = out.style.display === 'none';
+      out.style.display = hidden ? 'block' : 'none';
+      button.style.display = hidden ? 'block' : 'none';
+      select.style.display = hidden ? 'block' : 'none';
+      box.querySelector('#sl-toggle').textContent = hidden ? '收起' : '展开';
+    });
+  }
+
+  (async function main() {
+    try {
+      const sources = await loadSources();
+      if (!Array.isArray(sources) || sources.length === 0) {
+        log('配方清单为空，跳过');
+        return;
+      }
+      buildPanel(sources);
+      log('已加载 ' + sources.length + ' 条配方');
+    } catch (err) {
+      log('未注入面板：' + err.message);
+    }
+  })();
+})();
