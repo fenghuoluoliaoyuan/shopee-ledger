@@ -22,11 +22,27 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from shopee_ledger.cost_engine import CostEngine
-from shopee_ledger.spec import Spec
+from shopee_ledger.spec import DEFAULT_SPEC_ROOT, Spec
+
+REFERENCE_DIR = Path(DEFAULT_SPEC_ROOT) / "reference"
+LFF_SITE_FILE = REFERENCE_DIR / "lff-site-and-channel.json"
+
+
+def reference_fx_by_market() -> dict[str, float]:
+    """官方「多履约渠道利润计算器」给出的参考汇率（B 级，**不是**结算汇率）。
+
+    没指定汇率时的默认。命令行与网页共用这一处，避免两边各读一遍文件、哪天读出不同的数。
+    """
+    if not LFF_SITE_FILE.exists():
+        return {}
+    data = json.loads(LFF_SITE_FILE.read_text(encoding="utf-8"))
+    return {item["name"]: float(item["exchange_rate"]) for item in data.get("data") or []}
 
 
 @dataclass

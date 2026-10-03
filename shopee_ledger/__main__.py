@@ -581,7 +581,7 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         print("回灌完成：参数覆盖 %d 条、核实结论 %d 条" % (restored_params, restored_tasks))
         return 0
     if args.cmd == "landed":
-        from shopee_ledger.landed import compare, render
+        from shopee_ledger.landed import compare, reference_fx_by_market, render
 
         fx_by_market: dict[str, float] = {}
         for item in args.fx:
@@ -591,13 +591,7 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             code, _, value = item.partition("=")
             fx_by_market[code.strip().upper()] = float(value)
         if not fx_by_market:
-            # 没给就用官方成本计算器的参考汇率（B 级，非结算汇率）
-            from shopee_ledger.spec import DEFAULT_SPEC_ROOT
-
-            raw = json.loads((Path(DEFAULT_SPEC_ROOT) / "reference" / "lff-site-and-channel.json")
-                             .read_text(encoding="utf-8"))["data"]
-            for item in raw:
-                fx_by_market[item["name"]] = float(item["exchange_rate"])
+            fx_by_market = reference_fx_by_market()
             print("未指定 --fx，使用官方成本计算器的参考汇率（B 级，非结算汇率）\n")
 
         rows = compare(ledger.spec, purchase_cny=args.purchase, domestic_cny=args.domestic,

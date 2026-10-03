@@ -13,7 +13,69 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from shopee_ledger.store import Ledger
-from shopee_ledger.web import orders_page, products_page
+from shopee_ledger.web import landed_page, orders_page, products_page
+
+
+class LandedPageTest(unittest.TestCase):
+    """落地对比页。选品页能带参跳过来，所以两种入口都要能用。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
+        self.ledger.init()
+
+    def tearDown(self):
+        self.ledger.close()
+        self.tmp.cleanup()
+
+    def test_renders_with_defaults(self):
+        html = landed_page(self.ledger, {})
+        self.assertIn("落地对比", html)
+        self.assertIn("折人民币", html)
+        self.assertIn("市场", html)
+
+    def test_carries_the_cross_currency_caveat(self):
+        """跨站点比本币数字毫无意义——这句提醒必须在页面上，不能只在命令行输出里。"""
+        html = landed_page(self.ledger, {})
+        self.assertIn("没有可比性", html)
+
+    def test_prefills_from_query_string(self):
+        """选品页带参跳过来时要真的用上，不然用户还得手抄一遍数字。"""
+        html = landed_page(self.ledger, {"purchase": ["23"], "weight_g": ["800"],
+                                         "margin": ["0.2"], "name": ["硅胶隔热垫"]})
+        self.assertIn("硅胶隔热垫", html)
+        self.assertIn('value="23"', html)
+        self.assertIn('value="800"', html)
+
+    def test_bad_query_values_fall_back_instead_of_crashing(self):
+        """URL 是用户能随手改的：乱填要回默认值，不能 500。"""
+        for bad in ({"purchase": ["abc"]}, {"weight_g": ["-"]}, {"margin": [""]},
+                    {"per_market": ["x"]}):
+            html = landed_page(self.ledger, bad)
+            self.assertIn("落地对比", html)
+
+    def test_zero_margin_still_renders(self):
+        html = landed_page(self.ledger, {"margin": ["0"]})
+        self.assertIn("落地对比", html)
+
+    def test_infeasible_market_is_shown_not_hidden(self):
+        """缺费率的站点要显示成「做不了」，而不是从表里消失。"""
+        html = landed_page(self.ledger, {})
+        self.assertIn("做不了", html)
+        self.assertIn("缺数据", html)
+
+    def test_products_page_links_to_landed_when_it_can(self):
+        self.ledger.set_param("TW", "local_per_cny", "4.5", "C")
+        self.ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)
+        html = products_page(self.ledger)
+        self.assertIn("/landed?", html, "有采购价与重量的候选品应当能一键跳到落地对比")
+
+    def test_products_page_has_no_link_without_weight(self):
+        """重量没填时跳过去也算不出运费，不该给一个假的入口。"""
+        self.ledger.set_param("TW", "local_per_cny", "4.5", "C")
+        self.ledger.add_candidate("TW", "没称重的品", None, 20, 1.5, 350, 60, True)
+        html = products_page(self.ledger)
+        self.assertNotIn("/landed?", html)
 
 
 class OrdersPageTest(unittest.TestCase):

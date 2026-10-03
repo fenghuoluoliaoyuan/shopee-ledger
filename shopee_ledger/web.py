@@ -26,6 +26,7 @@ DECISION_LABEL = {
 NAV = (
     ("/", "今日"),
     ("/products", "选品"),
+    ("/landed", "落地对比"),
     ("/orders", "订单"),
     ("/books", "账本"),
     ("/params", "参数"),
@@ -86,7 +87,7 @@ class Handler(BaseHTTPRequestHandler):
         ledger = Ledger(self.db_path)
         try:
             ledger.init()
-            page = self._page(ledger, parsed.path, notice, error)
+            page = self._page(ledger, parsed.path, notice, error, query)
         finally:
             ledger.close()
         if page is None:
@@ -136,7 +137,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _page(self, ledger: Ledger, path: str, notice: str, error: str) -> str | None:
+    def _page(self, ledger: Ledger, path: str, notice: str, error: str,
+              query: dict | None = None) -> str | None:
+        query = query or {}
         pages = {
             "/": lambda: today(ledger),
             "/params": lambda: params_page(ledger),
@@ -144,6 +147,7 @@ class Handler(BaseHTTPRequestHandler):
             "/suppliers": lambda: suppliers_page(ledger),
             "/products": lambda: products_page(ledger),
             "/candidates": lambda: products_page(ledger),
+            "/landed": lambda: landed_page(ledger, query),
             "/orders": lambda: orders_page(ledger),
             "/books": lambda: books_page(ledger),
             "/checklist": lambda: checklist_page(ledger),
@@ -615,6 +619,86 @@ def spec_page(ledger: Ledger) -> str:
 <table><tr><th>ID</th><th>阻塞第一单</th><th>模块</th><th>事项</th><th>状态</th></tr>{''.join(task_rows)}</table></section>"""
 
 
+def _query_float(query: dict, key: str, default: float | None = None) -> float | None:
+    """从查询串取数字。取不到或不是数字就回默认，不抛异常——URL 是用户能随手改的。"""
+    raw = _first(query, key)
+    if raw is None or raw == "":
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def landed_page(ledger: Ledger, query: dict) -> str:
+    """多站点落地成本对比：同一个品，卖到哪个站点、走哪个渠道最划算。
+
+    输入走 GET 参数，所以选品页可以把采购价与重量直接带过来（`/landed?purchase=..&weight_g=..`）。
+    """
+    from shopee_ledger.landed import compare, reference_fx_by_market
+
+    purchase = _query_float(query, "purchase", 20.0)
+    domestic = _query_float(query, "domestic", 2.0)
+    weight = _query_float(query, "weight_g", 500.0)
+    margin = _query_float(query, "margin", 0.15)
+    cargo = _first(query, "cargo") or "Normal"
+    name = _first(query, "name") or ""
+    markets = [item.upper() for item in (_first(query, "markets") or "").split(",") if item] or None
+
+    rows = compare(ledger.spec, purchase_cny=purchase or 0.0, domestic_cny=domestic or 0.0,
+                   weight_g=weight or 0.0, fx_by_market=reference_fx_by_market(),
+                   target_margin=margin or 0.15, markets=markets, cargo=cargo,
+                   channels_per_market=int(_query_float(query, "per_market", 3) or 3))
+
+    body = []
+    for row in rows:
+        if row.feasible:
+            cny = row.min_price_cny
+            body.append(
+                "<tr><td><code>%s</code></td><td>%s</td><td class='k'>%s</td><td>%.2f</td>"
+                "<td>%.2f%%</td><td>%.2f</td><td><b>%s</b></td><td class='k'>%.2f</td></tr>" % (
+                    escape(row.market), escape(row.channel[:34]), escape(row.currency),
+                    row.seller_freight, row.proportional * 100, row.min_price,
+                    ("¥%.2f" % cny) if cny else "—", row.landed_cost))
+        else:
+            reason = "；".join(row.notes) or ("缺数据：" + "、".join(row.missing))
+            body.append(
+                "<tr><td><code>%s</code></td><td>%s</td><td class='k'>%s</td><td>%.2f</td>"
+                "<td>%.2f%%</td><td colspan='3'><span class='pill cut'>做不了</span> "
+                "<span class='k'>%s</span></td></tr>" % (
+                    escape(row.market), escape(row.channel[:34]), escape(row.currency),
+                    row.seller_freight, row.proportional * 100, escape(reason)))
+
+    lead = "同一个品，在哪个站点、走哪个渠道需要卖多少钱才达标。"
+    if name:
+        lead = "「%s」%s" % (escape(name), lead)
+
+    return f"""<h1>落地对比</h1><p class="lead">{lead}
+**跨站点要比「折人民币」那一列**——币种不同，本币数字之间没有可比性。下面的排序已按折人民币升序。</p>
+<div class="row">
+<section class="card"><h2>输入</h2>
+<form method="get" action="/landed" class="stack">
+<label>采购实付（人民币）<input name="purchase" value="{purchase:g}"></label>
+<label>国内段运费（人民币）<input name="domestic" value="{domestic:g}"></label>
+<label>包裹重量 g<input name="weight_g" value="{weight:g}"></label>
+<label>目标净利率（如 0.15）<input name="margin" value="{margin:g}"></label>
+<label>货类<select name="cargo">
+<option value="Normal"{" selected" if cargo == "Normal" else ""}>普货</option>
+<option value="Special"{" selected" if cargo == "Special" else ""}>特货</option></select></label>
+<label>每个市场列几个渠道<input name="per_market" value="3"></label>
+<button>算一遍</button></form>
+<p class="k">汇率默认用官方「多履约渠道利润计算器」的参考汇率（B 级，<b>不是</b>结算汇率）。
+要改汇率请用命令行的 <code>--fx 市场=汇率</code>。</p></section>
+<section class="card"><h2>结果</h2><table>
+<tr><th>市场</th><th>渠道</th><th>币种</th><th>卖家运费</th><th>费率合计</th><th>最低售价</th><th>折人民币</th><th>落地成本</th></tr>
+{''.join(body)}
+</table>
+<p class="k">费率合计 = 佣金 + 交易手续费 + 技术支持费（含税费口径）。<br>
+最低售价 = 固定支出 /（1 − 费率合计 − 目标净利率）；分母 ≤0 时报「做不了」，不会给一个看起来能算的数。<br>
+运费按官方运费表**按重量**算出；基础设施费按站点固定额计入。</p></section>
+</div>"""
+
+
 def suppliers_page(ledger: Ledger) -> str:
     body = "".join(
         "<tr>"
@@ -664,6 +748,11 @@ def products_page(ledger: Ledger) -> str:
         result = ledger.quote(row["id"])
         money = (f"{result.net:.2f} / {result.rate:.1%}"
                  if result.rate is not None and result.net is not None else "")
+        # 有采购价与重量就带参跳到落地对比——省得再抄一遍数字
+        if row["purchase_cny"] is not None and row["weight_g"] is not None:
+            money += (' <a class="k" href="/landed?%s">落地对比 →</a>'
+                      % urlencode({"purchase": row["purchase_cny"],
+                                   "weight_g": row["weight_g"], "name": row["name"]}))
         linked = ledger.supplier_ids(row["id"])
         checked_flags = {f for f in (row.get("flags") or "").split(",") if f}
         row_suppliers = "".join(
