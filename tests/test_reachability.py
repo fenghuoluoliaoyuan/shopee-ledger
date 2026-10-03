@@ -190,5 +190,71 @@ class CorroborationTest(unittest.TestCase):
         self.assertIn("不可替代", note, "邻近渠道的数据要写明不能替代")
 
 
+class FailureClassificationTest(unittest.TestCase):
+    """失败分类：证书问题 ≠ 网络不通。
+
+    这条区分救回过一个被搁置好几轮的来源——泰国税务那篇因为
+    CERTIFICATE_VERIFY_FAILED 被当成"不可达"，其实浏览器一读就有。
+    混成一类会让"本来能拿到的来源"白白搁着。
+    """
+
+    def test_certificate_error_is_its_own_kind(self):
+        import ssl
+        import urllib.error
+
+        from shopee_ledger.reachability import CERT_ISSUE, classify_failure
+
+        exc = urllib.error.URLError(ssl.SSLCertVerificationError("certificate verify failed"))
+        self.assertEqual(classify_failure(exc), CERT_ISSUE)
+
+    def test_plain_connection_error_is_unreachable(self):
+        import urllib.error
+
+        from shopee_ledger.reachability import UNREACHABLE, classify_failure
+
+        self.assertEqual(classify_failure(urllib.error.URLError("timed out")), UNREACHABLE)
+        self.assertEqual(classify_failure(OSError("connection refused")), UNREACHABLE)
+
+    def test_http_error_means_the_site_is_up(self):
+        import urllib.error
+
+        from shopee_ledger.reachability import CLIENT_ERROR, OK, SERVER_ERROR, classify_failure
+
+        # 404 说明站点答了，只是这个地址失效——和"站点挂了"不是一回事
+        not_found = urllib.error.HTTPError("u", 404, "nf", {}, None)
+        self.assertEqual(classify_failure(not_found), CLIENT_ERROR)
+        broken = urllib.error.HTTPError("u", 500, "err", {}, None)
+        self.assertEqual(classify_failure(broken), SERVER_ERROR)
+        fine = urllib.error.HTTPError("u", 302, "moved", {}, None)
+        self.assertEqual(classify_failure(fine), OK)
+
+    def test_cert_issue_gets_a_hint_in_the_record(self):
+        import json
+        import tempfile
+        from pathlib import Path as _Path
+
+        from shopee_ledger.reachability import CERT_ISSUE, record_reachability
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            path = _Path(folder) / "r.json"
+            record_reachability(results=[("https://a.test", "证书验证失败（站点可能可通，用浏览器再试）")],
+                                path=path, kind_by_url={"https://a.test": CERT_ISSUE})
+            data = json.loads(path.read_text(encoding="utf-8"))
+            entry = data["urls"]["https://a.test"]
+            self.assertEqual(entry["kind"], CERT_ISSUE)
+            self.assertIn("浏览器", entry["hint"])
+            self.assertFalse(entry["ok"], "证书问题不算已验证")
+
+    def test_repo_record_flags_the_chinatax_source_as_cert_issue(self):
+        """这条来源只能从浏览器读，记录里必须看得出——否则下次又会有人当它不可达。"""
+        from shopee_ledger.reachability import CERT_ISSUE, load_reachability
+
+        records = load_reachability()
+        url = ("https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html")
+        entry = records.get(url)
+        self.assertIsNotNone(entry, "reachability.json 里应当有这条")
+        self.assertEqual(entry.get("kind"), CERT_ISSUE)
+
+
 if __name__ == "__main__":
     unittest.main()

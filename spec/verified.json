@@ -106,6 +106,15 @@
       "status": "done"
     },
     {
+      "checked_date": "2026-01-27",
+      "conclusion": "取消 1500 泰铢免税，1 泰铢及以上全部征税（2026-01-01 生效）",
+      "grade": "A",
+      "snapshot_ref": "data\\snapshots\\SRC-TH-TAX-2026-811e93c49444.txt",
+      "source_url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+      "spec_task_id": "VT-045",
+      "status": "done"
+    },
+    {
       "checked_date": "2026-09-10",
       "conclusion": "低价值门槛 500 MYR 与代收方式（依据：Shopee 马来站点高价值商品税相关通知）",
       "grade": "A",
@@ -315,6 +324,82 @@
       "source_url": "https://solutions.shopee.cn/sellers/pricing-simulator/",
       "value": 0.22469999999999998
     },
+    "P-TH-IMPORT-DUTY": {
+      "checked_at": "2026-01-27",
+      "created_at": "2026-10-03T09:55:18+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TH-IMPORT-DUTY",
+      "snapshot_ref": "data\\snapshots\\SRC-TH-TAX-2026-811e93c49444.txt",
+      "source_url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+      "value": {
+        "apparel_footwear_max": 0.3,
+        "applies_from": "2026-01-01",
+        "bags_accessories": 0.2,
+        "basis": "CIF",
+        "electronics": 0.1,
+        "low_value_start_rate": 0.1,
+        "policy_name": "2026年低价值商品进口税收实施细则",
+        "source_note": "国家税务总局转载泰王国海关署；原文见快照"
+      }
+    },
+    "P-TH-IMPORT-THRESHOLD": {
+      "checked_at": "2026-01-27",
+      "created_at": "2026-10-03T09:55:18+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TH-IMPORT-THRESHOLD",
+      "snapshot_ref": "data\\snapshots\\SRC-TH-TAX-2026-811e93c49444.txt",
+      "source_url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+      "value": {
+        "all_imports_taxed": true,
+        "current_threshold_thb": 1,
+        "effective_from": "2026-01-01",
+        "note": "取消的是**关税**免征；增值税见 P-TH-VAT，同样自 2026-01-01 起无门槛",
+        "policy_name": "2026年低价值商品进口税收实施细则",
+        "previous_since": "2024-07",
+        "previous_threshold_thb": 1500,
+        "source_note": "国家税务总局转载泰王国海关署；原文见快照"
+      }
+    },
+    "P-TH-MIN-EFFECTIVE-TAX": {
+      "checked_at": "2026-01-27",
+      "created_at": "2026-10-03T09:55:18+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TH-MIN-EFFECTIVE-TAX",
+      "snapshot_ref": "data\\snapshots\\SRC-TH-TAX-2026-811e93c49444.txt",
+      "source_url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+      "value": {
+        "meaning": "关税 + 增值税两项合计不低于 17%",
+        "min_combined": 0.17,
+        "source_note": "国家税务总局转载泰王国海关署；原文见快照"
+      }
+    },
+    "P-TH-PLATFORM-WITHHOLD": {
+      "checked_at": "2026-01-27",
+      "created_at": "2026-10-03T09:55:18+00:00",
+      "evidence_level": "A",
+      "operator": "cli",
+      "param_id": "P-TH-PLATFORM-WITHHOLD",
+      "snapshot_ref": "data\\snapshots\\SRC-TH-TAX-2026-811e93c49444.txt",
+      "source_url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
+      "value": {
+        "agreement_date": "2025-12-22",
+        "express_channel": "快递公司先行代缴，再向收件人结算",
+        "platform_channel": "平台在消费者线上下单时直接代收税款",
+        "platform_collects_at_checkout": true,
+        "platforms": [
+          "Lazada",
+          "Shopee",
+          "TikTok Shop",
+          "Temu",
+          "Shein"
+        ],
+        "postal_channel": "海关在箱体标注税额，收件人扫码支付",
+        "source_note": "国家税务总局转载泰王国海关署；原文见快照"
+      }
+    },
     "P-TH-TXN-FEE": {
       "checked_at": "2026-10-03",
       "created_at": "2026-10-03T09:46:24+00:00",
@@ -326,19 +411,20 @@
       "value": 0.0321
     },
     "P-TH-VAT": {
-      "checked_at": "2026-09-16",
-      "created_at": "2026-10-03T09:40:14+00:00",
-      "evidence_level": "B",
+      "checked_at": "2026-01-27",
+      "created_at": "2026-10-03T09:55:18+00:00",
+      "evidence_level": "A",
       "operator": "cli",
       "param_id": "P-TH-VAT",
-      "snapshot_ref": "data\\snapshots\\ARTICLE-26381-dfb08fb86c5a.txt",
-      "source_url": "https://shopee.cn/edu/article/26381",
+      "snapshot_ref": "data\\snapshots\\SRC-TH-TAX-2026-811e93c49444.txt",
+      "source_url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
       "value": {
-        "as_stated": "官方 #26381：广告金跨站转移至泰国站点需承担增值税，税率为 7%",
-        "caveat": "原文场景是广告金转移；一般进口/销售场景的适用范围未在本文展开",
-        "cross_check": "与泰国通用 VAT 税率 7% 一致",
+        "applies_from": "2026-01-01",
+        "applies_to": "all_imports",
+        "basis": "CIF + 关税",
+        "cross_check": "与 #26381 提到的泰国增值税 7% 一致（那条原本只给 B 级）",
         "rate": 0.07,
-        "scope": "泰国站点增值税（VAT）"
+        "source_note": "国家税务总局转载泰王国海关署；原文见快照"
       }
     },
     "P-TW-BUYER-SHIP": {

@@ -1,41 +1,55 @@
 {
   "note": "来源 URL 可达性。A 级要求可打开的 URL，这里记录实测是否打得开。",
-  "checked_at": "2026-10-03T08:44:43+00:00",
+  "checked_at": "2026-10-03T09:55:38+00:00",
   "urls": {
     "https://help.shopee.tw/portal/4/article/80084": {
-      "status": "打不开：URLError",
+      "status": "连不上",
       "ok": false,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "unreachable",
+      "kind_label": "连不上"
     },
     "https://help.shopee.tw/portal/4/article/80088": {
-      "status": "打不开：URLError",
+      "status": "连不上",
       "ok": false,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "unreachable",
+      "kind_label": "连不上"
     },
     "https://shopee.cn/edu/article/19945": {
       "status": "HTTP 200",
       "ok": true,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
     },
     "https://shopee.cn/edu/article/26619": {
       "status": "HTTP 200",
       "ok": true,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
     },
     "https://shopee.cn/edu/article/26620": {
       "status": "HTTP 200",
       "ok": true,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
     },
     "https://shopee.cn/edu/article/28146": {
       "status": "HTTP 200",
       "ok": true,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
     },
     "https://shopee.cn/edu/article/28294": {
       "status": "HTTP 200",
       "ok": true,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
     },
     "https://shopee.mobduos.com/article/operate/31834": {
       "status": "HTTP 200",
@@ -43,14 +57,103 @@
       "checked_at": "2026-10-03T08:44:43+00:00"
     },
     "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html": {
-      "status": "打不开：URLError",
+      "status": "证书验证失败（站点可能可通，用浏览器再试）",
       "ok": false,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "cert_issue",
+      "kind_label": "证书验证失败（站点可能可通，用浏览器再试）",
+      "hint": "用浏览器再试；Chrome 有自己的信任库"
     },
     "https://www.ksher.cn/news/post/wmb2b26091704/": {
       "status": "HTTP 200",
       "ok": true,
-      "checked_at": "2026-10-03T08:44:43+00:00"
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/16905": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/23907": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/25237": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/25750": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/25770": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/25798": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/26381": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/26628": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/26633": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://shopee.cn/edu/article/26634": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://solutions.shopee.cn/sellers/lff-cost-calculator/": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
+    },
+    "https://solutions.shopee.cn/sellers/pricing-simulator/": {
+      "status": "HTTP 200",
+      "ok": true,
+      "checked_at": "2026-10-03T09:55:38+00:00",
+      "kind": "ok",
+      "kind_label": "通"
     }
   }
 }

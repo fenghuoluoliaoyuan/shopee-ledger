@@ -44,9 +44,11 @@
         "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
         "published_at": "2026-01-27",
         "checked_at": "2026-10-03",
-        "recheck_status": "machine_ok",
+        "recheck_status": "blocked",
         "source_tier": "government_secondary",
-        "snapshot_ref": "SNAP-TH-001"
+        "snapshot_ref": "SNAP-TH-001",
+        "recheck_note": "urllib 报 SSL CERTIFICATE_VERIFY_FAILED（证书链不在本机信任库），**不是网络不通**；用无头浏览器可正常读取，2026-10-03 已据此把 5 个泰国税务参数升到 A 级",
+        "recheck_status_was": "machine_ok（当时未区分证书问题与网络不通）"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
@@ -77,9 +79,11 @@
         "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
         "published_at": "2026-01-27",
         "checked_at": "2026-10-03",
-        "recheck_status": "machine_ok",
+        "recheck_status": "blocked",
         "source_tier": "government_secondary",
-        "snapshot_ref": "SNAP-TH-001"
+        "snapshot_ref": "SNAP-TH-001",
+        "recheck_note": "urllib 报 SSL CERTIFICATE_VERIFY_FAILED（证书链不在本机信任库），**不是网络不通**；用无头浏览器可正常读取，2026-10-03 已据此把 5 个泰国税务参数升到 A 级",
+        "recheck_status_was": "machine_ok（当时未区分证书问题与网络不通）"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
@@ -108,9 +112,11 @@
         "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
         "published_at": "2026-01-27",
         "checked_at": "2026-10-03",
-        "recheck_status": "machine_ok",
+        "recheck_status": "blocked",
         "source_tier": "government_secondary",
-        "snapshot_ref": "SNAP-TH-001"
+        "snapshot_ref": "SNAP-TH-001",
+        "recheck_note": "urllib 报 SSL CERTIFICATE_VERIFY_FAILED（证书链不在本机信任库），**不是网络不通**；用无头浏览器可正常读取，2026-10-03 已据此把 5 个泰国税务参数升到 A 级",
+        "recheck_status_was": "machine_ok（当时未区分证书问题与网络不通）"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
@@ -137,9 +143,11 @@
         "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
         "published_at": "2026-01-27",
         "checked_at": "2026-10-03",
-        "recheck_status": "machine_ok",
+        "recheck_status": "blocked",
         "source_tier": "government_secondary",
-        "snapshot_ref": "SNAP-TH-001"
+        "snapshot_ref": "SNAP-TH-001",
+        "recheck_note": "urllib 报 SSL CERTIFICATE_VERIFY_FAILED（证书链不在本机信任库），**不是网络不通**；用无头浏览器可正常读取，2026-10-03 已据此把 5 个泰国税务参数升到 A 级",
+        "recheck_status_was": "machine_ok（当时未区分证书问题与网络不通）"
       },
       "review_cycle": "quarterly",
       "next_review_at": "2027-01-03",
@@ -177,9 +185,11 @@
         "url": "https://www.chinatax.gov.cn/chinatax/c102738/c5247291/content.html",
         "published_at": "2026-01-27",
         "checked_at": "2026-10-03",
-        "recheck_status": "machine_ok",
+        "recheck_status": "blocked",
         "source_tier": "government_secondary",
-        "snapshot_ref": "SNAP-TH-001"
+        "snapshot_ref": "SNAP-TH-001",
+        "recheck_note": "urllib 报 SSL CERTIFICATE_VERIFY_FAILED（证书链不在本机信任库），**不是网络不通**；用无头浏览器可正常读取，2026-10-03 已据此把 5 个泰国税务参数升到 A 级",
+        "recheck_status_was": "machine_ok（当时未区分证书问题与网络不通）"
       },
       "review_cycle": "on_policy_change",
       "next_review_at": "2027-01-03",

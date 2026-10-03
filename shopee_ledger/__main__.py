@@ -640,29 +640,53 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         print("检查 %d 个来源 URL…\n" % len(usage))
         broken = []
         statuses: list[tuple[str, str]] = []
+        kinds: dict[str, str] = {}
+        from shopee_ledger.reachability import CERT_ISSUE, FAILURE_LABEL, classify_failure
+
         for url, users in sorted(usage.items()):
             status = ""
+            kind = "ok"
             try:
                 request = urllib.request.Request(
                     url, headers={"User-Agent": "Mozilla/5.0"}, method="GET")
                 with urllib.request.urlopen(request, timeout=8) as response:
                     status = "HTTP %s" % response.status
             except urllib.error.HTTPError as exc:
+                kind = classify_failure(exc)
                 status = "HTTP %s" % exc.code
+                # 4xx/5xx 的来源 URL 不能当证据用——它现在打不开了
+                if kind != "ok":
+                    broken.append((url, users))
             except Exception as exc:
-                status = "打不开：%s" % type(exc).__name__
-                broken.append((url, users))
+                # 证书问题与网络不通要分开：前者站点是通的，只是本机信任库不认，
+                # 浏览器往往读得到（实测踩过：泰国税务那篇因此被搁置好几轮）。
+                kind = classify_failure(exc)
+                status = FAILURE_LABEL.get(kind, "打不开")
+                if kind != CERT_ISSUE:
+                    broken.append((url, users))
+                else:
+                    broken.append((url, users))
+            kinds[url] = kind
             statuses.append((url, status))
-            mark = "OK  " if status.startswith("HTTP") else "❌  "
-            print("%s%-58s %-22s %s" % (mark, url[:58], status, ", ".join(users)[:60]))
+            mark = "OK  " if kind == "ok" else ("⚠  " if kind == CERT_ISSUE else "❌  ")
+            print("%s%-58s %-34s %s" % (mark, url[:58], status, ", ".join(users)[:50]))
         print("\n打不开的来源 %d 个" % len(broken))
         # 把可达性记成证据：这是「关于证据的证据」，A 级是否成立要看它
         from shopee_ledger.reachability import record_reachability
 
         record = record_reachability(ledger.path.parent.parent,
-                                     [(url, status) for url, status in statuses])
+                                     [(url, status) for url, status in statuses],
+                                     kind_by_url=kinds)
         print("已记录到 %s（%s 条）" % (record, len(statuses)))
+        cert = [url for url, kind in kinds.items() if kind == CERT_ISSUE]
+        if cert:
+            print("\n⚠ %d 个来源是**证书验证失败**（不是网络不通）：" % len(cert))
+            for url in cert:
+                print("   %s" % url[:90])
+            print("  站点可能读得到——用无头浏览器再试（Chrome 有自己的信任库），")
+            print("  或直接 python -m shopee_ledger harvest 抓它。别急着判定「不可达」。")
         if broken:
+            print("\n打不开的来源 %d 个" % len(broken))
             print("提示：A 级的定义是「有可打开的 URL」。这些 URL 打不开，")
             print("      对应的 A 级证据就只是记录，不构成可复核的证据。")
             print("      若你用代理/VPN 能打开，重跑本命令即可更新这份记录。")
