@@ -65,6 +65,15 @@ class ListingParseTest(unittest.TestCase):
         ids = [entry.article_id for entry in entries_from_links(links)]
         self.assertEqual(ids, ["30001", "30002", "30003", "26619"])
 
+    def test_ignores_nav_links_that_point_at_articles(self):
+        """实测踩过：页脚「iOS版」也指向 /article/，混进了清单。"""
+        links = LISTING_LINKS + [
+            {"href": "https://shopee.cn/edu/article/4579", "text": "iOS版", "date": ""},
+            {"href": "https://shopee.cn/edu/article/4580", "text": "更多", "date": ""},
+        ]
+        ids = [entry.article_id for entry in entries_from_links(links)]
+        self.assertEqual(ids, ["30001", "30002", "30003", "26619"])
+
     def test_date_normalisation(self):
         self.assertEqual(normalize_date("发布于 2026/9/3"), "2026-09-03")
         self.assertEqual(normalize_date("2026.9.30"), "2026-09-30")

@@ -32,6 +32,10 @@ DEFAULT_SOURCES = ROOT / "spec" / "sources.json"
 ARTICLE_RE = re.compile(r"/edu/article/(\d+)")
 DATE_RE = re.compile(r"(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})")
 
+# 导航/页脚链接也会指向 /article/，标题短得不正常。实测踩过：一条「iOS版」混进清单。
+MIN_TITLE_LENGTH = 6
+NAV_TITLES = {"ios版", "android版", "app下载", "更多", "首页"}
+
 STATUS_NEW = "new"
 STATUS_SEEN = "seen"
 
@@ -87,6 +91,8 @@ def entries_from_links(links: list[dict[str, Any]], base_url: str = "") -> list[
         title = str(link.get("text") or "").strip()
         if not href or not title:
             continue
+        if len(title) < MIN_TITLE_LENGTH or title.lower() in NAV_TITLES:
+            continue  # 导航/页脚链接：标题短得不正常，不是通知
         if href.startswith("/") or not urlsplit(href).netloc:
             href = urljoin(base_url or "https://shopee.cn", href)
         article_id = article_id_of(href)
