@@ -159,6 +159,7 @@
         {"name": "competitor_notes", "type": "object", "required": true},
         {"name": "state", "type": "enum", "values": ["candidate", "accepted", "measured", "costed", "observe", "listed", "dropped", "rejected"], "required": true},
         {"name": "weight_g", "type": "number", "required": false, "note": "实测重量（C 级）"},
+        {"name": "weight_is_measured", "type": "boolean", "required": false, "note": "重量是实测还是估算——上架前录的都是估算，属 D 级证据"},
         {"name": "purchase_cny", "type": "number", "required": false, "note": "1688 下单页实付"},
         {"name": "domestic_cny", "type": "number", "required": false, "note": "国内段运费"},
         {"name": "price_local", "type": "number", "required": false, "note": "商品价，不含买家运费"},

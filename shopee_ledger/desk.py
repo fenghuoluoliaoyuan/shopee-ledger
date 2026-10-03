@@ -22,6 +22,7 @@ def build_context(
     supplier_count: int = 0,
     sample_bought: bool = False,
     weighed: bool = False,
+    measured: bool = False,
     purchase_price_cny: float | None = None,
     photo_ready: bool = False,
     title_ready: bool = False,
@@ -42,7 +43,9 @@ def build_context(
         "candidate": candidate if candidate is not None else {"has_brand_ip": False, "category": ""},
         "suppliers": [{}] * max(0, supplier_count),
         "sample": {"bought": sample_bought},
-        "measurement": {"weight_g": 1.0 if weighed else None},
+        # weighed＝有重量值；measured＝这个值是称出来的。上架前录的都是估算（D 级）。
+        "measurement": {"weight_g": 1.0 if weighed else None,
+                        "weight_is_measured": bool(measured)},
         # 物流规则（R-LOG-002/003/004）用的是裸 weight_g，与 R-DATA-001 的 measurement.weight_g 同源
         "weight_g": 1.0 if weighed else None,
         # 采购实付显式给 None 表示"还没录"，让 R-DATA-002 报缺数据（而不是静默当成 0）

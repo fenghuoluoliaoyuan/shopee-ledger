@@ -220,33 +220,42 @@ class DeskTest(unittest.TestCase):
     def test_sample_blocks_before_listing(self):
         text = listing_gate(
             None, supplier_count=3, sample_bought=False, weighed=True,
-            purchase_price_cny=20.0, photo_ready=True,
+            measured=True, purchase_price_cny=20.0, photo_ready=True,
         )
         self.assertTrue(text.startswith("先买样品再称重"), text)
 
+    def test_estimated_weight_is_not_enough(self):
+        """重量是估的不算过 G2——上架前随手填的数字是 D 级，称过才是 C 级。"""
+        text = listing_gate(
+            None, supplier_count=3, sample_bought=True, weighed=True,
+            measured=False, purchase_price_cny=20.0, photo_ready=True,
+        )
+        self.assertIn("估算值", text)
+
     def test_missing_purchase_price_blocks(self):
         text = listing_gate(
-            None, supplier_count=3, sample_bought=True, weighed=True, photo_ready=True,
+            None, supplier_count=3, sample_bought=True, weighed=True, measured=True,
+            photo_ready=True,
         )
         self.assertIn("采购", text)
 
     def test_supplier_shortage_is_a_warning_not_a_block(self):
         """供应商 <3 在 v4.0 是软门禁（R-SUP-001 WARN），不再硬拦上架。"""
         text = listing_gate(
-            None, supplier_count=1, sample_bought=True, weighed=True,
+            None, supplier_count=1, sample_bought=True, weighed=True, measured=True,
             purchase_price_cny=20.0, photo_ready=True,
         )
         self.assertEqual(text, "可上架")
         notes = " ".join(listing_warnings(
-            None, supplier_count=1, sample_bought=True, weighed=True,
+            None, supplier_count=1, sample_bought=True, weighed=True, measured=True,
             purchase_price_cny=20.0, photo_ready=True,
         ))
         self.assertIn("供应商", notes)
 
     def test_ready_when_everything_done(self):
         text = listing_gate(
-            None, supplier_count=3, sample_bought=True, weighed=True, purchase_price_cny=20.0,
-            photo_ready=True, title_ready=True, detail_ready=True,
+            None, supplier_count=3, sample_bought=True, weighed=True, measured=True,
+            purchase_price_cny=20.0, photo_ready=True, title_ready=True, detail_ready=True,
         )
         self.assertEqual(text, "可上架")
 

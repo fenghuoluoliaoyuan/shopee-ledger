@@ -182,6 +182,20 @@
       "next_action": "下单买样品，到手后立即称重"
     },
     {
+      "id": "R-DATA-004",
+      "layer": "platform",
+      "name": "重量是估算值而非实测值",
+      "gate": "G2",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "measurement.weight_is_measured != true",
+      "depends_on": [],
+      "evidence_level": "C",
+      "result": "INCOMPLETE",
+      "message": "重量还是估算值：样品到手后称过实物再上架，否则运费档和利润都是猜的",
+      "next_action": "称重后记录实测重量"
+    },
+    {
       "id": "R-COST-001",
       "layer": "platform",
       "name": "关键运费档缺失",

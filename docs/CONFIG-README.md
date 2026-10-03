@@ -61,7 +61,7 @@ spec/
 └── manual-core.json              ⚠ 已废弃路标，请删除
 ```
 
-合计：**52 参数 / 45 规则 / 48 任务 / 24 实体 / 14 不变量 / 9 模块 / 3 模式 / 5 市场**。
+合计：**52 参数 / 46 规则 / 48 任务 / 24 实体 / 14 不变量 / 9 模块 / 3 模式 / 5 市场**。
 
 ---
 
@@ -128,7 +128,7 @@ spec/
 工程在 `D:\shopee-ledger` 的话，把整个 `spec/` 复制过去再跑。预期：
 
 ```
-counts : params=52 rules=45 tasks=48 entities=24 invariants=14 modules=9 modes=3 markets=5
+counts : params=52 rules=46 tasks=48 entities=24 invariants=14 modules=9 modes=3 markets=5
 cross-verified (5): P-TW-COMMISSION, P-TW-FREE-ORDERS, P-TW-FREESHIP-FEE, P-TW-PRESALE-FEE, P-TW-TXN-FEE
 ```
 

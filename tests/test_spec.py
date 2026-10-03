@@ -26,7 +26,7 @@ class SpecLoadTest(unittest.TestCase):
 
     def test_counts_match_declared(self):
         self.assertEqual(len(self.spec.params), 52)
-        self.assertEqual(len(self.spec.rules), 45)
+        self.assertEqual(len(self.spec.rules), 46)
         self.assertEqual(len(self.spec.tasks), 48)
         self.assertEqual(len(self.spec.modes), 3)
 

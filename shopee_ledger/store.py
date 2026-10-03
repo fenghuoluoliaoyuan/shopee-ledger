@@ -249,13 +249,14 @@ class Ledger:
     # ---- 候选品 ---------------------------------------------------------
     def add_candidate(self, site: str, name: str, weight_g: float, purchase_cny: float,
                       domestic_cny: float, price: float, sls_fee: float,
-                      intends_free_shipping: bool) -> int:
+                      intends_free_shipping: bool, measured: bool = False) -> int:
         return self.storage.insert("ProductCandidate", {
             "platform": "shopee", "market": site, "source_url": "local:%s" % name, "title": name,
             "category": "", "veto_flags": {}, "competitor_notes": {}, "state": "candidate",
             "weight_g": weight_g, "purchase_cny": purchase_cny, "domestic_cny": domestic_cny,
             "price_local": price, "sls_fee": sls_fee,
             "intends_free_shipping": intends_free_shipping,
+            "weight_is_measured": measured,
         })
 
     def list_candidates(self) -> list[dict[str, Any]]:
@@ -295,6 +296,14 @@ class Ledger:
             "sample_bought": sample_bought, "photo_ready": photo_ready,
             "detail_ready": detail_ready, "title_text": title_text,
         })
+
+    def set_measured(self, candidate_id: int, measured: bool,
+                     weight_g: float | None = None) -> None:
+        """记下"这个重量是称出来的"。上架前录的都是估算，属 D 级——不是实测。"""
+        payload: dict[str, Any] = {"weight_is_measured": measured}
+        if weight_g is not None:
+            payload["weight_g"] = weight_g
+        self.storage.update("ProductCandidate", candidate_id, payload)
 
     # ---- 核算 -----------------------------------------------------------
     def quote(self, candidate_id: int) -> QuoteView:
@@ -509,7 +518,13 @@ class Ledger:
             item["status"] = row.get("state")
             item["site"] = row.get("market")
             item["candidate_name"] = (candidate or {}).get("title", "—")
-            item["next_states"] = OrderMachine(self.spec, state=row.get("state") or None).allowed()
+            machine = OrderMachine(self.spec, state=row.get("state") or None)
+            item["next_states"] = machine.allowed()
+            # 把"为什么这一步"一起带出来，前端不用自己查状态机
+            item["next_guards"] = {
+                state: (machine.transition_for(state).guard if machine.transition_for(state) else "")
+                for state in item["next_states"]
+            }
             out.append(item)
         return out
 
