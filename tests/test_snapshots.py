@@ -115,18 +115,27 @@ class RepoEvidenceTest(unittest.TestCase):
                          "这些 A 级参数的快照不能用（没进版本库或文件不在）：%s"
                          % [(item.ref, item.detail) for item in broken])
 
-    def test_the_known_gap_is_exactly_the_unreachable_source(self):
-        """没写 snapshot_ref 的应当只剩 help.shopee.tw 那几个——那是已确认打不开的来源。
+    def test_no_a_level_param_lacks_a_snapshot(self):
+        """A 级参数的快照引用必须齐全。
 
-        把"已知缺口"钉成具体名单：多出别的就说明有新参数缺凭据。
+        这条原来是「没写 snapshot_ref 的应当只剩 help.shopee.tw 那几个」——
+        那 4 个（EZWAY / FREQ-IMPORT / PRESALE-TAX-COLLECT / TAX-THRESHOLD）
+        来源打不开又没快照，却挂着 A，属于**高估**。已按 INV-003 降为 B。
+        于是这条测试的前提消失了，改成更强的断言：A 级一个都不许缺。
         """
-        missing = [p for p in self._a_level() if not (p.source or {}).get("snapshot_ref")]
-        self.assertTrue(missing, "一个都没有反而可疑——这条测试该被删掉")
-        for param in missing:
-            url = (param.source or {}).get("url") or ""
-            self.assertIn("help.shopee.tw", url,
-                          "%s 是 A 级却没有快照，而它的来源不是已确认打不开的 help.shopee.tw"
-                          % param.id)
+        missing = [p.id for p in self._a_level() if not (p.source or {}).get("snapshot_ref")]
+        self.assertEqual(missing, [],
+                         "这些 A 级参数没有快照引用——要么补凭据，要么降级：%s" % missing)
+
+    def test_the_demoted_ones_are_now_b_level_with_a_reason(self):
+        """降级要留下理由，不能只是把字母改掉。"""
+        for param_id in ("P-TW-EZWAY", "P-TW-FREQ-IMPORT",
+                         "P-TW-PRESALE-TAX-COLLECT", "P-TW-TAX-THRESHOLD"):
+            param = self.ledger.spec.params.get(param_id)
+            self.assertIsNotNone(param, param_id)
+            self.assertEqual(param.evidence_level, "B", param_id)
+            self.assertIn("help.shopee.tw", (param.source or {}).get("url", ""),
+                          "%s 的来源应当仍指向那个打不开的地址（缺口要留痕）" % param_id)
 
     def test_most_a_level_params_carry_a_usable_snapshot(self):
         items = [item for item in audit(self.ledger.spec.params) if item.ref]
