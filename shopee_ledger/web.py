@@ -329,7 +329,7 @@ def today(ledger: Ledger) -> str:
         badge = "" if viability == "viable" else f'<div class="k">直发可行性：{escape(viability)}</div>'
         cards.append(
             f'<article class="card"><div class="k">{escape(title)}</div><div class="v">{shown}</div>'
-            f'<div class="k">{escape(survival_advice(rate))}</div>{badge}</article>'
+            f'<div class="k">{escape(survival_advice(rate, ledger.spec))}</div>{badge}</article>'
         )
 
     sections: list[str] = []
@@ -399,8 +399,15 @@ def today(ledger: Ledger) -> str:
 
 
 def _gate_kwargs(ledger: Ledger, row) -> dict:
-    """候选品 → 门禁上下文的唯一映射点（网页各处不再各拼一份）。"""
+    """候选品 → 门禁上下文的唯一映射点（网页各处不再各拼一份）。
+
+    **必须带上 spec=ledger.spec**。不带的话 desk 会回落到 default_spec()（基础 spec，
+    不含核实覆盖层），门禁就按 E 级判定——实测后果很严重：P-SLS-BANNED 基础是 E 级
+    （降级成 WARN）、核实后是 A 级（硬拦），于是网页把本该「需人工确认」的商品
+    显示成「可上架」。少传一个参数，门禁就从严格变成了宽松。
+    """
     return dict(
+        spec=ledger.spec,
         supplier_count=len(ledger.supplier_ids(row["id"])),
         sample_bought=bool(row["sample_bought"]),
         weighed=row["weight_g"] is not None,
