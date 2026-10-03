@@ -285,6 +285,22 @@
         "vn_table_note": "越南站点逐类目禁运标记见 vn-highvalue-tax-26632.xlsx（2153 行）"
       }
     },
+    "P-TH-VAT": {
+      "checked_at": "2026-09-16",
+      "created_at": "2026-10-03T09:40:14+00:00",
+      "evidence_level": "B",
+      "operator": "cli",
+      "param_id": "P-TH-VAT",
+      "snapshot_ref": "data\\snapshots\\ARTICLE-26381-dfb08fb86c5a.txt",
+      "source_url": "https://shopee.cn/edu/article/26381",
+      "value": {
+        "as_stated": "官方 #26381：广告金跨站转移至泰国站点需承担增值税，税率为 7%",
+        "caveat": "原文场景是广告金转移；一般进口/销售场景的适用范围未在本文展开",
+        "cross_check": "与泰国通用 VAT 税率 7% 一致",
+        "rate": 0.07,
+        "scope": "泰国站点增值税（VAT）"
+      }
+    },
     "P-TW-BUYER-SHIP": {
       "checked_at": "2026-10-03",
       "created_at": "2026-10-03T09:30:25+00:00",
