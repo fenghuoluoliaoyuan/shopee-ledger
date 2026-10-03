@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -124,8 +125,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/orders":
             return _order_post(ledger, form)
         if path == "/checklist":
-            ledger.set_checklist(int(_need(form, "id")), _need(form, "date"), _need(form, "conclusion"), _need(form, "grade"))
-            return "/checklist?" + urlencode({"notice": "核实结果已写入"})
+            return _checklist_post(ledger, form)
         if path == "/escrow":
             view = ledger.record_actual(int(_need(form, "order")), json.loads(_need(form, "payload")))
             return "/books?" + urlencode({"notice": view.explain()})
@@ -472,6 +472,8 @@ def spec_page(ledger: Ledger) -> str:
         for m in (spec.registry.get("markets") or [])
     )
 
+    overrides = {row["param_id"]: row
+                 for row in ledger.storage.list("ParamOverride", limit=500)}
     param_rows = []
     for pid, param in sorted(spec.params.items()):
         if param.value is None:
@@ -482,11 +484,24 @@ def spec_page(ledger: Ledger) -> str:
             shown = escape(str(param.value))
         state = param.effective_state()
         flag = "" if param.hard_eligible() else ' <span class="k">（不可硬拦）</span>'
+        override = overrides.get(pid)
+        if override:
+            link = ('<a href="%s">来源</a>' % escape(override["source_url"])
+                    if override.get("source_url") else "无来源链接")
+            origin = "已核实 %s 级 · %s · %s" % (
+                escape(override.get("evidence_level") or ""),
+                escape(override.get("checked_at") or "未记日期"), link)
+            if override.get("snapshot_ref"):
+                origin += " · 存档 %s" % escape(override["snapshot_ref"])
+        elif param.source.get("url"):
+            origin = '<a href="%s">来源</a>' % escape(param.source["url"])
+        else:
+            origin = '<span class="k">未记来源</span>'
         param_rows.append(
-            "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td><td>%s%s</td><td>%s</td></tr>" % (
+            "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td><td>%s%s</td><td>%s</td><td>%s</td></tr>" % (
                 escape(pid), escape(param.name[:22]), shown,
                 escape(param.evidence_level), escape(state), flag,
-                escape(param.next_review_at or "—"),
+                escape(param.next_review_at or "—"), origin,
             )
         )
 
@@ -518,8 +533,9 @@ def spec_page(ledger: Ledger) -> str:
 <section class="card" style="margin-top:12px"><h2>模块</h2><ul>{modules}</ul></section>
 
 <section class="card" style="margin-top:12px"><h2>参数与证据等级</h2>
-<p class="k">「不可硬拦」= 该证据等级不能参与硬门禁（INV-001/010）。</p>
-<table><tr><th>ID</th><th>名称</th><th>值</th><th>等级</th><th>状态</th><th>下次复核</th></tr>{''.join(param_rows)}</table></section>
+<p class="k">「不可硬拦」= 该证据等级不能参与硬门禁（INV-001/010）。
+「已经核实」的参数来自 ParamOverride 覆盖层，点来源可回到当时的依据。</p>
+<table><tr><th>ID</th><th>名称</th><th>值</th><th>等级</th><th>状态</th><th>下次复核</th><th>出处</th></tr>{''.join(param_rows)}</table></section>
 
 <section class="card" style="margin-top:12px"><h2>核实任务</h2>
 <table><tr><th>ID</th><th>阻塞第一单</th><th>模块</th><th>事项</th><th>状态</th></tr>{''.join(task_rows)}</table></section>"""
@@ -748,24 +764,70 @@ def orders_page(ledger: Ledger) -> str:
 
 
 def checklist_page(ledger: Ledger) -> str:
+    today_text = date.today().isoformat()
     rows = []
     for row in ledger.checklist_rows():
         grades = "".join(
-            f'<option{" selected" if grade == row["grade"] else ""}>{grade}</option>' for grade in "ABCDE"
-        )
+            "<option%s>%s</option>" % (" selected" if grade == row["grade"] else "", grade)
+            for grade in "ABCDE")
+        target = row.get("target_param_id")
+        value_field = ""
+        if target:
+            current = row.get("param_value")
+            shown = "" if current is None or isinstance(current, (dict, list)) else str(current)
+            value_field = (
+                "<label>抄到的值 <code>%s</code>（当前 %s 级）"
+                "<input name='value' value='%s' placeholder='填了就顺便升级这个参数'></label>"
+                % (escape(target), escape(row.get("param_level") or "—"), escape(shown)))
+        badge = '<span class="pill cut">阻塞第一单</span> ' if row.get("blocks_first_order") else ""
+        done = ('<span class="pill go">已核实 %s</span>' % escape(row["grade"] or "")
+                if row["conclusion"] else "")
         rows.append(
-            f"""<tr><td>{row['id']}</td><td>{escape(row['module'])}</td><td>{escape(row['item'])}</td>
-<td>{escape(row['conclusion'] or '')}</td>
-<td><form method="post" action="/checklist">
-<input type="hidden" name="id" value="{row['id']}">
-<input name="date" placeholder="日期" value="{escape(row['checked_date'] or '')}">
-<input name="conclusion" placeholder="结论" value="{escape(row['conclusion'] or '')}">
-<select name="grade">{grades}</select>
-<button class="slim">保存</button></form></td></tr>"""
-        )
-    return f'''<h1>待核实</h1><p class="lead">这是附属记录。公开网页对不上中国跨境店的费率，所以不会把网上的百分比写进参数。</p>
-<form method="post" action="/checklist">
-<section class="card"><table>{''.join(rows)}</table></section>'''
+            "<tr><td><code>%s</code> %s%s<div class='k'>%s</div><div class='k'>渠道：%s</div></td>"
+            "<td><form method='post' action='/checklist' class='stack'>"
+            "<input type='hidden' name='id' value='%s'>"
+            "<label>日期<input name='date' value='%s'></label>"
+            "<label>来源 URL<input name='url' value='%s' placeholder='https://…（A 级必填）'></label>"
+            "<label>截图 / 存档引用<input name='snapshot' value='%s' placeholder='本地路径或可打开链接'></label>"
+            "<label>结论<textarea name='conclusion' rows='2'>%s</textarea></label>"
+            "%s"
+            "<label>等级<select name='grade'>%s</select></label>"
+            "<button class='slim'>保存%s</button></form></td></tr>" % (
+                escape(row.get("spec_task_id") or ""), badge, done, escape(row["item"]),
+                escape(row["channel"] or "—"), row["id"],
+                escape(row["checked_date"] or today_text), escape(row["source_url"]),
+                escape(row["snapshot_ref"]), escape(row["conclusion"]), value_field, grades,
+                "并升级参数" if target else ""))
+    remaining = len([item for item in ledger.checklist_rows()
+                     if item.get("blocks_first_order") and not item["conclusion"]])
+    return f"""<h1>待核实</h1>
+<p class="lead">阻塞第一单的排在最前（还剩 {remaining} 条）。A 级必须有可打开的 URL——没有凭据的 A 级等于自述。
+这条任务若绑定了解锁参数，填「抄到的值」会在保存的同时把它升到该等级，对应功能随即启用。</p>
+<section class="card"><table>{''.join(rows)}</table></section>"""
+
+
+def _checklist_post(ledger: Ledger, form: dict) -> str:
+    """核实结果的闭环出口：记录结论与出处；若这条任务绑定了参数且填了值，顺手把参数升上去。
+
+    等级校验交给 Ledger.set_checklist（A 级必须有 URL），异常由 do_POST 兜成页面提示。
+    """
+    item_id = int(_need(form, "id"))
+    grade = _need(form, "grade")
+    url = _first(form, "url")
+    snapshot = _first(form, "snapshot")
+    row = next((item for item in ledger.checklist_rows() if item["id"] == item_id), None)
+    ledger.set_checklist(item_id, _need(form, "date"), _first(form, "conclusion"), grade,
+                         source_url=url, snapshot_ref=snapshot)
+    target = (row or {}).get("target_param_id")
+    value = _first(form, "value")
+    if target and value and grade in ("A", "B", "C"):
+        ledger.set_param_value(target, value, grade, source_url=url, snapshot_ref=snapshot)
+        return "/checklist?" + urlencode({
+            "notice": "%s 已记录，%s 升到 %s 级" % (row.get("spec_task_id") or item_id, target, grade)})
+    if target and value:
+        return "/checklist?" + urlencode({
+            "notice": "%s 级不能写入覆盖层，参数未升级；请先补到 A/B/C" % grade})
+    return "/checklist?" + urlencode({"notice": "核实结果已写入"})
 
 
 def _need(form: dict, key: str) -> str:

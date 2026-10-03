@@ -51,7 +51,9 @@
         {"name": "evidence_ref", "type": "string", "required": false},
         {"name": "spec_task_id", "type": "string", "required": false, "note": "spec/evidence 里的任务 id（VT-xxx）"},
         {"name": "grade", "type": "enum", "required": false, "note": "核实后的证据等级"},
-        {"name": "checked_date", "type": "string", "required": false, "note": "核实日期"}
+        {"name": "checked_date", "type": "string", "required": false, "note": "核实日期"},
+        {"name": "source_url", "type": "string", "required": false, "note": "核实依据的可打开 URL（A 级必须有）"},
+        {"name": "snapshot_ref", "type": "string", "required": false, "note": "截图/存档引用：本地路径或链接"}
       ]
     },
     { "id": "AuditLog", "layer": "platform", "key": "log_id",

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -172,12 +172,19 @@ class Ledger:
             })
 
     # ---- 参数（覆盖层） -------------------------------------------------
-    def _write_override(self, param_id: str, value: Any, grade: str, *, source: str = "本机录入") -> None:
+    def _write_override(self, param_id: str, value: Any, grade: str, *, source: str | None = None,
+                        source_url: str | None = None, snapshot_ref: str | None = None,
+                        checked_at: str | None = None) -> None:
+        """写一条覆盖值。证据出处必须一起落库——只写在审计里，配置页就说不清依据。"""
         if grade not in ("A", "B", "C"):
             raise ValueError("覆盖层只接受 A/B/C 级（实测或后台抄录）；%s 级请走核实任务升级路径" % grade)
+        if grade == "A" and not (source_url or "").strip() and not self.spec.params[param_id].source.get("url"):
+            raise ValueError("A 级覆盖必须有可打开的 URL——没有凭据的 A 级等于自述")
         self.storage.insert("ParamOverride", {
             "param_id": param_id, "value": value, "evidence_level": grade,
-            "operator": "cli", "note": source, "checked_at": "2026-10-03",
+            "operator": "cli", "note": source or "本机录入",
+            "checked_at": checked_at or date.today().isoformat(),
+            "source_url": source_url, "snapshot_ref": snapshot_ref,
         })
         self._spec = None
 
@@ -614,23 +621,58 @@ class Ledger:
     # ---- 核实任务 -------------------------------------------------------
     def checklist_rows(self) -> list[dict[str, Any]]:
         rows = self.storage.list("VerificationTask", limit=500)
-        rows.sort(key=lambda r: r.get("spec_task_id") or "")
-        return [{
-            "id": r["id"], "module": r["module"], "item": r["item"], "channel": r["channel"],
-            "grade": r.get("grade") or "", "checked_date": r.get("checked_date") or "",
-            "conclusion": r.get("conclusion") or "", "spec_task_id": r.get("spec_task_id"),
-            "blocks_first_order": r.get("blocks_first_order"), "status": r.get("status"),
-        } for r in rows]
+        rows.sort(key=lambda r: (not r.get("blocks_first_order"), r.get("spec_task_id") or ""))
+        out = []
+        for row in rows:
+            target = row.get("target_param_id")
+            param = self.spec.params.get(target) if target else None
+            out.append({
+                "id": row["id"], "module": row["module"], "item": row["item"],
+                "channel": row["channel"], "grade": row.get("grade") or "",
+                "checked_date": row.get("checked_date") or "",
+                "conclusion": row.get("conclusion") or "",
+                "spec_task_id": row.get("spec_task_id"),
+                "blocks_first_order": row.get("blocks_first_order"), "status": row.get("status"),
+                "source_url": row.get("source_url") or "",
+                "snapshot_ref": row.get("snapshot_ref") or "",
+                "target_param_id": target,
+                "param_level": (param.evidence_level if param else None),
+                "param_value": (param.value if param else None),
+            })
+        return out
 
-    def set_checklist(self, item_id: int, checked_date: str, conclusion: str, grade: str) -> None:
+    def set_checklist(self, item_id: int, checked_date: str, conclusion: str, grade: str,
+                      *, source_url: str | None = None, snapshot_ref: str | None = None) -> None:
         if grade not in ("A", "B", "C", "D", "E"):
             raise ValueError("证据等级只能是 A-E")
+        if grade == "A" and not (source_url or "").strip():
+            raise ValueError("A 级必须有可打开的 URL——没有凭据的 A 级等于自述")
         self.storage.update("VerificationTask", item_id, {
-            "checked_date": checked_date, "conclusion": conclusion, "grade": grade, "status": "done"})
+            "checked_date": checked_date, "conclusion": conclusion, "grade": grade,
+            "status": "done", "source_url": source_url, "snapshot_ref": snapshot_ref})
         row = self.storage.get("VerificationTask", item_id)
         if row and row.get("spec_task_id"):
             self.storage.record_audit("task.done", "VerificationTask", item_id, result=grade,
-                                      detail={"spec_task_id": row["spec_task_id"]})
+                                      detail={"spec_task_id": row["spec_task_id"],
+                                              "source_url": source_url,
+                                              "snapshot_ref": snapshot_ref})
+
+    def set_param_value(self, param_id: str, value: Any, grade: str, *,
+                        source_url: str | None = None, snapshot_ref: str | None = None,
+                        note: str = "核实任务") -> None:
+        """按 spec 参数 id 直接写覆盖值——核实任务的闭环出口。
+
+        与 set_param 的区别：那个走旧的 10 个 key 映射，这个是新流程用的，
+        参数 id 直接来自任务表，并带上证据出处。
+        """
+        if param_id not in self.spec.params:
+            raise ValueError("spec 里没有参数 %s" % param_id)
+        self._write_override(param_id, _parse_value(value), grade, source=note,
+                             source_url=source_url, snapshot_ref=snapshot_ref)
+        if source_url or snapshot_ref:
+            self.storage.record_audit("param.override", "Param", param_id, result=grade,
+                                      detail={"source_url": source_url,
+                                              "snapshot_ref": snapshot_ref, "value": value})
 
     # ---- 兼容：托管明细导入 ---------------------------------------------
     def apply_escrow(self, candidate_id: int, payload: dict[str, Any]) -> dict[str, Any]:
