@@ -147,6 +147,41 @@ class StorageTest(unittest.TestCase):
         self.storage.init()
         self.assertEqual(self.storage.count("Supplier"), 0)
 
+    def test_init_adds_missing_columns_to_existing_table(self):
+        """元数据加了字段，已有表要补列——CREATE TABLE IF NOT EXISTS 不会补。"""
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            path = Path(folder) / "old.sqlite"
+            conn = sqlite3.connect(str(path))
+            conn.execute("CREATE TABLE supplier (id INTEGER PRIMARY KEY AUTOINCREMENT)")
+            conn.commit()
+            conn.close()
+
+            storage = Storage(path, self.spec)
+            storage.init()
+            cols = {row["name"] for row in storage.connect().execute(
+                "PRAGMA table_info(supplier)").fetchall()}
+            storage.close()
+            self.assertIn("name", cols, "应当补出实体声明的列")
+            self.assertIn("years_in_business", cols)
+
+    def test_added_column_is_writable(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            path = Path(folder) / "old.sqlite"
+            conn = sqlite3.connect(str(path))
+            conn.execute("CREATE TABLE watch_entry (id INTEGER PRIMARY KEY AUTOINCREMENT)")
+            conn.commit()
+            conn.close()
+
+            storage = Storage(path, self.spec)
+            storage.init()
+            row_id = storage.insert("WatchEntry", {
+                "watch_id": "W", "article_id": "1", "title": "t", "url": "u",
+                "first_seen_at": "now", "last_seen_at": "now", "status": "new"})
+            storage.update("WatchEntry", row_id, {"content_ref": "data/snapshots/x.txt"})
+            self.assertEqual(storage.get("WatchEntry", row_id)["content_ref"],
+                             "data/snapshots/x.txt")
+            storage.close()
+
 
 if __name__ == "__main__":
     unittest.main()

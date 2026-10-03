@@ -815,6 +815,24 @@ class Ledger:
     def mark_watch_seen(self, entry_id: int) -> None:
         self.storage.update("WatchEntry", entry_id, {"status": "seen"})
 
+    # ---- 采集文档正文：自己读它找参数值 ---------------------------------
+    def entries_without_content(self, limit: int = 500) -> list[dict[str, Any]]:
+        rows = [row for row in self.storage.list("WatchEntry", limit=limit)
+                if not row.get("content_ref")]
+        rows.sort(key=lambda row: row.get("published_at") or "", reverse=True)
+        return rows
+
+    def all_watch_entries(self, limit: int = 500) -> list[dict[str, Any]]:
+        rows = self.storage.list("WatchEntry", limit=limit)
+        rows.sort(key=lambda row: row.get("published_at") or "", reverse=True)
+        return rows
+
+    def save_article_text(self, entry_id: int, content_ref: str, *, length: int = 0) -> None:
+        self.storage.update("WatchEntry", entry_id,
+                            {"content_ref": content_ref, "harvested_at": _now()})
+        self.storage.record_audit("watch.harvest", "WatchEntry", entry_id, result="PASS",
+                                  detail={"content_ref": content_ref, "length": length})
+
     # ---- 核实任务 -------------------------------------------------------
     def checklist_rows(self) -> list[dict[str, Any]]:
         rows = self.storage.list("VerificationTask", limit=500)

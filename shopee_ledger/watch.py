@@ -69,6 +69,44 @@ def load_watches(path: Path | str = DEFAULT_SOURCES) -> list[Watch]:
             for item in doc.get("watch") or []]
 
 
+class _TextExtractor(HTMLParser):
+    """把渲染后的页面变成纯文本（丢掉 script/style/导航）。
+
+    给"自己去读文档找参数值"用：先拿到正文，再按关键词定位。
+    """
+
+    SKIP = {"script", "style", "noscript", "svg", "head"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.chunks: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self.SKIP:
+            self._skip_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self.SKIP and self._skip_depth:
+            self._skip_depth -= 1
+        elif tag in ("p", "div", "li", "tr", "br", "h1", "h2", "h3", "h4"):
+            self.chunks.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip_depth:
+            text = data.strip()
+            if text:
+                self.chunks.append(text + " ")
+
+
+def article_text(html: str) -> str:
+    """渲染后的文章页 → 纯文本。用于自己读文档找参数值。"""
+    parser = _TextExtractor()
+    parser.feed(html or "")
+    text = "".join(parser.chunks)
+    return re.sub(r"\n{3,}", "\n\n", re.sub(r"[ \t]{2,}", " ", text)).strip()
+
+
 def article_id_of(url: str) -> str | None:
     match = ARTICLE_RE.search(url or "")
     return match.group(1) if match else None
@@ -169,33 +207,26 @@ def find_browser() -> str | None:
 
 def render_page(url: str, *, browser: str | None = None, wait_ms: int = 12000,
                 timeout: int = 120, runner: Any = None) -> tuple[str, str]:
-    """用无头浏览器把页面渲染出来，返回 (HTML, 错误说明)。
+    """渲染一个页面，返回 (HTML, 错误说明)。
 
-    为什么要用浏览器：shopee.cn/edu 是 SPA，服务端 urllib 抓到的是空壳（0 个文章链接）。
-    列表接口 /help/api/v3/article/list/ 有签名头，直接调会被挡（"not allowed language"）。
-    浏览器本来就执行 JS、带会话，最省事。
+    走 CDP（自己开的无头 Chrome），**等真实时间**。
+    为什么不用 ``chrome --dump-dom``：加虚拟时钟会被永不结束的请求卡死，
+    不加则页面没渲染完就 dump（拿到 JS 空壳）。只有等真实时间才稳。
 
-    **只抓第 1 页就够**：新通知总是出现在列表最上面。
-    翻旧页是"补历史"，不是"监测"。
+    需要连续抓多个页面时，直接 ``with Chrome() as chrome`` 复用实例，别用这个函数。
     """
-    import subprocess
-    import tempfile
+    if runner is not None:      # 测试注入
+        return runner(url), ""
+    from shopee_ledger.browser import BrowserError, Chrome
 
-    exe = browser or find_browser()
-    if not exe:
-        return "", "找不到 Chrome 或 Edge，无法渲染页面"
-    profile = Path(tempfile.gettempdir()) / "sl-chrome-profile"
-    args = [exe, "--headless=new", "--disable-gpu", "--no-first-run",
-            "--no-default-browser-check", "--window-size=1400,2400",
-            "--virtual-time-budget=%d" % wait_ms,
-            "--user-data-dir=%s" % profile, "--dump-dom", url]
     try:
-        if runner is not None:
-            return runner(args), ""
-        done = subprocess.run(args, capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", timeout=timeout)
-        return done.stdout or "", "" if done.stdout else "浏览器没有输出"
-    except Exception as exc:  # 超时/浏览器崩溃都当成"这次没抓到"
+        with Chrome(browser=browser) as chrome:
+            chrome.open(url, wait_seconds=max(1.0, wait_ms / 1000.0))
+            html = chrome.html()
+        return html, "" if html else "浏览器没有输出"
+    except BrowserError as exc:
+        return "", str(exc)
+    except Exception as exc:  # 超时/崩溃都当成"这次没抓到"
         return "", "%s: %s" % (type(exc).__name__, exc)
 
 

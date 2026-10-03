@@ -168,6 +168,8 @@ class Storage:
         for entity_id in self.spec.entities:
             conn.execute(self.ddl(entity_id))
             created.append(table_for(entity_id))
+        for entity_id in self.spec.entities:
+            self._migrate(entity_id)
         conn.execute(
             "CREATE TABLE IF NOT EXISTS config_version ("
             "  fingerprint TEXT PRIMARY KEY,"
@@ -180,6 +182,32 @@ class Storage:
                 self._install_append_only_triggers(table_for(entity_id))
         conn.commit()
         return created
+
+    def _existing_columns(self, table: str) -> set[str]:
+        rows = self.connect().execute('PRAGMA table_info("%s")' % table).fetchall()
+        return {row["name"] for row in rows}
+
+    def _migrate(self, entity_id: str) -> list[str]:
+        """元数据里加了字段，给**已经存在**的表补列。
+
+        ``CREATE TABLE IF NOT EXISTS`` 不会改已存在的表——加了字段不补列，
+        写进去就报 "no such column"（实测踩过：给 WatchEntry 加 content_ref）。
+        SQLite 的 ADD COLUMN 只能加可空列，正好符合这里的用法。
+        """
+        table = table_for(entity_id)
+        existing = self._existing_columns(table)
+        added: list[str] = []
+        for field in self.entity(entity_id).get("fields") or []:
+            name = column_for(field["name"])
+            if name not in existing:
+                self.connect().execute('ALTER TABLE "%s" ADD COLUMN "%s" %s'
+                                       % (table, name, sql_type(field)))
+                added.append(name)
+        # insert() 会自动写 created_at（除非实体自己声明了同名列），迁移也要补上
+        if "created_at" not in existing and "created_at" not in self._field_columns(entity_id):
+            self.connect().execute('ALTER TABLE "%s" ADD COLUMN "created_at" TEXT' % table)
+            added.append("created_at")
+        return added
 
     def _install_append_only_triggers(self, table: str) -> None:
         """只增不改：数据库层兜底，绕过应用层也拦得住（INV-007）。"""

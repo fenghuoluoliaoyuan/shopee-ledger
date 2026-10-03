@@ -305,7 +305,7 @@
         {"name": "snapshot_ref", "type": "string", "required": false},
         {"name": "raw_sha256", "type": "string", "required": false},
         {"name": "captured_at", "type": "string", "required": true},
-        {"name": "channel", "type": "enum", "values": ["fetch", "userscript", "manual"], "required": true},
+        {"name": "channel", "type": "enum", "values": ["fetch", "userscript", "manual", "agent"], "required": true},
         {"name": "status", "type": "enum", "values": ["pending", "approved", "rejected"], "required": true},
         {"name": "message", "type": "string", "required": false},
         {"name": "decided_at", "type": "string", "required": false},
@@ -321,7 +321,9 @@
         {"name": "published_at", "type": "string", "required": false},
         {"name": "first_seen_at", "type": "string", "required": true},
         {"name": "last_seen_at", "type": "string", "required": true},
-        {"name": "status", "type": "enum", "values": ["new", "seen"], "required": true}
+        {"name": "status", "type": "enum", "values": ["new", "seen"], "required": true},
+        {"name": "content_ref", "type": "string", "required": false, "note": "渲染后正文的快照路径（自己读文档时用）"},
+        {"name": "harvested_at", "type": "string", "required": false, "note": "最近一次采集正文的时间"}
       ]
     }
   ]

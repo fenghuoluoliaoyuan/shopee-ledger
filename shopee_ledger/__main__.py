@@ -111,6 +111,9 @@ def main(argv: list[str] | None = None) -> int:
     q2.add_argument("--grant", type=int, help="不填则只打印；填候选品 id 则留档成本快照")
 
     sub.add_parser("sources", help="列出抓取配方与访问方式")
+    harvest = sub.add_parser("harvest", help="用无头浏览器抓已监测文档的正文，留档待读（自己找参数值用）")
+    harvest.add_argument("--limit", type=int, default=40, help="本次最多抓几篇")
+    harvest.add_argument("--redo", action="store_true", help="已有的正文也重抓一遍")
     fetch = sub.add_parser("fetch", help="抓公开来源，产出候选值（不直接改参数）")
     fetch.add_argument("--param", help="只抓某个参数")
     fetch.add_argument("--include-login", action="store_true", help="连需登录的来源也走一遍（只会报状态）")
@@ -337,6 +340,49 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         payload = ReadClient(ReadConfig.from_env()).get_escrow_detail(args.order_sn)
         mapped = ledger.apply_escrow(args.candidate, payload)
         print(json.dumps(mapped, ensure_ascii=False))
+        return 0
+    if args.cmd == "harvest":
+        from shopee_ledger.browser import BrowserError, Chrome
+        from shopee_ledger.sources import save_snapshot
+        from shopee_ledger.watch import article_text, find_browser
+
+        if not find_browser():
+            print("找不到 Chrome/Edge，无法渲染正文")
+            return 1
+        ledger.init()
+        entries = (ledger.all_watch_entries() if args.redo
+                   else ledger.entries_without_content())[: args.limit]
+        if not entries:
+            print("没有需要抓正文的文档（都已留档；要重抓加 --redo）")
+            return 0
+        print("要抓 %d 篇（共用一条浏览器会话）…" % len(entries))
+        ok = failed = 0
+        try:
+            with Chrome() as chrome:
+                for index, entry in enumerate(entries, 1):
+                    try:
+                        chrome.open(entry["url"], wait_seconds=5.0)
+                        text = article_text(chrome.html())
+                    except BrowserError as exc:
+                        print("  [%d/%d] %s 失败：%s" % (index, len(entries),
+                                                        entry["article_id"], exc))
+                        failed += 1
+                        continue
+                    if len(text) < 200:
+                        print("  [%d/%d] %s 正文太短（%d 字）"
+                              % (index, len(entries), entry["article_id"], len(text)))
+                        failed += 1
+                        continue
+                    ref, _ = save_snapshot(text, "ARTICLE-" + entry["article_id"])
+                    ledger.save_article_text(entry["id"], ref, length=len(text))
+                    print("  [%d/%d] %s %4d 字  %s"
+                          % (index, len(entries), entry["article_id"], len(text),
+                             entry["title"][:38]))
+                    ok += 1
+        except BrowserError as exc:
+            print("浏览器起不来：%s" % exc)
+            return 1
+        print("\n成功 %d 篇，失败 %d 篇" % (ok, failed))
         return 0
     if args.cmd == "sources":
         from shopee_ledger.sources import load_sources
