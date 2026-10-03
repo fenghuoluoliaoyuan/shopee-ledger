@@ -16,5 +16,20 @@
       "bytes": 1479,
       "sha256": "6c093cd0abee8f6d2e2fe8daf46c35ac608c6f0785a7af995972ce679d3a35ed"
     }
-  ]
+  ],
+  "simulator_notes": {
+    "source": "https://solutions.shopee.cn/sellers/pricing-simulator/",
+    "version": "v1.4.0",
+    "last_updated": "2025-05-14",
+    "recorded_from": "用户提供的页面截图（页面底部的使用说明区）",
+    "what_it_does_NOT_cover": [
+      "不考虑平台或卖家提供的其他优惠",
+      "不考虑各站点的关税",
+      "不考虑一单多件等情况",
+      "未包含新加坡站点 Doorstep Delivery (Sea Shipping)（线上海运渠道）"
+    ],
+    "known_divergence": "涵盖特货、重货、轻货等多个渠道，相较中国卖家中心售价的计算结果会有差异",
+    "official_position": "若运费表与「藏价与运费计算工具」有差异，以藏价工具为准（https://shopee.cn/edu/article/5091）",
+    "why_recorded": "这些边界比数字更容易被误用——拿模拟器结果当实收/实付会算错利润。记在参考数据的出处文件里，用它的人先看到限制。"
+  }
 }
