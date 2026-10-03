@@ -1,0 +1,184 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "registry",
+  "project": {
+    "name": "智能卖家后台",
+    "version": "1.0",
+    "generated_at": "2026-10-03",
+    "positioning": "平台级卖家经营后台。横向能力（参数/证据/门禁/核算/审计/校准）与业务模块分离；平台 × 市场 × 履约模式 为可组合的正交维度；无货源只是一种履约模式。",
+    "principle": "不变的能力上提为平台级，会变的模式下沉为插件",
+    "supersedes": "spec/manual-core.json (v3.0)",
+    "load_order": [
+      "registry.json",
+      "entities.json",
+      "governance.json",
+      "params/platform.shopee.json",
+      "params/market.tw.json",
+      "params/market.th.json",
+      "params/market.my.json",
+      "params/assumptions.json",
+      "rules/platform.json",
+      "rules/modes/dropship.json",
+      "modes/dropship.json",
+      "modes/stock.json",
+      "modes/platform_managed.json",
+      "evidence/verification-tasks.json"
+    ]
+  },
+  "evidence_levels": [
+    { "level": "A", "name": "官方硬规则", "gate_eligible": true, "hard_block_allowed": true, "requires": ["source.url", "source.checked_at", "snapshot_ref"], "note": "无快照的 A 级视为无证据" },
+    { "level": "B", "name": "卖家后台实测", "gate_eligible": true, "hard_block_allowed": true, "requires": ["source.url", "source.checked_at"] },
+    { "level": "C", "name": "自己实测数据", "gate_eligible": true, "hard_block_allowed": true, "requires": [] },
+    { "level": "D", "name": "经验启发", "gate_eligible": false, "hard_block_allowed": false, "usage": "只能 WARN / AUTO_FILL" },
+    { "level": "E", "name": "待验证", "gate_eligible": false, "hard_block_allowed": false, "usage": "value 必须为 null；未核实数值放 unverified_claim；只能生成任务或 advisory 提示" }
+  ],
+  "gate_levels": [
+    { "id": "hard", "name": "硬门禁", "behavior": "阻止操作", "requires_evidence": ["A", "B", "C"] },
+    { "id": "soft", "name": "软门禁", "behavior": "允许但需确认留痕", "requires_evidence": ["A", "B", "C", "D"] },
+    { "id": "advisory", "name": "建议", "behavior": "仅提示", "requires_evidence": ["A", "B", "C", "D", "E"] }
+  ],
+  "result_states": [
+    { "id": "PASS", "meaning": "通过" },
+    { "id": "INCOMPLETE", "meaning": "缺数据，无法判定；不等于不可做" },
+    { "id": "WARN", "meaning": "可继续但有风险，需留痕" },
+    { "id": "REJECT", "meaning": "不通过，阻止继续" }
+  ],
+  "value_states": [
+    { "id": "null", "meaning": "未填/未知", "engine": "计入 missing_fields，结果 INCOMPLETE" },
+    { "id": "zero", "meaning": "明确为零", "engine": "正常参与计算" },
+    { "id": "na", "meaning": "不适用", "engine": "按 0 计算并标注 N/A" }
+  ],
+  "orthogonal_dimensions": ["platform", "market", "fulfillment_mode", "shop"],
+  "platform_capabilities": [
+    { "id": "ParamRegistry", "name": "参数注册表", "file_glob": "params/*.json", "desc": "参数唯一来源；按 scope 寻址；value=null 表示未核实" },
+    { "id": "EvidenceCenter", "name": "证据中心", "file_glob": "evidence/*.json", "desc": "证据等级、来源、快照、复核日历、核实任务" },
+    { "id": "GateService", "name": "门禁服务", "file_glob": "rules/*.json", "desc": "统一 check()，返回 {rule_id,result,evidence_level,next_action}" },
+    { "id": "CostEngine", "name": "核算引擎", "desc": "纯函数；费率包按 platform × market 插件化" },
+    { "id": "AuditLog", "name": "审计留痕", "desc": "只增不改" },
+    { "id": "KpiCalibrator", "name": "KPI 校准器", "file_glob": "governance.json#kpis", "desc": "估算 → 实测 → 阈值更新" }
+  ],
+  "platforms": [
+    {
+      "id": "shopee",
+      "name": "Shopee",
+      "role": "seed",
+      "status": "active",
+      "params_file": "params/platform.shopee.json",
+      "markets": ["TW", "MY", "TH"],
+      "logistics_product": "SLS",
+      "open_api": { "status": "to_verify", "task_ref": "VT-021", "impact": "决定订单/物流数据是自动同步还是手工录入" }
+    },
+    { "id": "lazada", "name": "Lazada", "status": "planned", "params_file": null, "markets": [], "logistics_product": "LGS" },
+    { "id": "tiktok_shop", "name": "TikTok Shop", "status": "planned", "params_file": null, "markets": [], "logistics_product": null },
+    { "id": "temu", "name": "Temu", "status": "planned", "params_file": null, "markets": [], "logistics_product": null }
+  ],
+  "markets": [
+    {
+      "code": "TW",
+      "name": "台湾",
+      "currency": "TWD",
+      "params_file": "params/market.tw.json",
+      "low_value_tax_policy": "intact",
+      "dropship_viability": "viable",
+      "viability_basis": "低值免税门槛未取消（2000 TWD）；SLS 时效 4-8 天；地理距离最近",
+      "viability_evidence": "A/D",
+      "viability_updated_at": "2026-10-03"
+    },
+    {
+      "code": "TH",
+      "name": "泰国",
+      "currency": "THB",
+      "params_file": "params/market.th.json",
+      "low_value_tax_policy": "removed",
+      "dropship_viability": "degraded",
+      "viability_basis": "1500 铢免税已取消，所有进口商品统一征关税 + 7% VAT；低客单价小包直发经济性大幅下降，本地仓由可选项变必选项",
+      "viability_evidence": "E",
+      "viability_updated_at": "2026-10-03"
+    },
+    {
+      "code": "MY",
+      "name": "马来西亚",
+      "currency": "MYR",
+      "params_file": "params/market.my.json",
+      "low_value_tax_policy": "lvg_tax",
+      "dropship_viability": "degraded",
+      "viability_basis": "500 令吉以下 LVG 征 10% 销售税且在强化执行；50 令吉商品叠加佣金与物流后利润可能归零",
+      "viability_evidence": "E",
+      "viability_updated_at": "2026-10-03"
+    },
+    {
+      "code": "BR",
+      "name": "巴西",
+      "currency": "BRL",
+      "params_file": null,
+      "low_value_tax_policy": "strict",
+      "dropship_viability": "not_viable",
+      "viability_basis": "20% 关税体系 + 长时效，直发模型不可行",
+      "viability_evidence": "E",
+      "viability_updated_at": "2026-10-03"
+    },
+    {
+      "code": "MX",
+      "name": "墨西哥",
+      "currency": "MXN",
+      "params_file": null,
+      "low_value_tax_policy": "tightening",
+      "dropship_viability": "not_viable",
+      "viability_basis": "监管收紧 + 长时效（原先仅巴西为佣金直减，墨西哥同批调整）",
+      "viability_evidence": "E",
+      "viability_updated_at": "2026-10-03"
+    }
+  ],
+  "market_viability_policy": {
+    "values": ["viable", "degraded", "not_viable", "unknown"],
+    "gate_level": "advisory",
+    "rule": "本字段只用于市场选择建议，不得作为硬门禁；viability 变化由政策参数（免税门槛/税率/时效）驱动，不写死在架构里"
+  },
+  "fulfillment_modes": [
+    {
+      "id": "dropship",
+      "name": "无货源一件代发",
+      "status": "active",
+      "spec_file": "modes/dropship.json",
+      "summary": "出单后向上游采购，经货代拆包贴单送平台国内中转仓，由平台跨境链路履约",
+      "owns": ["库存前置检查", "代发地址格式校验", "货代贴单", "采购垫付与回款周期", "断货降级链路"],
+      "does_not_own": ["参数注册表", "成本模型实现", "证据分级实现", "门禁服务实现", "审计实现"]
+    },
+    {
+      "id": "stock",
+      "name": "备货 / 海外仓",
+      "status": "planned",
+      "spec_file": "modes/stock.json",
+      "summary": "批量备货到本地仓或海外仓，批量清关摊薄单票税费，本地配送提时效",
+      "owns": ["补货计划", "库存周转", "批量清关", "仓储成本摊销"],
+      "does_not_own": ["参数注册表", "成本模型实现", "证据分级实现", "门禁服务实现", "审计实现"]
+    },
+    {
+      "id": "platform_managed",
+      "name": "平台全托管",
+      "status": "planned",
+      "spec_file": "modes/platform_managed.json",
+      "summary": "卖家仅供货，平台负责定价、运营、物流与售后",
+      "owns": ["供货价", "审版图审", "备货到国内仓"],
+      "does_not_own": ["参数注册表", "成本模型实现", "证据分级实现", "门禁服务实现", "审计实现"]
+    }
+  ],
+  "modules": [
+    { "id": "M1", "key": "onboarding", "name": "主体与店铺", "status": "mvp", "capabilities": ["材料清单", "入驻状态机", "激活日期→免佣窗口计算"], "entities": ["OnboardingCase"], "uses": ["ParamRegistry", "EvidenceCenter", "GateService"] },
+    { "id": "M2", "key": "catalog", "name": "选品与商品", "status": "mvp", "capabilities": ["候选品", "一票否决扫描", "评分卡", "上架校验"], "entities": ["ProductCandidate", "Sample", "Measurement", "Listing"], "uses": ["ParamRegistry", "GateService", "EvidenceCenter"] },
+    { "id": "M3", "key": "supply", "name": "供应链与采购", "status": "v1", "capabilities": ["供应商档案", "报价历史", "断货降级链路", "采购单"], "entities": ["Supplier", "SupplierQuote", "PurchaseOrder"], "uses": ["ParamRegistry", "GateService"] },
+    { "id": "M4", "key": "fulfillment", "name": "履约", "status": "v1", "capabilities": ["订单状态机（按模式插件）", "地址来源校验", "物流路径", "时效计时"], "entities": ["Order", "Shipment", "StockCheck"], "uses": ["GateService", "ParamRegistry", "AuditLog"] },
+    { "id": "M5", "key": "pricing", "name": "定价与利润", "status": "mvp", "capabilities": ["成本核算引擎", "成本快照与 trace", "平台账单对账"], "entities": ["CostSnapshot", "FeeRecord"], "uses": ["CostEngine", "ParamRegistry"] },
+    { "id": "M6", "key": "growth", "name": "流量与增长", "status": "planned", "capabilities": ["商品卡关键词覆盖", "上新节奏", "广告 ACoS", "活动与联盟"], "entities": ["AdSpend"], "uses": ["ParamRegistry", "KpiCalibrator"], "gap_note": "v3.0 手册的最大缺口：曝光/点击/转化从未被建模" },
+    { "id": "M7", "key": "finance", "name": "资金与结算", "status": "v2", "capabilities": ["资金台账", "现金流预测", "回款跟踪", "税务日历"], "entities": ["Payout", "CashLedger"], "uses": ["ParamRegistry", "KpiCalibrator", "EvidenceCenter"] },
+    { "id": "M8", "key": "risk", "name": "风控与合规", "status": "v1", "capabilities": ["违禁词库", "品牌词库", "类目黑名单", "知识产权边界", "罚分跟踪"], "entities": ["RiskHit"], "uses": ["GateService", "ParamRegistry"] },
+    { "id": "M9", "key": "review", "name": "复盘与决策", "status": "v2", "capabilities": ["KPI 看板", "估算 vs 实测偏差", "阈值建议", "参数复核日历"], "entities": [], "uses": ["KpiCalibrator", "EvidenceCenter"] }
+  ],
+  "module_entity_placement_rule": "实体按归属分层：platform（Param/Rule/VerificationTask/AuditLog 等）→ entities.json；module:<key> 与 mode:<id> 同样登记在 entities.json 的 layer 字段，便于统一校验引用完整性",
+  "open_questions": [
+    "技术栈与部署形态未定（本套文件为技术栈无关的声明式配置）",
+    "Shopee Open Platform API 权限范围待核实（VT-021）",
+    "单店自用 vs 多店 SaaS：影响 shop 维度与多租户隔离设计",
+    "M6 流量与增长模块尚无任何参数与规则，是当前最大结构性空白"
+  ]
+}

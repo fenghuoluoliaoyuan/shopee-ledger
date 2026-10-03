@@ -1,0 +1,82 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "mode",
+  "id": "dropship",
+  "name": "无货源一件代发",
+  "status": "active",
+  "platform_scope": ["shopee"],
+  "market_scope": ["TW", "MY", "TH"],
+  "summary": "出单后向上游采购，供应商发货至货代仓库，货代拆包贴平台面单后送平台国内中转仓，由平台跨境链路完成履约。卖家不持有库存。",
+  "owns": ["库存前置检查", "代发地址格式校验", "货代贴单", "采购垫付与回款周期", "断货降级链路"],
+  "does_not_own": ["参数注册表", "成本模型实现", "证据分级实现", "门禁服务实现", "审计实现", "选品与定价规则"],
+  "boundary_rule": "本模式只能实现 owns 中列出的能力；参数仍交由平台 ParamRegistry 注册与校验（mode_params 只是带 scope.mode 的登记，不是独立参数表），成本模型、证据分级与门禁服务全部来自平台级能力（INV-013 / R-GOV-004）",
+  "prerequisites": [
+    { "id": "PRE-01", "item": "平台支持跨境直邮到该市场，且存在国内中转仓路径", "status": "assumed" },
+    { "id": "PRE-02", "item": "目标市场低值免税政策仍成立，或已把关税/VAT 计入核算", "status": "param_driven", "param": "market.low_value_tax_policy" },
+    { "id": "PRE-03", "item": "每个候选品至少 3 家支持一件代发的供应商（含 ≥2 备选）", "status": "rule", "rule": "R-SUP-001" },
+    { "id": "PRE-04", "item": "上游供应商接受中转仓地址格式", "status": "field", "entity": "Supplier.accepts_warehouse_address_format" },
+    { "id": "PRE-05", "item": "已开通收款账户（无销售权则前台隐藏）", "status": "task", "task": "VT-008" }
+  ],
+  "mode_params": [
+    {
+      "id": "P-TW-WH-ADDR-FMT",
+      "name": "当单页面中转仓地址字段结构",
+      "scope": { "platform": "shopee", "market": "TW", "mode": "dropship" },
+      "value": null,
+      "basis": "账号下来后实测当单页面字段结构，用于实现「地址必须来自当单页面」硬规则",
+      "evidence_level": "E",
+      "state": "to_verify",
+      "gate_eligible": false,
+      "blocks_first_order": true,
+      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "review_cycle": "on_first_order",
+      "next_review_at": "2026-12-31",
+      "task_ref": "VT-043"
+    }
+  ],
+  "rules_file": "rules/modes/dropship.json",
+  "own_rules": ["R-ORDER-001", "R-ORDER-002", "R-ORDER-003", "R-SUP-003", "R-LOG-001", "R-LOG-002", "R-LOG-003", "R-LOG-004", "R-LOG-005", "R-LOG-006", "R-LOG-007", "R-LOG-008", "R-MKT-001", "R-MKT-002"],
+  "entities": ["StockCheck", "PurchaseOrder", "Shipment"],
+  "reused_entities": ["Order", "Supplier", "SupplierQuote", "Measurement", "Listing", "ProductCandidate"],
+  "order_state_machine": {
+    "initial": "created",
+    "enforced_order": true,
+    "note": "跳步必须在后端报错，不允许前端禁用按钮代替",
+    "states": ["created", "stock_checked", "ship_arranged", "address_captured", "po_created", "supplier_shipped", "warehouse_scanned", "in_transit", "delivered", "completed", "payable", "paid", "cancelled"],
+    "transitions": [
+      { "from": "created", "to": "stock_checked", "guard": "供应商确认有货（R-ORDER-001 前置）" },
+      { "from": "created", "to": "cancelled", "guard": "全部供应商无货（R-SUP-003）且已下架商品" },
+      { "from": "stock_checked", "to": "ship_arranged", "guard": "stock_checked 已完成，禁止跳步" },
+      { "from": "ship_arranged", "to": "address_captured", "guard": "地址来源 = order_page" },
+      { "from": "address_captured", "to": "po_created", "guard": "R-ORDER-002 通过" },
+      { "from": "po_created", "to": "supplier_shipped", "guard": "供应商已发货" },
+      { "from": "supplier_shipped", "to": "warehouse_scanned", "guard": "中转仓扫描签收" },
+      { "from": "warehouse_scanned", "to": "in_transit", "guard": "跨境段开始" },
+      { "from": "in_transit", "to": "delivered", "guard": "买家签收" },
+      { "from": "delivered", "to": "completed", "guard": "订单完成或退货期届满" },
+      { "from": "completed", "to": "payable", "guard": "进入待打款池" },
+      { "from": "payable", "to": "paid", "guard": "款项到账（触发 Payout 记录与回款天数校准）" }
+    ],
+    "exceptions": [
+      { "id": "EX-01", "condition": "ship_arranged 后 24h 未 po_created", "action": "ALERT P1" },
+      { "id": "EX-02", "condition": "warehouse_scanned 超期", "action": "ALERT（仅当 P-TW-DTS 为 A/B 时启用）" },
+      { "id": "EX-03", "condition": "stock_check = all_out", "action": "暂停商品 + 取消订单流程 + 断货事件" }
+    ]
+  },
+  "stock_degradation_chain": [
+    "主供应商无货 → 备选 1 → 备选 2 → 备选 3（每个限时 10 分钟）",
+    "全部无货：① 立即下架该商品（防继续出单）② 未发货订单按卖家中心当时规则取消 ③ 记录断货事件计入供应商评分",
+    "连续 2 次断货事件 → 更换主供应商"
+  ],
+  "financial_profile": {
+    "inventory_risk": "none（不持有库存）",
+    "cash_outflow_timing": "出单后垫付采购与运费",
+    "cash_inflow_timing": "订单完成后进入待打款池，回款周期见 P-CASH-CYCLE（D 级经验值）",
+    "working_capital_sensitivity": "high"
+  },
+  "market_viability_dependency": {
+    "param": "market.low_value_tax_policy",
+    "rule": "R-MKT-001 / R-MKT-002",
+    "note": "本模式的可行性完全取决于目标市场的低值免税政策，因此必须由市场参数驱动，不得写死在代码中"
+  }
+}

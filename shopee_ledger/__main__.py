@@ -87,6 +87,23 @@ def main(argv: list[str] | None = None) -> int:
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
 
+    sub.add_parser("spec-info", help="打印 spec 概况、配置指纹与加载期问题")
+    q2 = sub.add_parser("quote2", help="v4.0 核算引擎：参数来自 spec，只增不改地留档")
+    q2.add_argument("--market", required=True, help="市场代码，如 TW / TH / MY")
+    q2.add_argument("--price", type=float, required=True, help="商品价（不含买家运费）")
+    q2.add_argument("--purchase", type=float, required=True, help="采购实付（人民币）")
+    q2.add_argument("--domestic", type=float, required=True, help="国内段运费（人民币）")
+    q2.add_argument("--fx", type=float, required=True, help="1 人民币折合多少当地币")
+    q2.add_argument("--sls", type=float, help="SLS 运费（当地币）；缺省则报缺数据")
+    q2.add_argument("--buyer-shipping", type=float, help="买家实付运费")
+    q2.add_argument("--seller-pays-freight", action="store_true", help="卖家包邮")
+    q2.add_argument("--return-rate", type=float, help="退货率预留（覆盖参数）")
+    q2.add_argument("--withdraw-rate", type=float, help="提现费率（覆盖参数）")
+    q2.add_argument("--fx-loss-rate", type=float, help="汇损率（覆盖参数）")
+    q2.add_argument("--ads", type=float, default=0.0)
+    q2.add_argument("--free-window", action="store_true", help="处于免佣窗口内")
+    q2.add_argument("--grant", type=int, help="不填则只打印；填候选品 id 则留档成本快照")
+
     args = parser.parse_args(argv)
     ledger = Ledger(args.db)
     try:
@@ -196,6 +213,56 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         payload = ReadClient(ReadConfig.from_env()).get_escrow_detail(args.order_sn)
         mapped = ledger.apply_escrow(args.candidate, payload)
         print(json.dumps(mapped, ensure_ascii=False))
+        return 0
+    if args.cmd == "spec-info":
+        from shopee_ledger.spec import default_spec
+
+        spec = default_spec()
+        print(spec.summary())
+        print("指纹:", __import__("shopee_ledger.storage", fromlist=["Storage"]).Storage(args.db, spec).fingerprint())
+        if spec.problems:
+            print("加载期问题:")
+            for item in spec.problems:
+                print("  -", item)
+            return 1
+        print("加载期问题: 无")
+        return 0
+    if args.cmd == "quote2":
+        from shopee_ledger.cost_engine import CostEngine, CostInputs
+        from shopee_ledger.gates import GateService
+        from shopee_ledger.spec import default_spec
+
+        spec = default_spec()
+        inputs = CostInputs(
+            market=args.market,
+            price_local=args.price,
+            purchase_cny=args.purchase,
+            domestic_cny=args.domestic,
+            local_per_cny=args.fx,
+            sls_freight=args.sls,
+            buyer_paid_freight=args.buyer_shipping,
+            seller_pays_freight=args.seller_pays_freight,
+            in_free_window=args.free_window,
+            ad_spend=args.ads,
+            withdraw_rate=args.withdraw_rate,
+            fx_loss_rate=args.fx_loss_rate,
+            return_rate=args.return_rate,
+        )
+        result = CostEngine(spec).quote(inputs)
+        print(result.explain())
+        gate = GateService(spec).check("G3", result.gate_context(), platform="shopee", market=args.market)
+        print()
+        print(gate.explain())
+        if args.grant:
+            from shopee_ledger.storage import Storage
+
+            with Storage(args.db, spec) as storage:
+                storage.init()
+                row_id = storage.save_cost_snapshot(
+                    result, subject_type="candidate", subject_id=args.grant, market=args.market)
+                storage.record_audit("quote", "candidate", args.grant, result=gate.result,
+                                     detail={"snapshot_id": row_id})
+            print("已留档 CostSnapshot #%s（只增不改）" % row_id)
         return 0
     if args.cmd == "web":
         from shopee_ledger.web import serve

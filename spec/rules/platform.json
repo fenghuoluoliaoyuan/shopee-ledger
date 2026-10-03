@@ -1,0 +1,433 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "rule",
+  "file_scope": {
+    "layer": "platform"
+  },
+  "note": "平台级横向规则：治理、选品否决、供应商、实测取证、成本核算、上架质量、风控、资金、复盘。任何履约模式都复用这一层。",
+  "rules": [
+    {
+      "id": "R-GOV-001",
+      "layer": "platform",
+      "name": "E 级参数不得进入硬门禁",
+      "gate": "GOV",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "any(rule.level == 'hard' && any(dep.evidence_level == 'E'))",
+      "depends_on": [],
+      "target": "配置加载",
+      "message": "硬门禁引用了 E 级参数，配置非法，服务拒绝启动",
+      "evaluated_by": "validate.py",
+      "runtime": false
+    },
+    {
+      "id": "R-GOV-002",
+      "layer": "platform",
+      "name": "超期参数自动退出硬门禁",
+      "gate": "GOV",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "param.evidence_level in ['A','B'] && now > param.next_review_at",
+      "depends_on": [],
+      "target": "参数生命周期",
+      "effect": "param.state = 'stale'；引用它的规则降级为 soft 并生成复核任务",
+      "message": "参数已过期，已自动降级为提示",
+      "evaluated_by": "validate.py",
+      "runtime": false
+    },
+    {
+      "id": "R-GOV-003",
+      "layer": "platform",
+      "name": "站点/市场参数隔离",
+      "gate": "GOV",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "rule.scope.market != param.scope.market (both != '*')",
+      "depends_on": [],
+      "target": "核算引擎",
+      "message": "同一规则混用了不同市场参数",
+      "evaluated_by": "validate.py",
+      "runtime": false
+    },
+    {
+      "id": "R-GOV-004",
+      "layer": "platform",
+      "name": "履约模式不得越权",
+      "gate": "GOV",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "mode.has_own_registry || mode.has_own_cost_model || mode.has_own_gate_service || (rule.layer == 'mode' && rule.gate in ['G1','G3'])",
+      "depends_on": [],
+      "target": "模式加载",
+      "message": "履约模式不得实现自己的参数注册表、成本模型或门禁服务，也不得定义选品/核算门禁（INV-013）",
+      "evaluated_by": "validate.py",
+      "runtime": false
+    },
+    {
+      "id": "R-SEL-001",
+      "layer": "platform",
+      "name": "品牌/IP/卡通一票否决",
+      "gate": "G1",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "candidate.has_brand_ip == true",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "含品牌/知识产权元素，图片侵权风险高"
+    },
+    {
+      "id": "R-SEL-002",
+      "layer": "platform",
+      "name": "高风险类目一票否决",
+      "gate": "G1",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "candidate.category in ['fragile','apparel','shoes','certified_goods']",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "易碎/服装鞋帽/需认证品类，退货或合规风险不可控"
+    },
+    {
+      "id": "R-SEL-003",
+      "layer": "platform",
+      "name": "违禁词库命中",
+      "gate": "G1",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "match(candidate.title + candidate.desc, banned_terms)",
+      "depends_on": [
+        "P-SLS-BANNED"
+      ],
+      "evidence_level": "E",
+      "on_degrade": "P-SLS-BANNED 为 E 级时降级为 soft + 人工复核",
+      "message": "疑似违禁品类，需人工确认"
+    },
+    {
+      "id": "R-SEL-004",
+      "layer": "platform",
+      "name": "价格战提示",
+      "gate": "G1",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "competitor.top20.discounted_same_items >= 3",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "前排同款大幅折扣，新卖家空间有限"
+    },
+    {
+      "id": "R-SUP-001",
+      "layer": "platform",
+      "name": "供应商数量不足",
+      "gate": "G1",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "count(suppliers(candidate)) < P-SEL-SUP-COUNT.value",
+      "depends_on": [
+        "P-SEL-SUP-COUNT"
+      ],
+      "evidence_level": "D",
+      "message": "可用供应商少于 3 家（含 ≥2 家备选）"
+    },
+    {
+      "id": "R-SUP-002",
+      "layer": "platform",
+      "name": "主供应商资质不足",
+      "gate": "G1",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "supplier.years_in_business < 3 || supplier.days_since_last_trade > 90",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "主供应商经营年限或近期交易不达标"
+    },
+    {
+      "id": "R-DATA-001",
+      "layer": "platform",
+      "name": "重量未实测",
+      "gate": "G2",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "measurement.weight_g == null",
+      "depends_on": [],
+      "evidence_level": "C",
+      "result": "INCOMPLETE",
+      "message": "缺重量数据，无法核算"
+    },
+    {
+      "id": "R-DATA-002",
+      "layer": "platform",
+      "name": "采购实付未录",
+      "gate": "G2",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "purchase_price_cny == null",
+      "depends_on": [],
+      "evidence_level": "C",
+      "result": "INCOMPLETE",
+      "message": "缺采购实付金额，无法核算"
+    },
+    {
+      "id": "R-DATA-003",
+      "layer": "platform",
+      "name": "样品未购买",
+      "gate": "G2",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "sample.bought != true",
+      "depends_on": [],
+      "evidence_level": "C",
+      "result": "INCOMPLETE",
+      "message": "先买样品再称重：没有实物就没有真实重量，运费和利润都无从算起",
+      "next_action": "下单买样品，到手后立即称重"
+    },
+    {
+      "id": "R-COST-001",
+      "layer": "platform",
+      "name": "关键运费档缺失",
+      "gate": "G3",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "sls_freight == null",
+      "depends_on": [
+        "P-TW-SLS-TIERS"
+      ],
+      "evidence_level": "E",
+      "on_degrade": "参数为 E 时只输出 INCOMPLETE，禁止输出 REJECT",
+      "result": "INCOMPLETE",
+      "message": "运费档为空，无法判定是否可上架"
+    },
+    {
+      "id": "R-COST-002",
+      "layer": "platform",
+      "name": "净利润率低于下限",
+      "gate": "G3",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "net_margin < P-TW-MARGIN-TH.value.warn",
+      "depends_on": [
+        "P-TW-MARGIN-TH"
+      ],
+      "evidence_level": "D",
+      "on_degrade": "阈值为 D 级，参数降级时自动转 WARN",
+      "result": "REJECT",
+      "message": "净利润率低于下限，砍掉"
+    },
+    {
+      "id": "R-COST-003",
+      "layer": "platform",
+      "name": "净利润率处于观察区间",
+      "gate": "G3",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "P-TW-MARGIN-TH.value.warn <= net_margin < P-TW-MARGIN-TH.value.pass",
+      "depends_on": [
+        "P-TW-MARGIN-TH"
+      ],
+      "evidence_level": "D",
+      "result": "WARN",
+      "message": "净利润率处于观察区间，建议补选或调整售价"
+    },
+    {
+      "id": "R-COST-004",
+      "layer": "platform",
+      "name": "售价字段混入运费",
+      "gate": "G3",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "inputs.price_local_includes_shipping == true",
+      "depends_on": [],
+      "result": "REJECT",
+      "message": "售价只能录商品价，买家运费必须单列"
+    },
+    {
+      "id": "R-COST-005",
+      "layer": "platform",
+      "name": "净运费成本口径",
+      "gate": "G3",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "net_freight != max(sls_freight - buyer_paid_freight, 0)",
+      "depends_on": [],
+      "effect": "引擎内置，禁止手工覆盖",
+      "message": "净运费成本计算口径错误"
+    },
+    {
+      "id": "R-COST-006",
+      "layer": "platform",
+      "name": "免佣窗口内的佣金与手续费",
+      "gate": "G3",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "(in_free_window && commission != 0) || (in_free_window && txn_fee != price_local * P-TW-TXN-FEE.value)",
+      "depends_on": [
+        "P-TW-FREE-ORDERS",
+        "P-TW-TXN-FEE"
+      ],
+      "evidence_level": "A",
+      "message": "免佣窗口内佣金记 0，但交易手续费照收 2.5%"
+    },
+    {
+      "id": "R-COST-007",
+      "layer": "platform",
+      "name": "提现费率留空",
+      "gate": "G3",
+      "level": "soft",
+      "action": "AUTO_FILL",
+      "condition": "withdraw_rate == null",
+      "depends_on": [
+        "P-TW-WITHDRAW"
+      ],
+      "evidence_level": "D",
+      "effect": "按区间上沿填入并标注为预留值",
+      "message": "提现费率未填，已按经验上沿预留（留空会高估利润）"
+    },
+    {
+      "id": "R-LIST-001",
+      "layer": "platform",
+      "name": "主图非自拍",
+      "gate": "G4",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "listing.main_image_source != 'self_shot'",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "禁止使用上游原图（水印与品牌 Logo 侵权）"
+    },
+    {
+      "id": "R-LIST-002",
+      "layer": "platform",
+      "name": "标题或详情未完成",
+      "gate": "G4",
+      "level": "advisory",
+      "action": "WARN",
+      "condition": "listing.title_ready != true || listing.detail_ready != true",
+      "depends_on": [],
+      "evidence_level": "D",
+      "advisory_only": true,
+      "message": "标题或详情前 3 屏还没写完；属性留空或图片模糊会被判定为低质量刊登，限制曝光",
+      "next_action": "补齐标题三段式与详情前 3 屏（材质/尺寸/售后）"
+    },
+    {
+      "id": "R-RISK-001",
+      "layer": "platform",
+      "name": "标题/描述命中品牌词或违禁词",
+      "gate": "G4",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "match(listing.title + listing.desc, brand_terms + banned_terms)",
+      "depends_on": [
+        "P-SLS-BANNED"
+      ],
+      "evidence_level": "E",
+      "on_degrade": "词库为 E 级时降级为 soft + 人工复核",
+      "message": "命中品牌词/违禁词"
+    },
+    {
+      "id": "R-FIN-001",
+      "layer": "platform",
+      "name": "周转金不足",
+      "gate": "G6",
+      "level": "advisory",
+      "action": "ALERT",
+      "condition": "available_cash < forecast_purchase_7d",
+      "depends_on": [],
+      "evidence_level": "D",
+      "priority": "P1",
+      "message": "可用周转金不足以覆盖未来 7 天采购需求"
+    },
+    {
+      "id": "R-FIN-002",
+      "layer": "platform",
+      "name": "回款超期",
+      "gate": "G6",
+      "level": "advisory",
+      "action": "ALERT",
+      "condition": "order.completed_at < now - P-CASH-CYCLE.value.max_days",
+      "depends_on": [
+        "P-CASH-CYCLE"
+      ],
+      "evidence_level": "D",
+      "priority": "P2",
+      "message": "订单完成超过经验上限仍未到账"
+    },
+    {
+      "id": "R-FIN-003",
+      "layer": "platform",
+      "name": "在途采购占比过高",
+      "gate": "G6",
+      "level": "advisory",
+      "action": "WARN",
+      "condition": "in_transit_purchase > capital * 0.6",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "在途采购超过本金 60%，避免全押"
+    },
+    {
+      "id": "R-KPI-001",
+      "layer": "platform",
+      "name": "估算值超期未校准",
+      "gate": "G7",
+      "level": "advisory",
+      "action": "TASK",
+      "condition": "snapshot.type == 'estimate' && now > snapshot.created_at + calibration_window",
+      "depends_on": [],
+      "message": "生成校准任务：用实测值替换估算值"
+    },
+    {
+      "id": "R-GROW-001",
+      "layer": "platform",
+      "name": "商品卡点击率低于基线",
+      "gate": "G8",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "listing.ctr > 0 && listing.ctr < P-TW-CTR-BASELINE.value.poor_below",
+      "depends_on": [
+        "P-TW-CTR-BASELINE"
+      ],
+      "evidence_level": "D",
+      "message": "点击率低于 1%：优先改主图，其次价格呈现与评价积累；不要先加广告"
+    },
+    {
+      "id": "R-GROW-002",
+      "layer": "platform",
+      "name": "主图未做单变量测试",
+      "gate": "G8",
+      "level": "advisory",
+      "action": "TASK",
+      "condition": "listing.main_image_ab_tested != true",
+      "depends_on": [
+        "P-TW-MAIN-IMAGE-WEIGHT"
+      ],
+      "evidence_level": "D",
+      "message": "主图占点击决策三成以上，但从未做过 A/B 测试"
+    },
+    {
+      "id": "R-GROW-003",
+      "layer": "platform",
+      "name": "未达免运门槛",
+      "gate": "G8",
+      "level": "advisory",
+      "action": "WARN",
+      "condition": "listing.price_local < P-TW-FREESHIP-2026.unverified_claim.shopee_pickup_threshold_twd && listing.free_shipping_enrolled != true",
+      "depends_on": [
+        "P-TW-FREESHIP-2026"
+      ],
+      "evidence_level": "E",
+      "advisory_only": true,
+      "on_degrade": "P-TW-FREESHIP-2026 为 E 级，只提示不拦截",
+      "message": "未达免运门槛的商品在搜索结果里缺少免运标签，点击率与曝光均受影响（阈值待官方原文确认）"
+    },
+    {
+      "id": "R-GROW-004",
+      "layer": "platform",
+      "name": "上新节奏中断",
+      "gate": "G8",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "days_since_last_listing > 7",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "连续 7 天未上新；铺货型店铺的货架曝光依赖持续上新"
+    }
+  ]
+}

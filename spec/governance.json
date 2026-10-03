@@ -1,0 +1,116 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "governance",
+  "note": "平台级横向治理：证据与参数生命周期、验收不变量、告警策略、事件、KPI 与校准。与平台/市场/履约模式无关，任何模式都复用这一层。",
+  "invariants": [
+    { "id": "INV-001", "statement": "任何 level=hard 的规则，其 depends_on 中所有参数的 evidence_level 必须属于 A/B/C", "violation": "配置非法，服务必须拒绝启动（R-GOV-001）" },
+    { "id": "INV-002", "statement": "evidence_level=E 的参数 value 必须为 null", "violation": "配置非法" },
+    { "id": "INV-003", "statement": "evidence_level=A 的参数必须同时具备 source.url、source.checked_at、snapshot_ref", "violation": "视为无证据，降级处理；corroboration 不能替代快照" },
+    { "id": "INV-004", "statement": "核算结果 status 为 INCOMPLETE 时 missing_fields 必须非空", "violation": "引擎 bug" },
+    { "id": "INV-005", "statement": "仅依赖 E 级参数的规则不得输出 REJECT", "violation": "引擎 bug（R-LOG-008 自检）" },
+    { "id": "INV-006", "statement": "所有数值字段必须区分 null 与 0，禁止把缺失值静默当 0", "violation": "系统性高估利润" },
+    { "id": "INV-007", "statement": "CostSnapshot、SupplierQuote、AuditLog 只增不改", "violation": "破坏可追溯性" },
+    { "id": "INV-008", "statement": "每个被跳过的流程步骤必须在 AuditLog 留痕，禁止静默跳步", "violation": "流程失控" },
+    { "id": "INV-009", "statement": "params_version 必须随每次参数变更递增，历史快照不得回溯改写", "violation": "账目漂移" },
+    { "id": "INV-010", "statement": "stale 状态的参数不得参与任何 hard 判定", "violation": "用过期费率做硬拦截" },
+    { "id": "INV-011", "statement": "E 级参数不得被 hard 规则读取；E 级的未核实数值只能放在 unverified_claim，读取它的规则必须 advisory_only=true 且只能输出 WARN 或 INCOMPLETE", "violation": "用未核实数据硬拦截" },
+    { "id": "INV-012", "statement": "参数 scope 必须与其所在文件的层级一致（market.*.json 内的参数 market 不得为别的市场）", "violation": "分层失效，市场间参数串用" },
+    { "id": "INV-013", "statement": "履约模式不得实现自己的参数注册表、成本模型、证据分级或门禁服务；模式专属参数必须带 scope.mode 并经平台 ParamRegistry 统一校验（mode_params 是登记，不是独立参数表）；模式只能拥有 modes.<id>.owns 中列出的能力", "violation": "模式越权，架构重新退化为硬编码" },
+    { "id": "INV-014", "statement": "参数上的 task_ref 必须指向一个 target_param_id 等于该参数、或 also_targets 包含该参数的任务；反向也必须成立", "violation": "任务与参数引用不对称，取证清单会漏项（v4.0 初稿曾违反，独立校验发现后修复）" }
+  ],
+  "state_machines": {
+    "product": {
+      "initial": "candidate",
+      "states": ["candidate", "accepted", "measured", "costed", "observe", "listed", "dropped", "rejected"],
+      "transitions": [
+        { "from": "candidate", "to": "accepted", "guard": "R-SEL-001/002/003 全部通过" },
+        { "from": "candidate", "to": "rejected", "guard": "命中任一 R-SEL", "note": "不可回退" },
+        { "from": "accepted", "to": "measured", "guard": "样品到手且完成称重（R-DATA-001 通过）" },
+        { "from": "measured", "to": "costed", "guard": "R-DATA-002 通过且核算完成" },
+        { "from": "costed", "to": "listed", "guard": "结果 PASS" },
+        { "from": "costed", "to": "observe", "guard": "结果 WARN" },
+        { "from": "costed", "to": "dropped", "guard": "结果 REJECT" },
+        { "from": "costed", "to": "measured", "guard": "结果 INCOMPLETE，需补数据" },
+        { "from": "observe", "to": "costed", "guard": "补选或调价后重新核算" }
+      ]
+    },
+    "verification_task": {
+      "initial": "todo",
+      "states": ["todo", "doing", "done", "upgraded"],
+      "transitions": [
+        { "from": "todo", "to": "doing", "guard": "领取任务" },
+        { "from": "doing", "to": "done", "guard": "结论与来源已记录" },
+        { "from": "done", "to": "upgraded", "guard": "参数已写入并发布（触发 ParamUpgrade）" },
+        { "from": "doing", "to": "todo", "guard": "证据不完整，退回" }
+      ]
+    },
+    "param_lifecycle": {
+      "initial": "draft",
+      "states": ["draft", "to_verify", "active", "stale"],
+      "transitions": [
+        { "from": "draft", "to": "to_verify", "guard": "标记为 E 级，value = null" },
+        { "from": "to_verify", "to": "active", "guard": "核实完成，写入 value + 来源 + 快照" },
+        { "from": "active", "to": "stale", "guard": "now > next_review_at（R-GOV-002）", "effect": "自动退出硬门禁并生成复核任务" },
+        { "from": "stale", "to": "active", "guard": "复核完成并更新 checked_at / next_review_at" }
+      ]
+    }
+  },
+  "events": [
+    { "id": "candidate.rejected", "trigger": "命中一票否决", "action": "记录原因并禁止进入核算" },
+    { "id": "measurement.missing", "trigger": "提交核算但缺重量或采购实付", "action": "返回 INCOMPLETE + 缺失字段清单" },
+    { "id": "cost.incomplete", "trigger": "关键费率或运费缺失", "action": "标记缺数据，不判 REJECT" },
+    { "id": "cost.rejected", "trigger": "净利润率低于下限", "action": "标记砍掉并保存 trace" },
+    { "id": "order.created", "trigger": "平台新订单", "action": "按订单所属 mode 创建对应履约状态机" },
+    { "id": "address.source_invalid", "trigger": "地址来源非当单页面", "action": "拒绝提交采购单（P0）" },
+    { "id": "stock.all_out", "trigger": "所有备选供应商无货", "action": "下架任务 + 断货事件" },
+    { "id": "payout.received", "trigger": "款项到账", "action": "关闭回款跟踪并计算真实回款天数" },
+    { "id": "payout.overdue", "trigger": "超期未到账", "action": "告警 P2" },
+    { "id": "cash.shortage", "trigger": "周转金不足", "action": "告警 P1" },
+    { "id": "param.expired", "trigger": "A/B 参数超过复核日", "action": "降级为 stale + 生成复核任务" },
+    { "id": "task.verification_overdue", "trigger": "核实任务逾期", "action": "看板置顶 + 催办" },
+    { "id": "calibration.applied", "trigger": "实测值替换估算值", "action": "写入新参数版本并记录差异" },
+    { "id": "market.viability_changed", "trigger": "市场免税门槛/税率/时效参数变化", "action": "重算该市场 dropship_viability 并提示（advisory，不阻断）" }
+  ],
+  "alert_policy": [
+    { "priority": "P0", "scope": "可能造成直接损失或封店", "examples": ["地址来源非法", "未确认库存即发货"], "sla": "立即（系统硬拦）", "channel": "界面阻断 + 审计日志" },
+    { "priority": "P1", "scope": "影响履约或现金流", "examples": ["发货超时风险", "周转金不足", "断货"], "sla": "当天处理", "channel": "站内待办 + 置顶" },
+    { "priority": "P2", "scope": "影响体验或账目", "examples": ["回款超期", "订单异常"], "sla": "2 个工作日", "channel": "站内提醒" },
+    { "priority": "P3", "scope": "优化类", "examples": ["参数待复核", "KPI 待校准", "市场可行性变化"], "sla": "按复核周期", "channel": "周报汇总" }
+  ],
+  "alert_design_rules": [
+    "E 级参数一律不产生时效类告警，只产生待核实任务",
+    "宁可少而准，不可多而废",
+    "告警必须包含规则 ID、依据参数、证据等级与下一步动作",
+    "市场可行性变化属 advisory，只能提示，不得自动停售或拦截"
+  ],
+  "kpis": [
+    { "id": "KPI-SURVIVAL", "name": "选品存活率", "formula": "net_margin >= 阈值 的候选数 / 完成核算的候选数", "exclude": "INCOMPLETE 不计入分母", "calibrates": "P-TW-MARGIN-TH" },
+    { "id": "KPI-FIRST-ORDER", "name": "第一单周期", "formula": "首个订单日期 - 激活日期", "unit": "days" },
+    { "id": "KPI-PROCURE-TO-WH", "name": "采购到仓时长", "formula": "median(warehouse_scanned_at - po_created_at)", "unit": "hours", "calibrates": "R-ORDER-003.lead_time", "mode": "dropship" },
+    { "id": "KPI-LATE-SHIP", "name": "迟发率", "formula": "迟发订单数 / 发货订单数", "calibrates": "P-TW-DTS, 供应商评分" },
+    { "id": "KPI-RETURN", "name": "退款/退货率", "formula": "退款订单数 / 完成订单数", "calibrates": "P-RETURN-RATE" },
+    { "id": "KPI-CASH-CYCLE", "name": "回款天数", "formula": "median(received_at - completed_at)", "calibrates": "P-CASH-CYCLE" },
+    { "id": "KPI-EST-DEVIATION", "name": "估算 vs 实测利润偏差", "formula": "estimate_net_margin - actual_net_margin", "calibrates": "P-TW-WITHDRAW, P-FX-LOSS, 运费估算" },
+    { "id": "KPI-UNIT-ECON", "name": "单位经济", "formula": "单均净利润 / 单均采购 / 单均运费" },
+    { "id": "KPI-OOS", "name": "断货率", "formula": "断货事件数 / 出单 SKU 数", "calibrates": "P-SEL-SUP-COUNT", "mode": "dropship" },
+    { "id": "KPI-EXPOSURE", "name": "曝光与转化（M6 补齐）", "formula": "曝光 / 访客 / 加购 / 转化率 / 广告 ACoS", "status": "planned", "note": "v3.0 完全缺失，是最大结构空白" }
+  ],
+  "calibration": [
+    { "estimate_param": "P-TW-SLS-TIERS", "actual_source": "当单页面实际运费", "when": "每单出单后", "upgrade_to": "C" },
+    { "estimate_param": "P-TW-WITHDRAW", "actual_source": "收款商实际扣费", "when": "首次提现后", "upgrade_to": "C" },
+    { "estimate_param": "P-RETURN-RATE", "actual_source": "真实退款/退货记录", "when": "累计 >= 20 单", "upgrade_to": "C" },
+    { "estimate_param": "P-CASH-CYCLE", "actual_source": "实际到账时间", "when": "累计 >= 5 笔", "upgrade_to": "C" },
+    { "estimate_param": "R-ORDER-003.lead_time", "actual_source": "采购到仓时间戳", "when": "累计 >= 10 单", "upgrade_to": "C", "mode": "dropship" },
+    { "estimate_param": "P-TW-TXN-FEE-BASIS", "actual_source": "平台账单实际金额", "when": "首单账单后", "upgrade_to": "B", "note": "用真实金额替代基数争议" },
+    { "estimate_param": "P-TW-FX", "actual_source": "账单结算汇率与银行汇率比对", "when": "首次回款后", "upgrade_to": "C" },
+    { "estimate_param": "market.dropship_viability", "actual_source": "该市场低值免税/税率/时效参数变化", "when": "参数变更时", "upgrade_to": "A/B", "note": "可行性来自参数，不来自人工判断" }
+  ],
+  "review_calendar": {
+    "quarterly": "费率类、政策类参数复核；E 级任务清账",
+    "on_policy_change": "官方公告发布即触发",
+    "on_first_payout": "提现费率、汇率口径",
+    "on_20_orders": "退货率",
+    "on_5_payouts": "回款周期",
+    "on_first_round": "选品阈值、存活率阈值"
+  }
+}

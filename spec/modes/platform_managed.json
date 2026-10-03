@@ -1,0 +1,20 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "mode",
+  "id": "platform_managed",
+  "name": "平台全托管",
+  "status": "planned",
+  "platform_scope": ["temu", "tiktok_shop"],
+  "market_scope": [],
+  "summary": "卖家仅供货，平台负责定价、营销、物流与售后。卖家侧几乎不承担运营风险，代价是定价权与利润空间被锁定。",
+  "owns": ["供货价", "审版图审", "备货到国内仓"],
+  "does_not_own": ["参数注册表", "成本模型实现", "证据分级实现", "门禁服务实现", "审计实现", "定价与广告"],
+  "implementation_status": "not_implemented",
+  "open_items": [
+    "成本模型退化为「供货价 − 采购成本 − 国内运费」，需要独立核算模板",
+    "需要新增实体：SupplyOffer / SampleReview / DomesticStockTransfer",
+    "门禁大幅简化：选品与定价门禁不适用，仅保留合规与供货价门槛",
+    "已知行业数据：全托管利润通常在 3%-5%（D 级经验值，需实测校准）"
+  ],
+  "reuses": ["ParamRegistry", "EvidenceCenter", "GateService", "CostEngine", "AuditLog"]
+}

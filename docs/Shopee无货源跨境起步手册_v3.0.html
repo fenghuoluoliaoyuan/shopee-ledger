@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Shopee 无货源跨境起步手册 v3.0（智能卖家后台版）</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif; color:#1a1a1a; line-height:1.7; font-size:10.5pt; margin:0; padding:0; }
+  h1 { font-size:22pt; margin:0 0 6px; color:#1F4E78; }
+  h2 { font-size:15pt; color:#1F4E78; margin:26px 0 10px; border-bottom:2px solid #1F4E78; padding-bottom:5px; }
+  h3 { font-size:12pt; margin:18px 0 8px; color:#2c3e50; }
+  h4 { font-size:10.8pt; margin:14px 0 6px; color:#34495e; }
+  p { margin:6px 0; }
+  ul,ol { margin:6px 0 6px 20px; padding:0; }
+  li { margin:3px 0; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:9.5pt; page-break-inside:avoid; }
+  th,td { border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#1F4E78; color:#fff; font-weight:600; }
+  tr:nth-child(even) td { background:#f7f9fc; }
+  code { background:#f0f2f5; padding:1px 5px; border-radius:3px; font-family:"JetBrains Mono",Consolas,monospace; font-size:9.5pt; }
+  pre { background:#f4f6f9; border:1px solid #dde3ea; border-radius:4px; padding:10px 12px; font-family:"JetBrains Mono",Consolas,monospace; font-size:9pt; line-height:1.5; overflow-x:auto; white-space:pre-wrap; }
+  .cover { text-align:center; padding:50px 0 32px; border-bottom:3px solid #1F4E78; margin-bottom:26px; }
+  .cover .sub { font-size:12pt; color:#555; margin-top:10px; }
+  .cover .small { font-size:9.5pt; color:#888; margin-top:8px; }
+  .cover .meta { font-size:9.5pt; color:#888; margin-top:26px; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:3px; font-size:8.5pt; font-weight:600; color:#fff; margin-right:4px; white-space:nowrap; }
+  .tag-A{background:#1F7A3D;} .tag-B{background:#2E86C1;} .tag-C{background:#B9770E;} .tag-D{background:#7D3C98;} .tag-E{background:#C0392B;}
+  .tag-hard{background:#C0392B;} .tag-soft{background:#B9770E;} .tag-adv{background:#7F8C8D;} .tag-none{background:#95A5A6;}
+  .box { border-left:4px solid #C0392B; background:#fdf3f2; padding:10px 14px; margin:12px 0; border-radius:0 4px 4px 0; }
+  .box.note { border-left-color:#2E86C1; background:#f0f7fd; }
+  .box.warn { border-left-color:#C0392B; background:#fdf3f2; }
+  .box.ok { border-left-color:#1F7A3D; background:#f0f9f3; }
+  .box.sys { border-left-color:#7D3C98; background:#f8f4fd; }
+  .box.sys strong.sysh { color:#5B2C8D; }
+  .toc { background:#f7f9fc; border:1px solid #dde3ea; padding:14px 20px; border-radius:6px; }
+  .toc ol { margin-left:18px; }
+  .toc .grp { margin:8px 0 2px; font-weight:600; color:#1F4E78; font-size:10pt; }
+  .page-break { page-break-before:always; }
+  .footer-note { font-size:8.5pt; color:#888; margin-top:4px; }
+  .src { font-size:8.5pt; color:#1F7A3D; background:#f0f9f3; padding:6px 10px; border-left:3px solid #1F7A3D; margin:10px 0 18px; border-radius:0 3px 3px 0; }
+  .gate { display:inline-block; padding:1px 8px; border-radius:10px; font-size:9pt; font-weight:700; color:#fff; background:#1F4E78; margin-right:5px; }
+  .chg { font-size:9pt; }
+  .chg td:last-child { font-size:9pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Shopee 无货源跨境起步手册</h1>
+  <div class="sub">v3.0 · 模块手册：履约 · 无货源（DROPSHIP）</div>
+  <div class="small" style="margin-top:6px; color:#7D3C98;"><strong>定位变更：</strong>自 v4.0 架构起，本手册降级为《智能卖家后台》的模块实现说明，平台级设计见 <code>智能卖家后台_总体架构_v1.0.html</code>。文中所有对 <code>spec/manual-core.json</code> 的引用请改指 <code>spec/params/</code>、<code>spec/rules/</code>、<code>spec/modes/</code>。</div>
+  <div class="sub">两万元预算 · 台湾站（个体户首站） / 马来西亚站（企业执照可选） · 一件代发模式</div>
+  <div class="small">个体户执照首站可能仅限台湾站（E 级待核实）；企业执照可选马来等站点。</div>
+  <div class="sub" style="margin-top:10px; color:#1F4E78; font-weight:600;">先跑通第一单，且利润为正</div>
+  <div class="small" style="margin-top:12px; max-width:640px; margin-left:auto; margin-right:auto;">
+    本版双重定位：<strong>第 1–12 章给人读</strong>（判断与动作），<strong>第 13–20 章给系统读</strong>（数据、规则、门禁、闭环）。
+    紫色「系统落地」框标注每一章对应的后台模块。机器可读配置见 <code>spec/</code>（分层结构见架构文档第 8 节）。
+  </div>
+  <div class="meta">版本 v3.0 &nbsp;|&nbsp; 状态：执行中 &nbsp;|&nbsp; 编制日期：2026-10-03 &nbsp;|&nbsp; 上游版本：v2.6</div>
+</div>
+
+<div class="toc">
+  <h3 style="margin-top:0;">目录</h3>
+  <div class="grp">第一部分 · 人读：行动手册（第 1–12 章）</div>
+  <ol>
+    <li>使用说明与证据等级</li>
+    <li>入驻与账户</li>
+    <li>选品标准</li>
+    <li>供应商管理</li>
+    <li>利润核算模型（主模型：台湾站 NT$）</li>
+    <li>闭环与门禁总览</li>
+    <li>上架与履约</li>
+    <li>风险与合规</li>
+    <li>税务合规</li>
+    <li>台湾站物流与时效</li>
+    <li>资金回款与现金流</li>
+    <li>证据采集任务清单（原「待核实清单」）</li>
+  </ol>
+  <div class="grp">第二部分 · 机读：智能卖家后台底座（第 13–20 章）</div>
+  <ol start="13">
+    <li>智能卖家后台总体架构</li>
+    <li>数据模型与字段字典</li>
+    <li>规则引擎与门禁矩阵</li>
+    <li>状态机规格</li>
+    <li>事件、告警与任务 SLA</li>
+    <li>复盘与 KPI 闭环（含参数校准）</li>
+    <li>手册与参数治理</li>
+    <li>实施路线图</li>
+  </ol>
+  <div class="grp">第三部分 · 附录</div>
+  <ol start="21">
+    <li>变更记录</li>
+    <li>附录 A 术语表 / 附录 B 来源复核记录 / 附录 C 来源交叉验证记录（2026-10-03）</li>
+  </ol>
+</div>
+
+<div class="page-break"></div>
+<h2>1. 使用说明与证据等级</h2>
+<p>本手册用于 Shopee 无货源一件代发模式的起步阶段，<strong>同时作为智能卖家后台的知识底座与规则来源</strong>。所有条目均标注证据等级，<strong>费率、政策、周期类内容不写死</strong>，以官方当期公示为准。</p>
+
+<h3>1.1 双重读法</h3>
+<table>
+  <tr><th style="width:18%;">读者</th><th style="width:26%;">读什么</th><th>用法</th></tr>
+  <tr><td><strong>人</strong></td><td>第 1–12 章正文</td><td>判断、决策、执行动作。遇到紫色「系统落地」框可略过。</td></tr>
+  <tr><td><strong>系统</strong></td><td><code>spec/manual-core.json</code> + 第 13–20 章</td><td>读参数、规则、门禁、状态机、告警与 KPI，直接生成配置表与校验服务。</td></tr>
+  <tr><td><strong>维护者</strong></td><td>第 12 章 + 第 19 章</td><td>按第 19 章治理流程采集证据、升级等级、发布新版本。</td></tr>
+</table>
+
+<h3>1.2 证据等级（含系统门禁资格）</h3>
+<table>
+  <tr><th style="width:7%;">等级</th><th style="width:17%;">含义</th><th style="width:20%;">写法与处理方式</th><th style="width:16%;">可否作为系统门禁</th><th>典型用途</th></tr>
+  <tr><td><span class="tag tag-A">A</span></td><td>官方硬规则</td><td>可写死。必须注明来源页面、查询日期、复核状态</td><td><strong>可硬拦</strong>（需未过期）</td><td>费率、关税起征点、免佣规则</td></tr>
+  <tr><td><span class="tag tag-B">B</span></td><td>卖家后台实测</td><td>账号下来后，从卖家中心抄真实数值</td><td><strong>可硬拦</strong>（绑定站点/类目）</td><td>SLS 运费档、保证金、DTS 时效</td></tr>
+  <tr><td><span class="tag tag-C">C</span></td><td>自己实测数据</td><td>称重、采购实付、运费报价等</td><td><strong>可硬拦</strong>（单条记录级）</td><td>实际重量、下单页实付</td></tr>
+  <tr><td><span class="tag tag-D">D</span></td><td>经验启发</td><td>可参考，不写死，标注「经验值」</td><td><strong>只能软提示</strong>，不得硬拦</td><td>净利润率阈值、退货率预留</td></tr>
+  <tr><td><span class="tag tag-E">E</span></td><td>待验证</td><td>留空，进入第 12 章证据采集任务。<strong>不作为第一单门禁</strong></td><td><strong>禁止进入计算与门禁</strong>，只能生成任务</td><td>首站限制、店配重量、罚分细则</td></tr>
+</table>
+
+<h3>1.3 核实渠道优先级与通道可达性</h3>
+<p>核实渠道优先级：官方文档 &gt; 卖家中心 &gt; 收款商官网 &gt; 物流商报价 &gt; 自己实测 &gt; 行业经验 &gt; 智能体方案。</p>
+<table>
+  <tr><th style="width:24%;">渠道</th><th style="width:14%;">可达性</th><th>说明（2026-10-03 复核）</th></tr>
+  <tr><td>shopee.cn/edu 卖家学习中心</td><td>仅人工</td><td>机器抓取返回 JS 空壳（"Seller Education Hub"），正文不可机读。<strong>必须人工登录截图存档</strong></td></tr>
+  <tr><td>help.shopee.tw 帮助中心</td><td>本次不可达</td><td>2026-10-03 复核 fetch 失败。需在可访问网络环境下人工复核并留存快照</td></tr>
+  <tr><td>Shopee 卖家中心（登录后）</td><td>账号下来后可达</td><td>B 级来源的主要入口，所有费率/时效以这里为准</td></tr>
+  <tr><td>招商经理 / 官方公告</td><td>可达</td><td>E 级冲突项（如首站限制）优先走这条通道书面确认</td></tr>
+  <tr><td>收款商官网</td><td>可达</td><td>提现费率以注册时页面为准</td></tr>
+  <tr><td>行业媒体（智象出海等）</td><td>可达</td><td>可对官方公告做<strong>交叉验证</strong>：印证公告存在性与细节一致性。<strong>不能替代官方原文</strong>，只降低「编造」风险，不改变证据等级归属</td></tr>
+  <tr><td>自己实测</td><td>最可靠</td><td>称重、实付、时效，优先于任何二手来源</td></tr>
+</table>
+<div class="box warn">
+  <strong>可达性带来的治理要求（新增）：</strong>A 级条目虽然标了来源 URL 与查询日期，但<strong>当前无法机器复核</strong>。因此：
+  <ul style="margin-top:4px;">
+    <li>每条 A 级参数必须记录 <code>复核状态</code>（可机读 / 仅人工 / 阻塞）与 <code>下次复核日期</code>。</li>
+    <li>到期未复核的 A 级参数<strong>自动退出硬门禁</strong>，降级为软提示（见第 15 章 R-GOV-002）。</li>
+    <li>禁止把 A 级参数的价值建立在「某篇文章里写过」上；必须留原始页面快照或登录复核记录。</li>
+  </ul>
+</div>
+
+<h3>1.4 三条底线</h3>
+<div class="box warn">
+  <ul style="margin-top:4px;">
+    <li>费率不写死，单独做参数表，每季度更新。</li>
+    <li>经验值单独标 <span class="tag tag-D">D</span>，不与官方规则混写。</li>
+    <li>涉及平台风控红线的操作（去水印、改 MD5、批量差异化、自动抢活动）不写入手册，<strong>也不在后台中实现</strong>。</li>
+  </ul>
+</div>
+
+<h3>1.5 系统门禁五原则（新增）</h3>
+<table>
+  <tr><th style="width:8%;">#</th><th style="width:30%;">原则</th><th>含义</th></tr>
+  <tr><td>1</td><td>只有 A/B/C 能硬拦</td><td>D 级只能生成提示或默认值，E 级只能生成任务</td></tr>
+  <tr><td>2</td><td>缺数据 ≠ 不可做</td><td>结果状态为 <code>INCOMPLETE</code>，不是 <code>REJECT</code>；提示补哪一项数据</td></tr>
+  <tr><td>3</td><td>一切门禁必须可解释</td><td>拦截时必须给出：规则 ID、依据参数、证据等级、下一步动作</td></tr>
+  <tr><td>4</td><td>一切参数必须可追溯</td><td>来源 URL + 查询日期 + 复核状态 + 复核人</td></tr>
+  <tr><td>5</td><td>一切估算必须可校准</td><td>估算值出单后被实测值替换，并回写阈值（第 18 章）</td></tr>
+</table>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 13 / 15 / 19 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>证据等级是<strong>一等字段</strong>：<code>params[].evidence_level</code>，门禁服务据此决定 <code>hard / soft / advisory</code>。</li>
+    <li>门禁判定必须返回四元组：<code>{rule_id, result, evidence_level, next_action}</code>。</li>
+    <li>结果枚举固定为：<code>PASS / INCOMPLETE / WARN / REJECT</code>，禁止只返回布尔值。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>2. 入驻与账户</h2>
+
+<div class="box warn">
+  <strong>关键前置约束：个体工商户执照首站可能仅限台湾站。</strong>
+  <p style="margin-top:4px;">多个行业来源称中国大陆个体工商户执照入驻 Shopee 跨境店首站只能选台湾站，但 <code>seller.shopee.cn</code> 入驻须知原文未打开核实，也有来源称首站可自选十大站点。<strong>此条待核实，不作为第一单门禁。</strong>需在提交入驻前通过官方渠道确认。<span class="tag tag-E">E</span></p>
+</div>
+
+<h3>2.1 个体工商户执照</h3>
+<table>
+  <tr><th style="width:26%;">项目</th><th style="width:10%;">等级</th><th>说明</th></tr>
+  <tr><td>申请渠道</td><td><span class="tag tag-E">E</span></td><td>有来源称通过当地政务服务网 / 市场监管局小程序线上申请，但无具体网址可打开核实。见第12章第36项</td></tr>
+  <tr><td>经营范围建议</td><td><span class="tag tag-D">D</span></td><td>互联网销售、日用百货销售、工艺品销售、货物进出口、技术进出口（按选品方向调整）</td></tr>
+  <tr><td>经营场所（住宅可否）</td><td><span class="tag tag-E">E</span></td><td>属当地事项，以当地政务平台要求为准</td></tr>
+  <tr><td>周期</td><td><span class="tag tag-E">E</span></td><td>属当地事项，以实际为准</td></tr>
+  <tr><td>费用</td><td><span class="tag tag-E">E</span></td><td>属当地事项，以实际为准</td></tr>
+</table>
+
+<h3>2.2 Shopee 卖家账号</h3>
+<table>
+  <tr><th style="width:26%;">项目</th><th style="width:10%;">等级</th><th>说明</th></tr>
+  <tr><td>入口</td><td><span class="tag tag-E">E</span></td><td>有来源称卖家入口为 seller.shopee.cn，但入驻须知正文未打开，也没有查询日期。见第12章第39项</td></tr>
+  <tr><td>站点选择</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>多个来源称个体户首站仅限台湾站，但官方原文未打开；也有来源称首站可自选。提交前通过官方渠道确认。见第12章第1项</td></tr>
+  <tr><td>营业执照状态</td><td><span class="tag tag-E">E</span></td><td>查询入口：<a href="https://www.gsxt.gov.cn">https://www.gsxt.gov.cn</a>（国家企业信用信息公示系统），可查询营业执照存续状态及经营异常名录。「入驻必须存续、无异常」这半句没有入驻页原文支撑，待核实。见第12章第37项</td></tr>
+  <tr><td>手机号要求</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>有来源称手机号需实名且从未注册过 Shopee，未找到可打开的官方入驻页面原文。见第12章第4项</td></tr>
+  <tr><td>法人身份证有效期</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>有来源称需剩余至少6个月，但未找到可打开的官方入驻页面原文。见第12章第5项</td></tr>
+  <tr><td>邮箱要求</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>有来源称优先 Outlook/Gmail，但未找到官方原文。见第12章第6项</td></tr>
+  <tr><td>法人实名认证</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>有来源称含人脸识别视频，但未找到可打开的官方入驻页面原文。见第12章第7项</td></tr>
+  <tr><td>电商流水</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>有来源称2026年已取消强制流水，也有来源称个体户申请台湾站仍需提供近3个月内贸平台流水。见第12章第2项</td></tr>
+  <tr><td>审核周期</td><td><span class="tag tag-E">E</span></td><td>资料齐全约3-7个工作日，以实际为准</td></tr>
+</table>
+
+<h3>2.3 保证金、免佣与佣金</h3>
+<table>
+  <tr><th style="width:26%;">项目</th><th style="width:10%;">等级</th><th>说明</th></tr>
+  <tr><td>保证金</td><td><span class="tag tag-E">E</span></td><td><strong>待核实。</strong>有来源称新卖家前3个月免缴保证金，之后约3000元，但带「约」字。见第12章第8项</td></tr>
+  <tr><td>免佣期</td><td><span class="tag tag-A">A</span></td><td>2026-01-01（北京时间）及之后开通、并激活销售权的台湾站首店，免除前三个月佣金，每月前 500 单；含跨境直邮。当月 19 日及之前激活，从次月起算；19 日之后激活，从次次月起算。当月取消或当月全额退货的订单从这 500 单里剔除。交易手续费和平台服务费照收。巴西、墨西哥是佣金直减 10%，不是台湾这条。新加坡 6 个月也与台湾无关。<span class="footer-note">来源：https://shopee.cn/edu/article/26619，页面更新 2026-09-03 · 查询日期 2026-10-03 · 复核状态：仅人工（该页机器抓取为 JS 空壳）· <strong>交叉验证：</strong>智象出海 2026-02-12，3 个月免佣 / 每月 500 单 / 19 日激活规则逐条一致</span></td></tr>
+  <tr><td>佣金费率</td><td><span class="tag tag-A">A</span></td><td>自 2026-01-01（北京时间）起，台湾跨境直邮佣金 14%（含税），交易手续费 2.5%（含税），只适用于生效后生成的订单。<strong>佣金按（商品售价 + 平台商品补贴 − 卖家优惠折扣）× 费率计算，不含订单运费。</strong>免运服务并入平台基础服务，免运活动费取消，店铺免费享受免运。<span class="footer-note">来源：https://shopee.cn/edu/article/26620，发布日期 2025-12-22 · 查询日期 2026-10-03 · 复核状态：仅人工（该页机器抓取为 JS 空壳）· <strong>交叉验证：</strong>智象出海 2025-12-24，台湾站 14% / 2.5% / 3% 与「免运并入基础服务」逐条一致</span></td></tr>
+  <tr><td>预售服务费</td><td><span class="tag tag-A">A</span></td><td>仅预售订单收取 3%（含税），普通单不加。<span class="footer-note">来源：https://shopee.cn/edu/article/26620 · 查询日期 2026-10-03 · <strong>交叉验证：</strong>同批公告（附录 C）</span></td></tr>
+  <tr><td>入驻费/年费</td><td><span class="tag tag-E">E</span></td><td>有来源称平台不收取，待官方原文确认</td></tr>
+</table>
+
+<h3>2.4 收款账户</h3>
+<ul>
+  <li><strong>候选：</strong>连连支付 / Payoneer / PingPong，选其一。</li>
+  <li><strong>材料：</strong>身份证、执照（可后补）、店铺链接（可后补）。</li>
+  <li><strong>周期：</strong>常比店铺审核慢，<strong>应最先提交</strong>。<span class="tag tag-D">D</span></li>
+  <li><strong>费率参考：</strong>台湾站提现费率区间约 0.5%-1.2%（<span class="tag tag-D">D</span>，无打开的费率页）；连连约 0.7%-0.8%（<span class="tag tag-D">D</span>，注册页抄到后再替换）、PingPong 约 1%、Payoneer 约 1.2%；另有汇兑损失约 0.3%-0.5%。<strong>利润表里取区间上沿预留，再加汇损。</strong>以注册时页面为准。</li>
+</ul>
+<div class="box note">
+  <strong>执行顺序：</strong>
+  <ol style="margin-top:4px; margin-bottom:0;">
+    <li>执照与收款账户<strong>并行提交</strong>。</li>
+    <li>审核期间：选候选品 → <strong>买样品</strong> → 称重 → 记录 1688 下单页实付 → 询国内运费。<strong>先买样品，否则没有重量可录</strong>。</li>
+    <li><strong>佣金 14% 和手续费 2.5% 现在就填进利润表</strong>（免佣窗口内佣金记 0）；账号下来后补 SLS 运费档和当单实际值。</li>
+  </ol>
+</div>
+
+<h3>2.5 入驻阶段门禁 <span class="gate">G0</span></h3>
+<table>
+  <tr><th style="width:22%;">门禁项</th><th style="width:12%;">等级</th><th style="width:26%;">通过条件</th><th>不通过时</th></tr>
+  <tr><td>主体类型已确认</td><td><span class="tag tag-D">D</span></td><td>个体户 / 企业 二选一已记录</td><td>软提示：影响首站与保证金参数选择</td></tr>
+  <tr><td>首站规则已核实</td><td><span class="tag tag-E">E</span></td><td>E 级，<strong>不作为门禁</strong></td><td>生成第 12 章第 1 项任务；系统按「未知」渲染，不得替用户选站</td></tr>
+  <tr><td>材料齐套</td><td><span class="tag tag-E">E</span></td><td>清单逐项打勾（清单本身为待核实项）</td><td>生成提醒任务，不阻塞记录</td></tr>
+  <tr><td>收款账户已提交</td><td><span class="tag tag-D">D</span></td><td>状态 ≥ 已提交</td><td>软提示：未绑定收款账户无销售权（E 级说法，仅提示）</td></tr>
+</table>
+
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 14 / 16 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>实体 <code>OnboardingCase</code>：执照类型、提交日期、材料勾选、审核状态、激活日期。</li>
+    <li><strong>激活日期是核心字段</strong>：免佣窗口的起算依赖它（19 日规则），后台据此计算免佣窗口区间并写入 <code>CommissionFreeWindow</code>。</li>
+    <li>入驻进度用状态机 <code>draft → submitted → reviewing → activated</code>，每步记录时间戳，用于计算真实审核周期（回填 E 级「审核周期」）。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>https://shopee.cn/edu/article/26619（免佣期）；https://shopee.cn/edu/article/26620（佣金费率、交易手续费、预售服务费）· 查询日期 2026-10-03 · <strong>2026-10-03 机器复核：两页均返回 JS 空壳，正文不可机读，需人工登录复核</strong>。站点选择、手机号、身份证、邮箱、人脸识别、流水、保证金、入驻费为 E 级待核实；提现费率为 D 级经验值。<br><strong>2026-10-03 交叉验证（新增）：</strong>独立行业媒体对同一次政策公告的报道与本章 A 级条目<strong>逐条一致</strong>（含「19 日激活规则」这一非常规细节），编造风险基本排除——详见附录 C。<strong>但这不改变复核状态</strong>：官方页面快照仍是 A 级参数的强制项，交叉验证不能替代。</div>
+
+<div class="page-break"></div>
+<h2>3. 选品标准</h2>
+
+<h3>3.1 一票否决（硬性）<span class="tag tag-D">D</span></h3>
+<table>
+  <tr><th style="width:6%;">#</th><th style="width:30%;">条件</th><th style="width:12%;">规则ID</th><th>原因</th></tr>
+  <tr><td>1</td><td>含品牌 / IP / 卡通形象</td><td>R-SEL-001</td><td>图片侵权投诉是封店最常见原因之一</td></tr>
+  <tr><td>2</td><td>易碎品</td><td>R-SEL-002</td><td>跨境链路长，破损集中爆发</td></tr>
+  <tr><td>3</td><td>服装、鞋帽</td><td>R-SEL-002</td><td>尺码退货率极高，退货预留盖不住</td></tr>
+  <tr><td>4</td><td>需认证品类</td><td>R-SEL-002</td><td>食品接触材料、电子电器、化妆品，无资质不碰</td></tr>
+  <tr><td>5</td><td>命中违禁品类清单（3.2）</td><td>R-SEL-003</td><td>平台禁运/禁售，上架即违规</td></tr>
+</table>
+
+<div class="box warn">
+  <strong>台湾站物流约束（前置引用第 10.1 节，E 级待核实）：</strong>
+  <ul style="margin-top:4px;">
+    <li><strong>店配：</strong>最大重量有来源称 10kg（虾皮物流手册），也有来源称 5kg。尺寸限制 45cm × 30cm × 30cm</li>
+    <li><strong>宅配：</strong>有来源称最大重量 20kg，三边之和 &lt; 1.5m</li>
+    <li><strong>液体：</strong>有来源称 ≤ 100ml 可走，超过跳过</li>
+  </ul>
+  <div class="footer-note"><strong>没称重才停下；三边、毫升、10kg 或 5kg 未知时继续算利润，不按这些数字砍品。</strong>以上物流限制均为 E 级待核实，不作为第一单门禁。需在账号下来后从卖家中心确认实际限制。<span class="tag tag-E">E</span></div>
+</div>
+
+<h3>3.2 违禁品类清单（跨境店通用）<span class="tag tag-E">E</span></h3>
+<div class="box warn">
+  <strong>以下品类有来源列为禁售或限制，但来源行无可打开的官方清单或文号，不作为第一单门禁。上架前需从 Shopee 官方禁运清单逐项确认（任务见第 12 章第 14 项）。</strong>
+  <table style="margin-top:6px;">
+    <tr><th style="width:22%;">类别</th><th>具体品类</th></tr>
+    <tr><td>食品与药品</td><td>食品（含宠物食品）、所有药物、保健品、医疗用品/器械</td></tr>
+    <tr><td>母婴与玩具</td><td>婴幼儿护肤品、奶嘴、奶瓶、纸尿裤等母婴用品，儿童玩具</td></tr>
+    <tr><td>武器与危险品</td><td>枪支弹药、管制刀具、警棍、刀斧、匕首、弹弓、剑、强力磁铁、油漆、粉末</td></tr>
+    <tr><td>知识产权</td><td>疑似侵权或假冒无品牌授权商品、含未经授权卡通图案的玩具/书刊</td></tr>
+    <tr><td>贵金属与珠宝</td><td>黄金白银铂等贵重金属、翡翠玉石、玛瑙琥珀、珍珠、稀有矿物原石</td></tr>
+    <tr><td>其他</td><td>活体动物、人体器官、色情低俗商品、虚拟货币、烟草及电子烟（部分站点）、宗教商品、货币有价证券</td></tr>
+  </table>
+  <div class="footer-note">完整清单以 Shopee 官方禁运清单为准，各站点略有差异。系统侧以「关键词命中表」实现，命中即硬拦并提示人工复核。</div>
+</div>
+
+<h3>3.3 供应商侧筛选 <span class="tag tag-D">D</span></h3>
+<ul>
+  <li>至少能找到 <strong>3 家支持一件代发</strong>的备选供应商（规则 R-SUP-001）。</li>
+  <li>主供应商：开店 ≥ 3 年、近 90 天有交易记录（规则 R-SUP-002）。</li>
+  <li>下单页<strong>实付金额</strong>（含起批量、优惠券），不录页面标价。</li>
+</ul>
+
+<h3>3.4 买家端人工验证（每天 15 分钟）<span class="tag tag-D">D</span></h3>
+<p>在 Shopee 目标站点 APP 搜目标关键词，观察前 20 个结果：</p>
+<ul>
+  <li>若 <strong>3 个以上同款打 5 折以下</strong> → 价格战激烈，新卖家无入场空间，跳过。</li>
+  <li>若前排<strong>评价数普遍 &gt; 500</strong> → 山头已被占住，新链接难进搜索前排，跳过。</li>
+  <li>若前排多为高运费或低销量链接 → 位置还空着，可作为候选。</li>
+</ul>
+
+<h3>3.5 选品评分卡（新增，结构化）</h3>
+<p>把 3.1–3.4 的人工判断固化成后台字段，使「选品」从感觉变成可审计记录。</p>
+<table>
+  <tr><th style="width:20%;">字段</th><th style="width:14%;">类型</th><th style="width:10%;">必填</th><th>取值与规则</th></tr>
+  <tr><td>候选品名 / 1688 链接</td><td>text</td><td>是</td><td>唯一键为链接</td></tr>
+  <tr><td>一票否决扫描</td><td>bool × 5</td><td>是</td><td>命中任一 → <strong>REJECT</strong>（硬拦）</td></tr>
+  <tr><td>类目</td><td>enum</td><td>是</td><td>用于绑定站点参数与违禁词表</td></tr>
+  <tr><td>重量 g</td><td>number</td><td>是</td><td>自己称重，C 级</td></tr>
+  <tr><td>采购实付 ¥</td><td>number</td><td>是</td><td>下单页截图留档，C 级</td></tr>
+  <tr><td>国内段运费 ¥</td><td>number</td><td>是</td><td>物流商报价，C 级</td></tr>
+  <tr><td>竞品前排观察</td><td>记录</td><td>是</td><td>记录：打折同款数、评价数区间、结论</td></tr>
+  <tr><td>净利润率</td><td>number</td><td>是</td><td>由第 5 章引擎算出，<strong>缺失 SLS 运费时为 INCOMPLETE</strong></td></tr>
+  <tr><td>结论</td><td>enum</td><td>是</td><td>可做 / 观察 / 砍掉，由 5.3 阈值自动建议、人工确认</td></tr>
+</table>
+
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 14 / 16 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>实体 <code>ProductCandidate</code>，主键 <code>candidate_id</code>；<code>source_url</code> 唯一约束防重复选品。</li>
+    <li>一票否决 = 硬规则集（R-SEL-001/002/003），在「保存候选」与「提交核算」两处都校验。</li>
+    <li>竞品观察记录结构化后，可统计「跳过率」，反哺类目选择（第 18 章 KPI）。</li>
+    <li><strong>不实现</strong>：自动抓取 Shopee 竞品销量/评价做批量分析（属对抗风控，见 8.3）。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>无。一票否决和物流约束为 D/E 级，违禁品清单为 E 级待核实 · 查询日期 2026-10-03</div>
+
+<div class="page-break"></div>
+<h2>4. 供应商管理</h2>
+<h3>4.1 建档字段 <span class="tag tag-C">C</span></h3>
+<table>
+  <tr><th style="width:30%;">字段</th><th style="width:12%;">类型</th><th>说明</th></tr>
+  <tr><td>品名 / 1688 链接</td><td>text</td><td>主供应商 + 至少 2 家备选</td></tr>
+  <tr><td>供应商 ID / 联系方式</td><td>text</td><td>便于出单后快速沟通</td></tr>
+  <tr><td>开店年限 / 近期交易</td><td>number / date</td><td>≥ 3 年、近 90 天有交易</td></tr>
+  <tr><td>下单页实付金额</td><td>number ¥</td><td>含起批量与优惠券影响</td></tr>
+  <tr><td>实际重量（g）</td><td>number</td><td>自己称，不信 1688 标注</td></tr>
+  <tr><td>是否支持一件代发</td><td>bool</td><td>明确确认</td></tr>
+  <tr><td>是否接受中转仓地址格式</td><td>bool + 确认日期</td><td><strong>建档时确认</strong>；确认过的，出单时不用再问</td></tr>
+  <tr><td>备选供应商</td><td>list[≥2]</td><td>至少 2 家，含联系人与报价</td></tr>
+</table>
+<h3>4.2 出单后盯梢 <span class="tag tag-D">D</span></h3>
+<ul>
+  <li>出单后<strong>人工跳转 1688 确认库存与是否涨价</strong>。</li>
+  <li>采购清单加一列「供应商链接」，减少跳转次数。</li>
+  <li>盯梢表同时记录 <strong>Shopee 发货剩余时间</strong>，任一环延迟都会吃罚分。</li>
+  <li>1688 不提供官方库存 API，不做自动抓取库存。</li>
+</ul>
+<h3>4.3 断货降级链路（新增）</h3>
+<pre>主供应商无货
+  → 备选 1 → 备选 2 → 备选 3（逐个确认，每个限时 10 分钟）
+  → 三家全无货：
+       ① 立即在 Shopee 下架该商品（防止继续出单）
+       ② 未发货订单：按卖家中心当时规则取消（取消原因选平台项，不选「卖家原因」需按当时规则）
+       ③ 记录一次「断货事件」→ 计入供应商评分 → 连续 2 次触发则更换主供应商</pre>
+
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 14 / 16 / 17 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>实体 <code>Supplier</code> + <code>SupplierQuote</code>（报价随日期变化，保留历史，不覆盖）。</li>
+    <li>「接受中转仓地址格式」= 布尔字段 + 确认日期，出单流程据此决定是否弹窗提醒确认。</li>
+    <li>断货降级链路实现为状态机 <code>StockCheck</code>：<code>pending → checking → found / all_out</code>，<code>all_out</code> 触发下架任务（T-LISTING-PAUSE）。</li>
+    <li>供应商评分 = f(断货次数, 涨价次数, 发货时长, 地址格式返工次数)，作为主供应商轮换依据。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>5. 利润核算模型（主模型：台湾站 NT$）</h2>
+
+<div class="box warn">
+  <strong>站点主次：</strong>本章以<strong>台湾站（NT$）为主模型</strong>，因为个体户执照首站可能只选台湾站，这是读者最可能的路径。<strong>马来西亚站（RM）为扩展分支</strong>，办了企业执照后才需要。两站参数不通用，各建各的表。
+</div>
+
+<h3>5.1 核心公式</h3>
+<p><code>净利润 = 售价 − 采购价(折当地币) − 国内段运费(折当地币) − 净运费成本 − 平台费 − 联盟佣金 − 广告费 − 提现费 − 汇损 − 退货损耗预留</code></p>
+<p><code>净利润率 = 净利润 ÷ 售价</code></p>
+<p class="footer-note">售价只录<strong>商品价</strong>，买家运费不进售价。</p>
+
+<div class="box warn">
+  <strong>六项容易算错的地方：</strong>
+  <ul style="margin-top:4px;">
+    <li><strong>售价只录商品价。</strong>买家实付的运费单独进「买家实付运费」字段，不并进售价。</li>
+    <li><strong>佣金基数 ≠ 售价。</strong>佣金按 <code>（商品售价 + 平台商品补贴 − 卖家优惠折扣）× 费率</code> 计算，<strong>不含订单运费</strong>。是否处于免佣窗口，按第 2.3 节的 19 日规则判断；窗口内佣金记 0。普通单不加预售服务费；只有预售单才另加 3%（含税）。</li>
+    <li><strong>净运费成本 ≠ SLS 全额。</strong>买家已付运费时，只扣「实际 SLS 运费高出买家实付的部分」，即 <code>max(SLS − 买家实付运费, 0)</code>；卖家包邮时才扣全额 SLS。</li>
+    <li><strong>免运活动费不单列。</strong>台湾站免运服务已并入平台基础服务，免运活动费取消。当单页面若又出现这一行，再判断归属，不和 14% 佣金重复扣。</li>
+    <li><strong>平台费 = 佣金 + 交易手续费，两笔都要含。</strong>佣金 14%（含税），交易手续费 2.5%（含税）。<strong>免佣窗口内佣金记 0，手续费仍记 2.5%。</strong>交易手续费<strong>计算基数原文没写</strong>，上架前估算时注明「基数未核实，暂按商品价」；出单后改用账单上的交易手续费金额。</li>
+    <li><strong>退货损耗按「退货率 ×（采购价 + 国内段运费）」预留。</strong>跨境货通常退不回国内，按采购侧成本计提，比按售价百分比更贴近实际损失。</li>
+  </ul>
+</div>
+
+<h3>5.2 字段与取数来源（台湾站 NT$）</h3>
+<table>
+  <tr><th style="width:22%;">字段</th><th style="width:20%;">来源</th><th style="width:9%;">类型</th><th>说明 / 等级</th></tr>
+  <tr><td>售价（TWD）</td><td>自己定</td><td>number</td><td><strong>只录商品价</strong>，不含买家运费。自己定价，不标等级</td></tr>
+  <tr><td>买家实付运费（TWD）</td><td>当单页面；上架前记 0</td><td>number</td><td>包邮记 0；出单后用当单实际值替换。上架前是估算值，不标 B</td></tr>
+  <tr><td>采购价（¥）</td><td>1688 下单页实付</td><td>number</td><td><span class="tag tag-C">C</span> 含起批量与优惠券，不录标价</td></tr>
+  <tr><td>实际重量（g）</td><td>自己称重</td><td>number</td><td><span class="tag tag-C">C</span> 重量错 → SLS 运费错 → 利润为负</td></tr>
+  <tr><td>国内段运费（¥）</td><td>物流商报价</td><td>number</td><td><span class="tag tag-C">C</span> 到 Shopee 国内中转仓</td></tr>
+  <tr><td>SLS 运费（TWD）</td><td>运费分档表估算 → 出单后当单实际值</td><td>number</td><td><span class="tag tag-E">E</span> 账号下来前为空。<strong>重量没称、采购实付没录，也要先停下；已经开了广告但没抄到本单金额，只卡住那一单。SLS 为空，只是费率项里剩下的那一个门禁。</strong></td></tr>
+  <tr><td>净运费成本</td><td>公式</td><td>number</td><td>计算公式，不标等级。SLS 空着时结果就是 <code>INCOMPLETE</code></td></tr>
+  <tr><td>佣金</td><td>https://shopee.cn/edu/article/26620</td><td>ratio</td><td><span class="tag tag-A">A</span> 14%（含税），免佣窗口内记 0。基数不含订单运费</td></tr>
+  <tr><td>交易手续费</td><td>https://shopee.cn/edu/article/26620</td><td>ratio</td><td><span class="tag tag-A">A</span> 2.5%（含税），免佣窗口内仍记 2.5%。<strong>计算基数原文没写，上架前估算时注明「基数未核实，暂按商品价」；出单后改用账单上的交易手续费金额</strong></td></tr>
+  <tr><td>预售服务费</td><td>https://shopee.cn/edu/article/26620</td><td>ratio</td><td><span class="tag tag-A">A</span> 仅预售单收取 3%（含税），普通单记 0</td></tr>
+  <tr><td>免运活动费</td><td>—</td><td>ratio</td><td>台湾站已取消，不单列。当单页面若又出现，再判断归属</td></tr>
+  <tr><td>联盟佣金率</td><td>自设</td><td>ratio</td><td><span class="tag tag-D">D</span> 起步可设 0%</td></tr>
+  <tr><td>广告费（本单）</td><td>广告后台</td><td>number</td><td><strong>没开广告就记 0，不标等级。</strong>只有已经开了广告、还没抄到本单金额时，才标 <span class="tag tag-E">E</span>，且只卡住这一单</td></tr>
+  <tr><td>提现费率</td><td>收款商</td><td>ratio</td><td><span class="tag tag-D">D</span> 台湾站区间约 0.5%-1.2%，<strong>取上沿 1.2% 预留，再加汇损</strong>。不要留空（留空会把利润算高）。以注册时页面为准</td></tr>
+  <tr><td>汇损率</td><td>估算</td><td>ratio</td><td><span class="tag tag-D">D</span> 保守预留，跑出流水后校准</td></tr>
+  <tr><td>退货率</td><td>估算</td><td>ratio</td><td><span class="tag tag-D">D</span> 经验值预留 3%-5%，<strong>不是类目实测</strong>，跑出数据后校准</td></tr>
+  <tr><td>退货损耗预留</td><td>公式</td><td>number</td><td>计算公式，不标等级。<strong>退货率用 D 级经验值预留即可，卡住上架的只有 SLS 运费档为空</strong></td></tr>
+</table>
+
+<div class="box note">
+  <strong>配套模板：</strong>台湾站 NT$ 版利润核算模板 <code>Shopee利润核算模板_台湾站_v2.xlsx</code>，结构与本章公式完全对应。汇率单元格为唯一汇率来源，全表联动。后台实现后，该表由核算引擎自动生成，人工只在「实测值回填」环节介入。
+</div>
+
+<h3>5.3 判断标准（台湾站）<span class="tag tag-D">D</span></h3>
+<table>
+  <tr><th style="width:22%;">净利润率</th><th style="width:22%;">判断</th><th style="width:16%;">系统结果</th><th>动作</th></tr>
+  <tr><td>≥ 15%</td><td>可做</td><td><code>PASS</code></td><td>上架，进入第一单</td></tr>
+  <tr><td>10% – 15%</td><td>观察</td><td><code>WARN</code></td><td>补选或调整售价后再判断</td></tr>
+  <tr><td>&lt; 10%</td><td>砍掉</td><td><code>REJECT</code></td><td>不上架</td></tr>
+  <tr><td>关键输入缺失</td><td>缺数据</td><td><code>INCOMPLETE</code></td><td><strong>不是「不可做」</strong>，提示补哪一项</td></tr>
+</table>
+<p class="footer-note">阈值为 D 级经验值。<strong>台湾站模板中此阈值默认为 ≥15% / 10%-15% / &lt;10%，可直接用来判断</strong>，台湾站第一轮实测后校准。<strong>佣金 14% 和交易手续费 2.5% 是 A 值，只填台湾站表，可直接使用；SLS 运费档为空时，结果仍是缺数据，不能上架。</strong>马来站佣金、手续费、免运继续空着，各用各的模板。</p>
+
+<h3>5.4 存活率定义 <span class="tag tag-D">D</span></h3>
+<div class="box ok">
+  <strong>存活率 = 本轮候选中净利润率 ≥ 15% 的款数 ÷ 候选款总数</strong>
+  <div class="footer-note" style="margin-top:6px;">分母 = 本轮实际录完数据的候选品数量；分子 = 其中净利润率 ≥ 15% 的数量。<strong>结果为 <code>INCOMPLETE</code> 的候选品不计入分母</strong>（另记为「待补数据」）。站点切换时以该站阈值为准。</div>
+</div>
+<table>
+  <tr><th style="width:22%;">存活率</th><th style="width:28%;">含义</th><th>动作</th></tr>
+  <tr><td>≥ 50%</td><td>选品方向健康</td><td>上架可做品，跑第一单</td></tr>
+  <tr><td>30% – 50%</td><td>部分品有问题</td><td>砍亏损品，补选 5 个候选</td></tr>
+  <tr><td>&lt; 30%</td><td>系统性问题</td><td>换类目或换价格带，重新选品</td></tr>
+</table>
+
+<h3>5.5 马来站扩展分支（企业执照后）</h3>
+<div class="box note">
+  办了企业执照后新增马来站，需<strong>单独建一套参数表（RM）</strong>：佣金、交易手续费、免运门槛、SLS 运费分档均与台湾站不同。已有马来站版模板（RM）可用，结构与台湾站版同构。<strong>马来站模板的判断阈值留空</strong>，待企业执照开通后第一轮实测设定。两站参数<strong>不得混用</strong>。
+</div>
+
+<h3>5.6 计算引擎规格（新增）</h3>
+<pre>输入: candidate_id, site, fx_rate, params[site], ad_spend_optional
+输出: { net_profit, net_margin, status, missing_fields[], trace[] }
+
+1. 校验必填: weight_g, purchase_price_cny, domestic_ship_cny, price_local
+     任一缺失 → status=INCOMPLETE, return (missing_fields)
+2. 校验三态: 每个数值字段取 null / 0 / value
+     null  = 未填 → 计入 missing_fields
+     0     = 明确为 0（如未开广告、包邮）
+     N/A   = 不适用（如普通单的预售费）→ 按 0 参与计算，但 trace 标注 N/A
+3. sls_freight 缺失 → status=INCOMPLETE（唯一允许卡住上架的费率项）
+4. 计算:
+     purchase_local   = purchase_price_cny * fx_rate
+     domestic_local   = domestic_ship_cny  * fx_rate
+     net_freight      = max(sls_freight - buyer_paid_freight, 0)
+     commission       = in_free_window ? 0 : (price_local + platform_subsidy - seller_discount) * 0.14
+     txn_fee          = (price_local + platform_subsidy - seller_discount) * 0.025   // 基数未核实
+     presale_fee      = is_presale ? price_local * 0.03 : 0
+     platform_fee     = commission + txn_fee + presale_fee
+     affiliate        = price_local * affiliate_rate
+     withdraw         = price_local * withdraw_rate          // D 级，取区间上沿
+     fx_loss          = price_local * fx_loss_rate
+     return_reserve   = return_rate * (purchase_local + domestic_local)
+     net_profit = price_local - purchase_local - domestic_local - net_freight
+                  - platform_fee - affiliate - ad_spend - withdraw - fx_loss - return_reserve
+     net_margin = net_profit / price_local
+5. 判定:
+     net_margin >= 0.15 → PASS
+     0.10 <= net_margin < 0.15 → WARN
+     net_margin < 0.10 → REJECT
+6. 生成 trace: 每个中间量的值、来源、证据等级、参数 ID
+7. 出单后: 用当单实测值覆盖估算值，生成 CostSnapshot(new)，保留旧快照用于对比</pre>
+<div class="box note">
+  <strong>计算顺序与取整约定：</strong>全部用高精度小数计算，<strong>只在展示层取整</strong>（TWD 取 2 位，比率取 4 位），避免中间取整导致利润虚高。汇率只允许一个来源（参数 <code>P-TW-FX</code>），禁止公式内硬编码。
+</div>
+
+<h3>5.7 三态语义（新增，防止「缺数据」被算成 0）</h3>
+<table>
+  <tr><th style="width:14%;">状态</th><th style="width:22%;">含义</th><th style="width:22%;">系统行为</th><th>典型场景</th></tr>
+  <tr><td><code>null</code></td><td>未填/未知</td><td>进入 <code>missing_fields</code>，结果 <code>INCOMPLETE</code></td><td>尚未称重、SLS 运费档未拿到</td></tr>
+  <tr><td><code>0</code></td><td>明确为零</td><td>正常参与计算，trace 标「确认为 0」</td><td>未开广告、卖家包邮</td></tr>
+  <tr><td><code>N/A</code></td><td>不适用</td><td>按 0 参与计算，trace 标 N/A</td><td>普通单的预售服务费</td></tr>
+</table>
+<div class="box warn">
+  <strong>这是本版最重要的工程约束：</strong>把未填的提现费当 0 会<strong>系统性高估利润</strong>。因此提现费率不允许留空，必须按 D 级区间上沿预留；而真正允许留空并卡住上架的，只有 SLS 运费档。
+</div>
+
+<h3>5.8 未核实数值放哪里：<code>unverified_claim</code>（新增）</h3>
+<p>有些参数确实「有来源说」一个数字（店配 10kg/5kg、液体 100ml、包裹上限 20000 TWD、配送 4-8 天），但这些数字没核实。它们既不能当事实用，也不该被丢掉——丢了就等于每次都要重新检索。</p>
+<table>
+  <tr><th style="width:20%;">字段</th><th style="width:16%;">含义</th><th>系统行为</th></tr>
+  <tr><td><code>value</code></td><td>已核实的可用值</td><td>E 级必须为 <code>null</code>；硬门禁只认这个字段</td></tr>
+  <tr><td><code>unverified_claim</code></td><td>未核实的候选值（含来源）</td><td>只有显式声明 <code>reads_unverified_claim: true</code> 的规则能读，且该规则必须是 <code>advisory_only</code></td></tr>
+  <tr><td><code>intended_level</code></td><td>拿到实测后应升到几级</td><td>升级时写入 <code>value</code> 并清空对 <code>unverified_claim</code> 的依赖</td></tr>
+</table>
+<div class="box warn">
+  <strong>为什么必须分开：</strong>如果未核实的 10kg 直接写进 <code>value</code>，某天有人写了个「超重就拦」的硬规则，你的货就会被一个没人验证过的数字拦下来。<strong>拆成两个字段后，硬门禁在物理上读不到未核实数据</strong>——这是不变量 INV-011（读取 <code>unverified_claim</code> 的规则必须 <code>advisory_only=true</code>、不得为硬门禁、只能输出 WARN 或 INCOMPLETE）。
+</div>
+
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 14 / 16 / 18 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>实体 <code>CostSnapshot</code>：一次核算一个快照，字段含 <code>inputs</code> / <code>outputs</code> / <code>params_version</code> / <code>trace</code> / <code>created_at</code>。快照<strong>只增不改</strong>。</li>
+    <li>核算引擎是纯函数：<code>calc(inputs, params) → result</code>，无副作用，便于单测与回归。</li>
+    <li>每次门禁判定写入 <code>AuditLog</code>：规则 ID、参数版本、结果、操作人。</li>
+    <li>提现费率、退货率、汇损率三个 D 级参数作为<strong>引擎入参</strong>而非常量，便于后续用实测值替换。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>https://shopee.cn/edu/article/26619（免佣期）；https://shopee.cn/edu/article/26620（佣金 14%、交易手续费 2.5%、预售服务费 3%）· 查询日期 2026-10-03 · <strong>2026-10-03 机器复核：JS 空壳，需人工登录复核</strong>。SLS 运费为 E 级待核实，提现费、退货率为 D 级经验值。</div>
+
+<div class="page-break"></div>
+<h2>6. 闭环与门禁总览</h2>
+
+<p>本章是全书<strong>人与系统的共同骨架</strong>：把「选品 → 核算 → 上架 → 出单 → 履约 → 回款 → 复盘」串成一条带门禁的闭环。前半节给人看流程，后半节给出系统门禁矩阵。</p>
+
+<h3>6.1 最小闭环（八关）</h3>
+<table>
+  <tr><th style="width:7%;">关卡</th><th style="width:14%;">阶段</th><th style="width:24%;">输入</th><th style="width:22%;">通过条件</th><th>不通过时</th></tr>
+  <tr><td><span class="gate">G0</span></td><td>入驻准备</td><td>主体类型、材料</td><td>材料记录完整，收款账户已提交</td><td>软提示，不阻塞记录</td></tr>
+  <tr><td><span class="gate">G1</span></td><td>选品</td><td>候选品、类目、竞品观察</td><td>一票否决未命中</td><td><strong>硬拦</strong>：不得进入核算</td></tr>
+  <tr><td><span class="gate">G2</span></td><td>实测取证</td><td>重量、采购实付、国内运费</td><td>三项实测值齐全</td><td><strong>硬拦</strong>：不得进入核算（缺数据）</td></tr>
+  <tr><td><span class="gate">G3</span></td><td>利润核算</td><td>G2 实测 + 站点参数</td><td>净利润率 ≥ 15%</td><td><code>WARN</code> 观察补选；<code>REJECT</code> 砍掉；SLS 缺失 <code>INCOMPLETE</code></td></tr>
+  <tr><td><span class="gate">G4</span></td><td>上架</td><td>主图、标题、详情、属性</td><td>主图为自拍、无禁词、属性完整</td><td><strong>硬拦</strong>：改完再上</td></tr>
+  <tr><td><span class="gate">G5</span></td><td>出单履约</td><td>订单、库存确认、地址</td><td>按 7.3 顺序完成五步</td><td><strong>硬拦</strong>：未确认库存不得点发货</td></tr>
+  <tr><td><span class="gate">G6</span></td><td>回款</td><td>到账记录</td><td>资金到账、账实相符</td><td>告警：超期未到账</td></tr>
+  <tr><td><span class="gate">G7</span></td><td>复盘校准</td><td>实测值、KPI</td><td>估算值被实测替换、阈值更新</td><td>告警：参数长期未校准</td></tr>
+</table>
+
+<h3>6.2 五条闭环规则（人读版）</h3>
+<table>
+  <tr><th style="width:5%;">#</th><th style="width:20%;">闭环项</th><th style="width:18%;">输入</th><th style="width:8%;">等级</th><th style="width:20%;">判断</th><th>过不了的下一步</th></tr>
+  <tr><td>1</td><td><strong>选首站</strong></td><td>主体类型（个体户/企业）</td><td><span class="tag tag-E">E</span></td><td>主体类型未知，不能选首站；E 级规则未核实时，不拿来选站</td><td>先确认执照类型；个体户可能走台湾站，企业可走马来站。提交前通过官方渠道确认首站规则</td></tr>
+  <tr><td>2</td><td><strong>进入利润计算</strong></td><td>重量、三边、液体毫升、类目</td><td><span class="tag tag-E">E</span></td><td>重量没称是缺数据，不能算利润，必须停下先称重。三边和毫升的限制仍是 E，未知时不按 100ml 或 10kg 砍掉，也不因此停掉利润计算</td><td>先称重、量尺寸、查禁运清单。称重是必须停下的一步；三边和毫升未知时可继续利润计算，只是不做物流限制判断</td></tr>
+  <tr><td>3</td><td><strong>可上架判断</strong></td><td>净利润率 ≥15%</td><td><span class="tag tag-D">D</span></td><td>15% 阈值是 D 级经验值，不是官方规则；佣金和手续费用 A 值（14% + 2.5%，免佣窗口内佣金记 0，预售单另加 3%）；<strong>SLS 运费档为空时，结果仍是缺数据，不能上架</strong></td><td>从卖家中心抄真实 SLS 运费档，补进模板。提现费和退货率按 D 级预留，不单独卡住上架；广告费没开就记 0</td></tr>
+  <tr><td>4</td><td><strong>发货截止时间</strong></td><td>DTS + 2 / DTS + 4</td><td><span class="tag tag-E">E</span></td><td>发货时效仍是 E，<strong>系统不自动生成截止时间</strong></td><td>账号下来后核对卖家中心原文，确认后填第12章第15项</td></tr>
+  <tr><td>5</td><td><strong>周转金检查</strong></td><td>回款 15-25 天（D级经验值）</td><td><span class="tag tag-D">D</span></td><td>回款天数不进利润公式，只检查周转金够不够盖住这段时间的采购</td><td>跑出第一单后，用实际到账时间校准</td></tr>
+</table>
+
+<h3>6.3 门禁矩阵（系统读版）</h3>
+<table>
+  <tr><th style="width:8%;">门禁</th><th style="width:20%;">触发点</th><th style="width:10%;">门禁级别</th><th style="width:26%;">规则</th><th>结果与动作</th></tr>
+  <tr><td>G1</td><td>保存候选品</td><td><span class="tag tag-hard">硬</span></td><td>R-SEL-001/002/003</td><td>命中 → <code>REJECT</code>；提示命中条目与原因</td></tr>
+  <tr><td>G2</td><td>提交核算</td><td><span class="tag tag-hard">硬</span></td><td>R-DATA-001/002</td><td>缺重量或采购实付 → <code>INCOMPLETE</code>；列出缺失字段</td></tr>
+  <tr><td>G3</td><td>核算完成</td><td><span class="tag tag-hard">硬</span></td><td>R-COST-001/002/003</td><td>SLS 缺失 → <code>INCOMPLETE</code>；&lt;10% → <code>REJECT</code>；10–15% → <code>WARN</code></td></tr>
+  <tr><td>G4</td><td>提交上架</td><td><span class="tag tag-hard">硬</span></td><td>R-LIST-001、R-RISK-001</td><td>主图非自拍或含禁词 → <code>REJECT</code></td></tr>
+  <tr><td>G5</td><td>点击「安排发货」</td><td><span class="tag tag-hard">硬</span></td><td>R-ORDER-001</td><td>未记录库存确认 → 禁止操作，引导去确认库存</td></tr>
+  <tr><td>G5</td><td>提交采购单</td><td><span class="tag tag-hard">硬</span></td><td>R-ORDER-002</td><td>地址来源 ≠ 当单页面 → 禁止提交</td></tr>
+  <tr><td>G5</td><td>订单计时</td><td><span class="tag tag-soft">软</span></td><td>R-ORDER-003</td><td>参数为 E 时只记录、不告警；升级为 A/B 后启用超时告警</td></tr>
+  <tr><td>G6</td><td>回款跟踪</td><td><span class="tag tag-soft">软</span></td><td>R-FIN-002</td><td>超期未到账 → 告警（阈值 D 级）</td></tr>
+  <tr><td>G7</td><td>期末复盘</td><td><span class="tag tag-adv">建议</span></td><td>R-KPI-001</td><td>估算值超期未校准 → 生成校准任务</td></tr>
+  <tr><td>GOV</td><td>配置加载</td><td><span class="tag tag-hard">硬</span></td><td>R-GOV-001/002</td><td>E 级参数被硬门禁引用 → <strong>配置错误，拒绝启动</strong>；A 级过期 → 自动降为软提示</td></tr>
+</table>
+
+<div class="box note">
+  <strong>使用方式：</strong><strong>E 级规则未核实时，不拿来选站或砍品；缺的是自己的实测（重量、采购实付）才停下。</strong>缺数据时标注 <code>INCOMPLETE</code>，不要当成「不可做」。
+</div>
+
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 15 / 16 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>门禁不是散落在业务代码里的 <code>if</code>，而是统一的 <code>GateService.check(gate_id, context)</code>，规则来自配置。</li>
+    <li>每个门禁返回 <code>{gate_id, rule_id, result, evidence_level, message, next_action, param_ids[]}</code>。</li>
+    <li>硬门禁只有在规则依赖的全部参数 <code>evidence_level ∈ {A,B,C}</code> 且未过期时才生效；否则自动降级并记录降级原因。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>7. 上架与履约</h2>
+<h3>7.1 上架要点</h3>
+<ul>
+  <li><strong>标题公式：</strong>核心词 + 属性 + 场景 + 地域。</li>
+  <li><strong>主图来源：</strong>买样品、自己拍照，这是主图的唯一来源。不使用 1688 原图，避免水印与品牌 Logo 侵权。</li>
+  <li><strong>主图结构：</strong>3 张 — 痛点场景 → 功能演示 → 对比图。</li>
+  <li><strong>详情页前 3 屏：</strong>材质 / 尺寸 / 售后，降低客服咨询。</li>
+</ul>
+<h3>7.2 商品审核机制 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:20%;">阶段</th><th style="width:16%;">触发时间</th><th>核心排查点</th></tr>
+  <tr><td>系统机审</td><td>上架即触发</td><td>标题/描述违禁词、类目是否错放、价格是否异常（低价SKU引流）</td></tr>
+  <tr><td>人工抽检与举报</td><td>有来源称 1-3 天</td><td>侵权、假冒伪劣、重复刊登</td></tr>
+  <tr><td>流量分配质量审核</td><td>有来源称一周内</td><td>属性完整度、图片质量、转化潜力；属性大量留空或图片模糊会被判定为低质量刊登，限制曝光</td></tr>
+</table>
+<div class="box warn">
+  <strong>待核实：</strong>标题含违禁词、类目错放、价格异常都会触发人工审核，周期有来源称可能从1-3天拉长到5-7天。不要直接复制国内电商平台标题，必须做本土化过滤。<span class="tag tag-E">E</span> 来源未提供可打开的官方页面，暂标 E。
+</div>
+
+<h3>7.3 履约链路（关键，顺序不能反）</h3>
+<div class="box warn">
+  <strong>出单后的正确顺序：先查库存 → 确认地址格式 → 安排发货 → 抄当单地址 → 拍单。</strong>
+  <ol style="margin-top:4px; margin-bottom:4px;">
+    <li>出单后，<strong>先跳转 1688 看库存和实付价</strong>，确认有货。</li>
+    <li><strong>确认供应商接受中转仓地址格式</strong>。若 4.1 建档时已确认过，此步跳过。</li>
+    <li>确认有货后，<strong>回 Shopee 卖家中心对这一单安排发货</strong>。</li>
+    <li><strong>抄当单页面给出的中转仓地址和收件人格式</strong>。地址以当单页面为准，<strong>不能用网上抄来的通用仓地址</strong>。</li>
+    <li>跳转 1688 拍单，收货地址填<strong>当单页面给出的中转仓地址</strong>，收件人处带 Shopee 订单号。</li>
+    <li>供应商发货至中转仓，由 SLS 链路完成后续跨境配送。</li>
+  </ol>
+  <div class="footer-note">
+    <strong>为什么先查库存再点发货：</strong>先点发货再发现没货，发货时效已经开始计。<br>
+    <strong>三家备选都无货时：</strong>先下架该商品，再按卖家中心当时规则处理订单取消。<br>
+    <strong>填买家海外地址或用网上抄的通用仓地址：</strong>货直接出国或中转仓无法分拣，时效与扣分都算在卖家头上。
+  </div>
+</div>
+
+<h3>7.4 时效风险 <span class="tag tag-D">D</span></h3>
+<p>1688 采购 + 中转仓链路中，任一环延迟都会吃罚分。库存盯梢表应同时记录发货剩余时间，异常时优先换备用供应商或下架对应商品。</p>
+
+<h3>7.5 履约强制顺序校验（新增）</h3>
+<table>
+  <tr><th style="width:8%;">步</th><th style="width:22%;">动作</th><th style="width:20%;">前置条件（缺则阻断）</th><th>留痕字段</th></tr>
+  <tr><td>1</td><td>查库存</td><td>—</td><td><code>stock_checked_at</code>、<code>supplier_id</code>、<code>stock_result</code></td></tr>
+  <tr><td>2</td><td>确认地址格式</td><td>供应商已确认（或本次确认）</td><td><code>address_format_confirmed</code></td></tr>
+  <tr><td>3</td><td>安排发货</td><td><strong>step1 = 有货</strong></td><td><code>shipped_arranged_at</code>（真发货计时起点）</td></tr>
+  <tr><td>4</td><td>抄当单地址</td><td>step3 已完成</td><td><code>warehouse_address_raw</code>、<code>address_source = order_page</code></td></tr>
+  <tr><td>5</td><td>提交采购单</td><td>step4 地址来源 = 当单页面</td><td><code>po_created_at</code>、<code>po_supplier</code>、<code>po_amount</code></td></tr>
+  <tr><td>6</td><td>到仓扫描</td><td>—</td><td><code>warehouse_scanned_at</code></td></tr>
+</table>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 16 / 17 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>订单状态机强制顺序流转，<strong>跳步直接报错</strong>，不允许 UI 绕过（后端校验，不依赖前端禁用按钮）。</li>
+    <li>「地址来源」是枚举字段：<code>order_page</code> / <code>manual</code> / <code>copied_from_forum</code>。<strong>非 <code>order_page</code> 一律拒绝提交采购单</strong>（这是历史上最贵的错误）。</li>
+    <li>发货剩余时间只在 DTS 参数升级为 A/B 后启用倒计时；此前只记录时间戳，不做误告警。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>8. 风险与合规</h2>
+<h3>8.1 知识产权侵权边界</h3>
+<table>
+  <tr><th style="width:22%;">侵权类型</th><th>具体表现</th><th>后果</th></tr>
+  <tr><td>商标侵权</td><td>未经授权使用他人商标或品牌词，标题/图片/产品含知名品牌标志性设计或图案</td><td>下架+扣分+罚金</td></tr>
+  <tr><td>图片侵权</td><td>盗用他人产品图（哪怕同款）</td><td>下架+扣分</td></tr>
+  <tr><td>专利侵权</td><td>外观专利、设计专利</td><td>下架+扣分+罚金</td></tr>
+  <tr><td>版权侵权</td><td>卡通形象、影视周边等</td><td>下架+扣分+罚金</td></tr>
+</table>
+<div class="box warn">
+  <strong>注意：</strong>正品无授权也可能侵权；标题/描述使用品牌词即使未声明正品也可能被判定侵权。多次侵权直接封店。<span class="tag tag-E">E</span> 来源未提供可打开的官方页面，暂标 E。
+</div>
+<h3>8.2 罚分规则 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:24%;">项目</th><th>说明</th></tr>
+  <tr><td>计分维度</td><td>上架违规、订单未完成率、延迟出货率、客服违规、运输违禁品、刷单、营销/广告逾期缴款</td></tr>
+  <tr><td>更新频率</td><td>有来源称每周一更新</td></tr>
+  <tr><td>清零规则</td><td>有来源称每季度最后一个周一（3月/6月/9月/12月）统一清零</td></tr>
+  <tr><td>处分等级</td><td>有来源称累计3-15分以上对应1到6级处分，持续28天（部分低等级已缩短）</td></tr>
+  <tr><td>快速交付率（FHR）</td><td><span class="tag tag-E">E</span> 有来源称 2026-05-11 起 FHR 低于 80% 每周计 1 分。待核实，见第 12 章第 31 项。</td></tr>
+  <tr><td>不良包装</td><td><span class="tag tag-E">E</span> 有来源称 2026-06-22 起不良包装导致人员受伤或设备损坏当周计 6 分，严重者永久冻结。待核实，见第 12 章第 32 项。</td></tr>
+</table>
+<div class="box warn">
+  <strong>待核实：</strong>罚分规则的更新频率、清零规则、处分等级均为 E 级待核实。上述两条 2026 年新规也未能找到独立来源核实。在官方公告确认前，不要据此调整运营动作。
+</div>
+<h3>8.3 综合风险表</h3>
+<table>
+  <tr><th style="width:24%;">风险</th><th style="width:30%;">触发原因</th><th style="width:14%;">规则ID</th><th>应对</th></tr>
+  <tr><td>无货先点发货</td><td>发货时效已开始计</td><td>R-ORDER-001</td><td>先查 1688 库存，确认有货再安排发货</td></tr>
+  <tr><td>三家都无货</td><td>供应商集体断货</td><td>R-SUP-003</td><td>先下架商品，订单取消按卖家中心当时规则处理</td></tr>
+  <tr><td>填错收货地址</td><td>填了买家海外地址或网上抄的通用仓地址</td><td>R-ORDER-002</td><td>先安排发货，抄当单页面的中转仓地址，收件人带订单号</td></tr>
+  <tr><td>图片侵权</td><td>使用 1688 原图含品牌或水印</td><td>R-LIST-001</td><td>买样品自己拍照；不选含品牌 / IP 的品</td></tr>
+  <tr><td>利润算错</td><td>售价混入买家运费；净运费成本按全额扣；免运活动费重复扣；平台费漏交易手续费；广告成交未计广告费；提现费留空；交易手续费按佣金基数误算</td><td>R-COST-004/005/006</td><td>按 5.1 节规则逐项核</td></tr>
+  <tr><td>站点参数混用</td><td>台湾站与马来站共用一套费率</td><td>R-GOV-003</td><td>两站各建参数表，不混用。14% 只填台湾站</td></tr>
+  <tr><td>认证缺失</td><td>食品接触、电子电器、化妆品</td><td>R-SEL-002</td><td>无资质不碰，一票否决</td></tr>
+  <tr><td>标题含禁词/品牌词</td><td>直接搬运国内电商标题</td><td>R-RISK-001</td><td>本土化过滤，禁用词库 + 品牌词库</td></tr>
+</table>
+<div class="box warn">
+  <strong>不写入手册、不在后台实现的操作：</strong>
+  <ul style="margin-top:4px;">
+    <li>去水印、改图片 MD5</li>
+    <li>批量生成「差异化」标题与主图以规避重复刊登检测</li>
+    <li>自动抢活动报名脚本</li>
+    <li>抓取竞品类目数据、评价做批量分析</li>
+  </ul>
+  <div class="footer-note">以上属对抗平台风控，轻则限流，重则关联封店。<strong>后台任何功能不得以此为目标，包括「效率工具」的包装形式。</strong></div>
+</div>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 15 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>风控规则实现为<strong>可配置的规则表</strong>：违禁词库、品牌词库、类目黑名单。运营可维护词库，但不能绕过规则。</li>
+    <li>每次命中写入 <code>RiskHit</code> 记录：对象（商品/订单）、规则、命中词、处置（拒绝/下架/放行并备注）。</li>
+    <li>词库版本化，历史判定可按当时词库复现（合规审计需要）。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>无。知识产权边界、罚分规则均为 E 级待核实 · 查询日期 2026-10-03</div>
+
+<div class="page-break"></div>
+<h2>9. 税务合规</h2>
+<div class="box warn">
+  <strong>本章来源行没有可打开的官方清单或文号，整章降为 E 级，不作为第一单门禁。</strong>以下内容仅为参考方向，具体税务义务需咨询当地税务部门或专业财税顾问。
+</div>
+<h3>9.1 平台数据报送 <span class="tag tag-E">E</span></h3>
+<p>有来源称自2025年10月起，Shopee 平台已按季度向税务机关报送卖家的身份信息、交易数量及收入等数据。平台<strong>不代扣国内税款</strong>，卖家需自行合规申报。待核实。</p>
+<h3>9.2 增值税 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:24%;">项目</th><th>说明</th></tr>
+  <tr><td>起征点</td><td>有来源称月销售额 ≤ 10万元（或季度 ≤ 30万元），免征增值税</td></tr>
+  <tr><td>超过起征点</td><td>有来源称小规模纳税人按1%征收；一般纳税人按13%征收</td></tr>
+  <tr><td>申报要求</td><td>有来源称按月或按季登录电子税务局申报，即使免税也必须进行零申报</td></tr>
+</table>
+<h3>9.3 所得税 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:24%;">主体类型</th><th>税种</th><th>税率</th></tr>
+  <tr><td>个人/个体户</td><td>个人所得税（经营所得）</td><td>有来源称5%-35%超额累进税率</td></tr>
+  <tr><td>有限公司</td><td>企业所得税</td><td>有来源称小型微利企业实际税负5%；普通企业25%</td></tr>
+</table>
+<h3>9.4 出口退税/免税（仅限跨境卖家）<span class="tag tag-E">E</span></h3>
+<ul>
+  <li>有来源称出口退税需满足大陆企业主体、使用 SLS/9810 物流并取得13%进项专票等条件。</li>
+  <li>有来源称出口免税若不符合退税条件（如无进项票），可申请「出口免税」，但不退还进项税。</li>
+</ul>
+<div class="box note">
+  <strong>税务备案提醒：</strong>有来源称领照后30天内必须到税务机关完成备案，建议选择「小规模纳税人」。哪怕当月零收入，也需按时申报。<span class="tag tag-E">E</span> 待核实。
+</div>
+<h3>9.5 申报日历任务（新增）</h3>
+<table>
+  <tr><th style="width:24%;">任务</th><th style="width:16%;">周期</th><th style="width:14%;">等级</th><th>系统行为</th></tr>
+  <tr><td>增值税申报（含零申报）</td><td>月 / 季</td><td><span class="tag tag-E">E</span></td><td>只在用户确认口径后开启提醒；默认仅生成「待确认」任务</td></tr>
+  <tr><td>税务备案</td><td>领照后 30 天内</td><td><span class="tag tag-E">E</span></td><td>入驻激活后自动生成一次性提醒</td></tr>
+  <tr><td>平台报送数据核对</td><td>季度</td><td><span class="tag tag-E">E</span></td><td>按季生成核对清单（金额、单量）</td></tr>
+</table>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li><strong>整章 E 级，系统不得据此自动计算税额或作出合规结论</strong>；只提供提醒与记录。</li>
+    <li>税务口径由用户在配置中显式确认后，才把对应参数从 E 升级为 B/C 并启用提醒。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>无。税务规则为 E 级待核实 · 查询日期 2026-10-03</div>
+
+<div class="page-break"></div>
+<h2>10. 台湾站物流与时效</h2>
+<h3>10.1 物流限制 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:20%;">物流类型</th><th style="width:16%;">最大重量</th><th>尺寸限制</th></tr>
+  <tr><td>店配</td><td>虾皮物流手册称 10kg<br>也有来源称 5kg</td><td>45cm × 30cm × 30cm（最长边 ≤ 45cm，其他两边均需 ≤ 30cm）</td></tr>
+  <tr><td>宅配</td><td>有来源称 20 kg</td><td>三边之和 &lt; 1.5m</td></tr>
+  <tr><td>液体限制</td><td>—</td><td>有来源称 ≤ 100ml 可走；超过 100ml 跳过</td></tr>
+</table>
+<div class="box warn">
+  <strong>待核实：</strong>店配最大重量存在数据冲突（虾皮物流手册写 10kg，另有来源写 5kg），暂标 <span class="tag tag-E">E</span> 级。账号下来后核对卖家中心原文，确认无误后升级为 <span class="tag tag-A">A</span>。在此之前，3.1 节的前置引用同步为 E 级。
+</div>
+
+<h3>10.2 关税与进口规则</h3>
+<h4>关税起征点 <span class="tag tag-A">A</span></h4>
+<p>订单金额超过新台币 2,000 元应征税。<span class="footer-note">来源：https://help.shopee.tw/portal/4/article/80088 · 查询日期 2026-10-03 · 复核状态：2026-10-03 机器复核不可达，需人工复核</span></p>
+<h4>频繁进口认定 <span class="tag tag-A">A</span></h4>
+<p>不限金额、半年度进口超过 6 次应征税。半年度指每年 1 月 1 日至 6 月 30 日及 7 月 1 日至 12 月 31 日。<span class="footer-note">来源：https://help.shopee.tw/portal/4/article/80088 · 查询日期 2026-10-03 · 复核状态：不可达</span></p>
+<h4>虾皮预收关税 <span class="tag tag-A">A</span></h4>
+<p>虾皮预收按超过 2,000 元，或自行统计的半年超过 5 次（含取消和退货退款），加在买家结账总额里。纳税义务人是买家。<span class="footer-note">来源：https://help.shopee.tw/portal/4/article/80088 · 查询日期 2026-10-03 · 复核状态：不可达</span></p>
+<h4>单包裹金额上限 <span class="tag tag-E">E</span></h4>
+<p>有来源称入境包裹总价值不得超过 <strong>20,000 新台币</strong>，若超过将不予配送。此条目前仅见于虾皮物流手册和连连文章，未找到可打开的虾皮官方帮助中心原文，暂标 E 级。</p>
+<h4>EZ WAY 易利委实名认证 <span class="tag tag-A">A</span></h4>
+<p>须完成 EZ WAY 实名认证和街口支付实名认证；2026-03-01 起须完成预先委任；包裹抵达后在 App 点申报相符。<span class="footer-note">来源：https://help.shopee.tw/portal/4/article/80084 · 查询日期 2026-10-03 · 复核状态：不可达</span></p>
+<h4>配送时效 <span class="tag tag-E">E</span></h4>
+<p>有来源称预计时效 4-8 天，但未找到可打开的官方页面，暂标 E 级。</p>
+<div class="box note">
+  <strong>等级说明：</strong>关税起征点、频繁进口认定、虾皮预收关税三句标 A，来源为虾皮帮助中心 80088；EZ WAY 易利委实名认证及预先委任标 A，来源为虾皮帮助中心 80084；配送时效暂标 E。<strong>本版补充：这四条 A 级参数在 2026-10-03 均无法机器复核（域名不可达），因此进入「仅人工复核」通道，并受 15 章 R-GOV-002（过期自动降级）约束。</strong>
+</div>
+
+<h3>10.3 发货时效与迟发货界定 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:26%;">项目</th><th>说明</th></tr>
+  <tr><td>迟发货界定</td><td>有来源称订单在 DTS（备货工作日）+ 2 个自然日内未完成到仓扫描</td></tr>
+  <tr><td>自动取消界定</td><td>有来源称 DTS + 2 个自然日内未点击发货，或 DTS + 4 个自然日内未到仓扫描</td></tr>
+  <tr><td>迟发货率公式</td><td>有来源称过去一周店铺迟发货订单量 ÷ 过去一周店铺发货总订单量</td></tr>
+</table>
+<div class="box warn">
+  <strong>待核实：</strong>本节内容未能核对卖家中心原文，暂标 <span class="tag tag-E">E</span> 级。账号下来后核对卖家中心原文，确认无误后填入第 12 章第 15 项，并升级为 <span class="tag tag-A">A</span>。在此之前不要据此调整运营动作。
+</div>
+
+<h3>10.4 物流校验函数规格（新增）</h3>
+<pre>checkLogistics(item, site_params) → {result, reasons[]}
+
+输入: weight_g, dims[L,W,H], is_liquid, liquid_ml, order_value_local, mode(店配/宅配)
+
+规则:
+  R-LOG-001  dims 任一缺失      → result = INCOMPLETE（缺数据，不判断）
+  R-LOG-002  weight_g 缺失      → result = INCOMPLETE（与 G2 同一门禁）
+  R-LOG-003  店配 10kg 与 5kg 冲突参数 → 若 weight 介于 5kg–10kg:
+                result = WARN（不确定区间，提示人工确认）
+                不可判为 REJECT（依据不足）
+  R-LOG-004  weight > 高值上沿(取较宽松口径) → WARN
+  R-LOG-005  液体且 liquid_ml 缺失 → INCOMPLETE
+  R-LOG-006  液体且 liquid_ml > 100 → WARN（E 级，人工复核）
+  R-LOG-007  order_value_local > 20000（E 级上限） → WARN
+  R-LOG-008  E 级参数一律不得产生 REJECT</pre>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 16 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>物流校验只输出 <code>PASS / WARN / INCOMPLETE</code>，<strong>在参数为 E 级时绝不输出 <code>REJECT</code></strong>——这是「E 级不得砍品」的工程实现。</li>
+    <li>冲突参数（10kg vs 5kg）用<strong>区间</strong>建模：<code>{safe_max: 5000, loose_max: 10000, conflict: true}</code>，落在冲突区间即 WARN。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>https://help.shopee.tw/portal/4/article/80088（关税起征点、频繁进口认定、虾皮预收关税）；https://help.shopee.tw/portal/4/article/80084（EZ WAY 易利委实名认证、预先委任）· 查询日期 2026-10-03 · <strong>2026-10-03 机器复核：域名不可达</strong>。店配重量、液体限制、发货时效、配送时效为 E 级待核实。</div>
+
+<div class="page-break"></div>
+<h2>11. 资金回款与现金流</h2>
+<h3>11.1 打款周期 <span class="tag tag-E">E</span></h3>
+<table>
+  <tr><th style="width:26%;">项目</th><th>说明</th></tr>
+  <tr><td>打款频率</td><td>有来源称所有站点每 7 个工作日 1 次</td></tr>
+  <tr><td>账单周期</td><td>有来源称订单完成之日对应当周为账单周期；或退货退款期限届满之日对应当周为账单周期</td></tr>
+  <tr><td>打款时间</td><td>有来源称账单周期完成后的 7 个工作日</td></tr>
+</table>
+<div class="box warn">
+  <strong>待核实：</strong>打款周期规则未能核对卖家中心原文，暂标 <span class="tag tag-E">E</span> 级。
+</div>
+<h3>11.2 完整回款链路 <span class="tag tag-D">D</span></h3>
+<div class="box ok">
+  <p><strong>买家下单 → 买家确认收货/系统自动确认 → 订单完成 → 进入待打款池 → 7个工作日打款到第三方账户 → 提现到银行卡（1-3个工作日）</strong></p>
+  <p>整体周期约 <strong>15-25 天</strong>，为 D 级经验值，不进利润公式，只检查周转金够不够盖住这段时间的采购。具体取决于买家是否主动确认收货以及收款商提现速度。</p>
+</div>
+<h3>11.3 对两万元预算的影响</h3>
+<div class="box warn">
+  <strong>现金流断档风险：</strong>从买家付款到资金到账约需 15-25 天（D 级经验值）。这段时间内，你仍需支付采购款、国内运费和广告费。两万元预算中，<strong>周转金必须覆盖这个周期的采购支出</strong>，否则会出现「有订单但没钱采购」的断档。
+  <ul style="margin-top:4px;">
+    <li>预留周转金：建议至少覆盖首批订单的采购总额。</li>
+    <li>不要把所有周转金压在第一批货上。</li>
+    <li>回款到账后，再考虑扩大采购规模。</li>
+    <li>回款周期不进利润公式，只检查周转金够不够盖住这段时间的采购。</li>
+  </ul>
+</div>
+<h3>11.4 收款方式 <span class="tag tag-E">E</span></h3>
+<ul>
+  <li>有来源称 Shopee 官方钱包费率更低、汇率更优</li>
+  <li>有来源称第三方支付可选 Payoneer、PingPong、连连支付</li>
+  <li>有来源称未绑定收款账户将无法获得销售权，店铺和商品前台隐藏</li>
+  <li>有来源称无销售权状态持续 60 天，店铺可能被限制销售权甚至冻结</li>
+</ul>
+<div class="box warn">
+  <strong>待核实：</strong>收款规则未能核对卖家中心原文，暂标 <span class="tag tag-E">E</span> 级。提现费率按第 2.4 节 D 级区间上沿预留，再加汇损。
+</div>
+
+<h3>11.5 现金流预测模型（新增）</h3>
+<pre>可用周转金 = 投入本金 − 已占用（采购在途 + 已发货未回款 + 首批备货）
+未来N天采购需求 = Σ(在途订单待采购额) + Σ(预测出单量 × 单均采购成本)
+
+预测出单量 = 过去7天日均出单量 × 趋势系数(默认1.0，D级)
+
+规则:
+  R-FIN-001  可用周转金 < 未来7天采购需求          → ALERT（P1）
+  R-FIN-002  订单完成超过 25 天仍未到账            → ALERT（P2，阈值 D 级）
+  R-FIN-003  在途采购额 > 投入本金 60%             → WARN（避免全押）
+  R-FIN-004  预计出单量增长但周转金未增加           → WARN（提示控速）</pre>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>实体 <code>CashLedger</code>：每笔资金进出（投入、采购、运费、广告、回款、提现），现金流预测基于流水而非账面推算。</li>
+    <li>回款天数用<strong>实测</strong>校准（订单完成 → 到账的实际天数中位数），跑通后把 D 级 15-25 天替换为实测值并升级为 C。</li>
+  </ul>
+</div>
+<div class="src"><strong>本章 A 级条目来源：</strong>无。打款周期、收款规则均为 E 级待核实；回款周期和提现费率为 D 级经验值 · 查询日期 2026-10-03</div>
+
+<div class="page-break"></div>
+<h2>12. 证据采集任务清单（原「待核实清单」）</h2>
+<p>本清单已从「记录表」升级为<strong>证据采集任务</strong>：每条任务都能被后台分配、跟踪、完成，并在完成后<strong>自动升级对应参数等级</strong>。</p>
+<table>
+  <tr><th style="width:14%;">字段</th><th>含义</th></tr>
+  <tr><td>阻塞第一单</td><td>「是」表示未核实会挡住第一单；「否」表示只影响精度或效率，不挡流程</td></tr>
+  <tr><td>复核通道</td><td>人工登录 / 官方公告 / 招商经理 / 卖家中心 / 实测（对应 1.3 节可达性）</td></tr>
+  <tr><td>写入参数</td><td>核实完成后写入的参数 ID（第 14 章字段字典 / <code>spec/manual-core.json</code>）</td></tr>
+  <tr><td>状态</td><td><code>todo → doing → done → upgraded</code>（<code>upgraded</code> 表示已完成等级升级）</td></tr>
+</table>
+
+<table>
+  <tr><th style="width:4%;">#</th><th style="width:9%;">模块</th><th style="width:22%;">待核实项</th><th style="width:11%;">复核通道</th><th style="width:7%;">阻塞第一单</th><th style="width:15%;">写入参数</th><th>结论 / 备注</th></tr>
+  <tr><td>1</td><td>入驻</td><td>个体户是否可入驻跨境店 / 首站限制</td><td>官方公告 / 招商经理</td><td>是</td><td>P-ONB-FIRST-SITE</td><td>多个来源称仅台湾，官方原文未打开</td></tr>
+  <tr><td>2</td><td>入驻</td><td>2026是否已取消电商流水要求</td><td>人工登录</td><td>是</td><td>P-ONB-FLOW-REQ</td><td>来源冲突</td></tr>
+  <tr><td>3</td><td>入驻</td><td>住宅地址能否作经营场所</td><td>当地政务平台</td><td>否</td><td>P-ONB-ADDR</td><td>属当地事项</td></tr>
+  <tr><td>4</td><td>入驻</td><td>手机号是否需实名且未注册过</td><td>人工登录</td><td>否</td><td>P-ONB-PHONE</td><td>有来源称需，无官方原文</td></tr>
+  <tr><td>5</td><td>入驻</td><td>法人身份证有效期是否需剩余6个月</td><td>人工登录</td><td>否</td><td>P-ONB-ID</td><td>有来源称需6个月，无官方原文</td></tr>
+  <tr><td>6</td><td>入驻</td><td>邮箱是否优先Outlook/Gmail</td><td>人工登录</td><td>否</td><td>P-ONB-EMAIL</td><td>有来源称优先，无官方原文</td></tr>
+  <tr><td>7</td><td>入驻</td><td>法人实名认证是否含人脸识别视频</td><td>人工登录</td><td>否</td><td>P-ONB-FACE</td><td>有来源称含，无官方原文</td></tr>
+  <tr><td>8</td><td>入驻</td><td>保证金金额与豁免期</td><td>卖家中心</td><td>否</td><td>P-TW-DEPOSIT</td><td>有来源称约3000元，带「约」</td></tr>
+  <tr><td>9</td><td>费率</td><td>台湾站佣金 + 交易手续费</td><td>人工登录</td><td>否</td><td>P-TW-COMMISSION / P-TW-TXN-FEE</td><td>A：佣金 14%（含税），交易手续费 2.5%（含税），2026-01-01 起生效。佣金基数不含订单运费；交易手续费基数原文没写。<strong>已交叉验证（附录 C）</strong>，仍需官方快照</td></tr>
+  <tr><td>10</td><td>费率</td><td>台湾站免运活动费</td><td>人工登录</td><td>否</td><td>P-TW-FREESHIP-FEE</td><td>卖家侧免运活动费记 0；免运服务并入平台基础服务。免运最低消费金额原文没写</td></tr>
+  <tr><td>11</td><td>费率</td><td>马来站佣金、交易手续费、免运（扩展分支）</td><td>卖家中心</td><td>否</td><td>P-MY-*</td><td>继续空着</td></tr>
+  <tr><td>12</td><td>物流</td><td>SLS 运费分档表（台湾站）</td><td>卖家中心</td><td><strong>是</strong></td><td>P-TW-SLS-TIERS</td><td><strong>唯一允许卡住上架的费率项</strong></td></tr>
+  <tr><td>13</td><td>物流</td><td>SLS 运费分档表（马来站）</td><td>卖家中心</td><td>否</td><td>P-MY-SLS-TIERS</td><td>扩展分支</td></tr>
+  <tr><td>14</td><td>物流</td><td>SLS 禁运品类完整清单</td><td>人工登录</td><td>是</td><td>P-SLS-BANNED</td><td>来源无可打开清单或文号</td></tr>
+  <tr><td>15</td><td>物流</td><td>发货时效要求与取消订单规则（DTS+2 / DTS+4）</td><td>卖家中心</td><td>否</td><td>P-TW-DTS</td><td>需核对 10.3 节原文；系统不自动生成截止时间</td></tr>
+  <tr><td>16</td><td>物流</td><td>店配最大重量（10kg vs 5kg）</td><td>卖家中心</td><td>否</td><td>P-TW-SHOPEE-SHIP-W</td><td>来源冲突，按区间建模</td></tr>
+  <tr><td>17</td><td>物流</td><td>液体限制是否确为100ml</td><td>卖家中心</td><td>否</td><td>P-TW-LIQUID-ML</td><td>有来源称100ml，官方原文未打开</td></tr>
+  <tr><td>18</td><td>物流</td><td>单包裹总值超过20000新台币是否不予投递</td><td>卖家中心</td><td>否</td><td>P-TW-PARCEL-CAP</td><td>有来源称不予投递，官方原文未打开</td></tr>
+  <tr><td>19</td><td>收款</td><td>提现费率、汇损实际值</td><td>收款商 / 实测</td><td>否</td><td>P-TW-WITHDRAW / P-FX-LOSS</td><td>台湾站约 0.5%-1.2%，取上沿预留再加汇损</td></tr>
+  <tr><td>20</td><td>广告</td><td>广告归因口径（本单金额怎么取）</td><td>广告后台</td><td>否</td><td>P-AD-ATTR</td><td>没开广告记 0；已开广告未抄到本单金额时才标 E</td></tr>
+  <tr><td>21</td><td>接口</td><td>Shopee Open Platform 权限范围</td><td>官方文档</td><td>否</td><td>—</td><td>影响自动同步能力，不影响人工流程</td></tr>
+  <tr><td>22</td><td>税务</td><td>当地税务备案要求</td><td>电子税务局</td><td>否</td><td>P-TAX-*</td><td>来源无文号</td></tr>
+  <tr><td>23</td><td>选品</td><td>重量 500g 阈值是否合适</td><td>运费表 + 自测</td><td>否</td><td>P-SEL-WEIGHT-D</td><td>D 级经验值</td></tr>
+  <tr><td>24</td><td>选品</td><td>供应商 3 家代发是否够</td><td>1688 实测</td><td>否</td><td>P-SEL-SUP-COUNT</td><td>D 级经验值</td></tr>
+  <tr><td>25</td><td>选品</td><td>前排评价数阈值（按类目）</td><td>买家端观察</td><td>否</td><td>P-SEL-REVIEW-TH</td><td>D 级经验值</td></tr>
+  <tr><td>26</td><td>利润</td><td>买家实付运费规则（免运门槛）</td><td>卖家中心</td><td>否</td><td>P-TW-BUYER-SHIP</td><td>免运活动费记 0；免运最低消费金额原文没写</td></tr>
+  <tr><td>27</td><td>利润</td><td>退货率实际值（按类目）</td><td>跑出数据后校准</td><td>否</td><td>P-RETURN-RATE</td><td>D 级预留 3%-5%；空着不单独卡住上架</td></tr>
+  <tr><td>28</td><td>利润</td><td>存活率 50% 阈值是否合理</td><td>第一轮实测后评估</td><td>否</td><td>P-KPI-SURVIVAL-TH</td><td>D 级经验值</td></tr>
+  <tr><td>29</td><td>利润</td><td>台湾站净利润率阈值</td><td>第一轮实测后设定</td><td>否</td><td>P-TW-MARGIN-TH</td><td>经验值 ≥15%/10%-15%/&lt;10%</td></tr>
+  <tr><td>30</td><td>风控</td><td>罚分申诉流程与时效</td><td>卖家中心</td><td>否</td><td>P-PENALTY-APPEAL</td><td>—</td></tr>
+  <tr><td>31</td><td>风控</td><td>FHR 低于 80% 每周计 1 分（有来源称 2026-05-11 起）</td><td>官方公告</td><td>否</td><td>P-FHR-RULE</td><td>待核实</td></tr>
+  <tr><td>32</td><td>风控</td><td>不良包装计 6 分（有来源称 2026-06-22 起）</td><td>官方公告</td><td>否</td><td>P-PACK-RULE</td><td>待核实</td></tr>
+  <tr><td>33</td><td>现金流</td><td>实际回款周期（含收款商提现）</td><td>第一轮实测</td><td>否</td><td>P-CASH-CYCLE</td><td>经验值15-25天，不进利润公式</td></tr>
+  <tr><td>34</td><td>入驻</td><td>店铺激活后5天内需上传50个SKU</td><td>卖家中心 / 招商经理</td><td>否</td><td>P-ONB-SKU-RULE</td><td>待核实</td></tr>
+  <tr><td>35</td><td>费率</td><td>前 3 个月免佣期订单量上限</td><td>人工登录</td><td>否</td><td>P-TW-FREE-ORDERS</td><td>A：前三个月，每月前 500 单；含跨境直邮；19 日规则；取消与全额退货订单剔除；手续费与平台服务费照收。<strong>已交叉验证（附录 C）</strong>，仍需官方快照</td></tr>
+  <tr><td>36</td><td>入驻</td><td>个体工商户执照申请渠道的具体网址</td><td>当地政务平台</td><td>否</td><td>P-ONB-LICENSE-URL</td><td>有来源称通过政务服务网/小程序，无具体网址</td></tr>
+  <tr><td>37</td><td>入驻</td><td>「入驻必须存续、无异常」是否有官方原文</td><td>人工登录</td><td>否</td><td>P-ONB-GSXT</td><td>查询入口：https://www.gsxt.gov.cn；入驻页原文未打开</td></tr>
+  <tr><td>38</td><td>费率</td><td>交易手续费的计算基数</td><td>人工登录</td><td>否</td><td>P-TW-TXN-FEE-BASIS</td><td>费率 2.5%（含税）已确认，基数原文没写。上架前暂按商品价；出单后改用账单金额</td></tr>
+  <tr><td>39</td><td>入驻</td><td>seller.shopee.cn 入驻须知正文</td><td>人工登录</td><td>是</td><td>P-ONB-ENTRY</td><td>入口有来源，正文未打开，无查询日期</td></tr>
+  <tr><td><strong>40</strong></td><td>治理</td><td><strong>新增：</strong>A 级来源页面可机读性（shopee.cn/edu 两页为 JS 空壳）</td><td>人工登录 + 快照存档</td><td>否</td><td>P-GOV-SNAPSHOT</td><td>2026-10-03 复核：26619/26620 返回 JS 空壳；需人工登录并截图存档，否则 A 级参数无长期可追溯性</td></tr>
+  <tr><td><strong>41</strong></td><td>物流</td><td><strong>新增：</strong>help.shopee.tw 域名的可访问性与镜像来源</td><td>网络环境确认</td><td>否</td><td>P-GOV-SOURCE-REACH</td><td>2026-10-03 复核：80088 / 80084 两页不可达。需确认是否区域网络限制，并确定替代取证方式</td></tr>
+  <tr><td><strong>42</strong></td><td>核算</td><td><strong>新增：</strong>台湾站真实汇率口径（平台结算汇率 vs 银行汇率）</td><td>出单后账单比对</td><td>否</td><td>P-TW-FX</td><td>影响采购成本折算与汇损预留的准确性</td></tr>
+  <tr><td><strong>43</strong></td><td>履约</td><td><strong>新增：</strong>当单页面中转仓地址的字段结构与校验方式</td><td>账号下来后实测</td><td>是</td><td>P-TW-WH-ADDR-FMT</td><td>决定「地址必须来自当单页面」这条硬规则的实现方式</td></tr>
+  <tr><td><strong>44</strong></td><td>核算</td><td><strong>新增：</strong>免运门槛下买家实付运费的取值规则</td><td>卖家中心 / 账单</td><td>否</td><td>P-TW-BUYER-SHIP</td><td>直接决定净运费成本 <code>max(SLS − 买家实付, 0)</code> 的结果</td></tr>
+</table>
+<div class="box note">
+  <strong>核实原则：</strong>费率类每季度复核一次；平台政策变化时立即更新；实测数据跑出后，把对应条目的等级从 <span class="tag tag-D">D</span> 或 <span class="tag tag-E">E</span> 升级为 <span class="tag tag-B">B</span> 或 <span class="tag tag-C">C</span>。<strong>「阻塞第一单 = 是」的条目共 6 条（第 1、2、12、14、39、43 项），构成第一单的最小取证集。</strong>
+</div>
+<div class="box sys">
+  <strong class="sysh">→ 系统落地（第 17 / 19 章）</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>实体 <code>VerificationTask</code>：<code>task_id, module, item, channel, blocks_first_order, target_param_id, status, owner, due_at, conclusion, evidence_ref</code>。</li>
+    <li>任务 <code>done</code> 后触发 <code>ParamUpgrade</code>：写入参数值 + 证据等级 + 来源快照，参数状态由 <code>to_verify</code> 变为 <code>active</code>。</li>
+    <li>「阻塞第一单」的任务逾期 → 看板置顶 + P1 告警；但不阻塞其他候选品的流程（避免单点卡死）。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>13. 智能卖家后台总体架构</h2>
+<p>第 1–12 章解决「怎么做对」，第 13–20 章解决「怎么让系统替你把这条链路守住」。核心设计目标只有三条：<strong>单一事实来源、门禁可执行、闭环可校准</strong>。</p>
+
+<h3>13.1 设计目标与验收口径</h3>
+<table>
+  <tr><th style="width:20%;">目标</th><th style="width:38%;">含义</th><th>可验收的表现</th></tr>
+  <tr><td>单一事实来源</td><td>费率、时效、限额、阈值只有一处定义，业务代码不硬编码</td><td>改一个参数值，全系统生效；能查出这个参数被哪些规则引用</td></tr>
+  <tr><td>门禁可执行</td><td>手册里的判断条件变成可运行的规则，人工操作无法绕过</td><td>未确认库存无法点发货；未称重无法进入核算</td></tr>
+  <tr><td>闭环可校准</td><td>估算值被实测值替换，阈值随真实数据更新</td><td>每个参数有「估算 → 实测」的替换记录与历史版本</td></tr>
+</table>
+
+<h3>13.2 模块划分</h3>
+<table>
+  <tr><th style="width:16%;">模块</th><th style="width:34%;">职责</th><th>对应章节</th></tr>
+  <tr><td>入驻中心</td><td>材料清单、进度状态机、激活日期（免佣窗口起算）</td><td>第 2 章</td></tr>
+  <tr><td>选品台</td><td>候选品、否决扫描、竞品观察记录、评分卡</td><td>第 3 章</td></tr>
+  <tr><td>供应商库</td><td>供应商档案、报价历史、断货降级链路、评分</td><td>第 4 章</td></tr>
+  <tr><td>核算引擎</td><td>纯函数计算、三态语义、快照留痕、trace</td><td>第 5 章</td></tr>
+  <tr><td>门禁服务</td><td>统一 <code>GateService</code>，返回四元组，硬/软/建议三级</td><td>第 6 / 15 章</td></tr>
+  <tr><td>上架中心</td><td>主图来源校验、标题词库校验、属性完整度</td><td>第 7 章</td></tr>
+  <tr><td>订单与履约</td><td>履约状态机、强制顺序、地址来源校验、计时</td><td>第 7 章</td></tr>
+  <tr><td>风控中心</td><td>违禁词库、品牌词库、类目黑名单、命中记录</td><td>第 8 章</td></tr>
+  <tr><td>资金台账</td><td>现金流流水、周转金预测、回款跟踪</td><td>第 11 章</td></tr>
+  <tr><td>证据中心</td><td>核实任务、参数等级、来源快照、复核日历</td><td>第 12 / 19 章</td></tr>
+  <tr><td>复盘中心</td><td>KPI 看板、估算与实测差异、阈值建议</td><td>第 18 章</td></tr>
+</table>
+
+<h3>13.3 数据流（闭环主干）</h3>
+<pre>候选品 ──G1──► 实测取证 ──G2──► 核算引擎 ──G3──► 上架 ──G4──► 出单
+                                                            │
+                            复盘校准 ◄──G7── 回款 ◄──G6── 履约 ◄──G5──┘
+                                │
+                                └──► 参数/阈值更新 ──► 回到核算引擎（下一轮更准）</pre>
+
+<h3>13.4 人机分工边界</h3>
+<table>
+  <tr><th style="width:34%;">系统负责</th><th>人负责</th></tr>
+  <tr><td>校验、计算、留痕、提醒、超时告警、参数版本管理、门禁拦截</td><td>选品方向、定价决策、供应商谈判、地址核对、异常兜底</td></tr>
+  <tr><td>把「缺数据」明确告诉人，并列出缺哪一项</td><td>补齐实测数据（称重、实付、询价）</td></tr>
+</table>
+
+<h3>13.5 非目标（明确不做）</h3>
+<div class="box warn">
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>不做对抗平台风控的任何功能（去水印、改 MD5、批量伪差异化、自动抢活动、批量抓取竞品数据）。</li>
+    <li>不替用户做不可逆的商业决策（是否开店、是否加预算、是否放弃类目）。</li>
+    <li>不把 E 级信息包装成确定结论（例如自动"选站"、自动"砍品"）。</li>
+    <li>不在无实测数据时输出一个看起来精确的利润数字。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>14. 数据模型与字段字典</h2>
+<p>以下为核心实体。字段字典的机器可读版本见 <code>spec/manual-core.json</code> 的 <code>entities</code> 段。</p>
+<table>
+  <tr><th style="width:16%;">实体</th><th style="width:10%;">主键</th><th style="width:44%;">核心字段</th><th>关键约束</th></tr>
+  <tr><td><code>OnboardingCase</code></td><td>case_id</td><td>主体类型、材料勾选、提交/审核/激活时间、首站</td><td>激活日期必填，用于免佣窗口计算</td></tr>
+  <tr><td><code>ProductCandidate</code></td><td>candidate_id</td><td>来源链接、类目、否决扫描结果、竞品观察、状态</td><td><code>source_url</code> 唯一</td></tr>
+  <tr><td><code>Sample</code></td><td>sample_id</td><td>candidate_id、采购实付、下单日期、实收日期</td><td>样品未到不得称重</td></tr>
+  <tr><td><code>Measurement</code></td><td>measure_id</td><td>sample_id、重量g、三边cm、是否液体、毫升</td><td>重量为 C 级必填</td></tr>
+  <tr><td><code>Supplier</code></td><td>supplier_id</td><td>名称、1688链接、年限、是否代发、是否接受中转仓格式、评分</td><td>每个候选品 ≥3 家</td></tr>
+  <tr><td><code>SupplierQuote</code></td><td>quote_id</td><td>supplier_id、价格、运费、日期</td><td>只增不改，保留历史</td></tr>
+  <tr><td><code>CostSnapshot</code></td><td>snapshot_id</td><td>inputs、params_version、outputs、trace、类型（估算/实测）</td><td>只增不改</td></tr>
+  <tr><td><code>Listing</code></td><td>listing_id</td><td>candidate_id、售价、主图来源、标题、属性完整度、状态</td><td>主图来源必须 = 自拍</td></tr>
+  <tr><td><code>Order</code></td><td>order_id</td><td>listing_id、买家实付运费、状态、DTS 起止、到仓时间</td><td>状态只能按 16 章顺序流转</td></tr>
+  <tr><td><code>PurchaseOrder</code></td><td>po_id</td><td>order_id、supplier_id、金额、地址来源、地址原文、下单时间</td><td><code>address_source</code> 必须 = order_page</td></tr>
+  <tr><td><code>Shipment</code></td><td>shipment_id</td><td>po_id、发货时间、到仓扫描时间、异常标记</td><td>到仓时间驱动迟发判定</td></tr>
+  <tr><td><code>Payout</code></td><td>payout_id</td><td>order_id、账单周期、打款日、到账日、提现费、汇损</td><td>用于校准回款天数</td></tr>
+  <tr><td><code>FeeRecord</code></td><td>fee_id</td><td>order_id、佣金、交易手续费、预售费、免运活动费</td><td>以平台账单为准，覆盖估算</td></tr>
+  <tr><td><code>AdSpend</code></td><td>ad_id</td><td>listing_id/order_id、日期、金额、归因口径</td><td>未开广告不建记录</td></tr>
+  <tr><td><code>ReturnRecord</code></td><td>return_id</td><td>order_id、原因、退款额、货是否退回</td><td>用于计算真实退货率</td></tr>
+  <tr><td><code>Param</code></td><td>param_id</td><td>名称、值(可 null)、单位、站点、证据等级、来源、复核状态、复核日、下次复核日、状态</td><td><strong>门禁资格由证据等级 + 是否过期共同决定</strong></td></tr>
+  <tr><td><code>Rule</code></td><td>rule_id</td><td>条件表达式、动作、门禁级别、依赖 param_ids、证据等级</td><td>E 级依赖不得进硬门禁</td></tr>
+  <tr><td><code>VerificationTask</code></td><td>task_id</td><td>模块、项目、通道、是否阻塞第一单、目标参数、状态、结论、证据引用</td><td>完成触发参数升级</td></tr>
+  <tr><td><code>AuditLog</code></td><td>log_id</td><td>动作、对象、规则、参数版本、结果、操作人、时间</td><td>只增不改</td></tr>
+</table>
+<div class="box note">
+  <strong>三个不可变表（append-only）：</strong><code>CostSnapshot</code>、<code>SupplierQuote</code>、<code>AuditLog</code>。任何「覆盖式更新」都会让复盘失去依据。
+</div>
+
+<div class="page-break"></div>
+<h2>15. 规则引擎与门禁矩阵</h2>
+<p>规则 ID 是人与系统的共同语言：手册里写 <code>R-xxx</code>，系统里就存在同名规则，可单独启停、可解释、可审计。</p>
+<h3>15.1 动作类型</h3>
+<table>
+  <tr><th style="width:16%;">动作</th><th style="width:44%;">含义</th><th>典型场景</th></tr>
+  <tr><td><code>BLOCK</code></td><td>阻止操作，必须修完才能继续</td><td>未确认库存点发货</td></tr>
+  <tr><td><code>WARN</code></td><td>允许继续，但必须显式确认并留痕</td><td>净利润率 10%–15%</td></tr>
+  <tr><td><code>AUTO_FILL</code></td><td>系统自动填默认值，可被人工覆盖</td><td>提现费按 D 级上沿预留</td></tr>
+  <tr><td><code>TASK</code></td><td>生成待办/核实任务</td><td>E 级参数待核实</td></tr>
+  <tr><td><code>ALERT</code></td><td>发出告警，不阻塞流程</td><td>周转金不足、回款超期</td></tr>
+</table>
+
+<h3>15.2 规则清单</h3>
+<table>
+  <tr><th style="width:11%;">规则ID</th><th style="width:26%;">条件</th><th style="width:11%;">动作</th><th style="width:11%;">门禁级别</th><th style="width:8%;">依赖等级</th><th>说明</th></tr>
+  <tr><td>R-GOV-001</td><td>硬门禁引用了 E 级参数</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>—</td><td><strong>配置错误，服务拒绝启动</strong></td></tr>
+  <tr><td>R-GOV-002</td><td>A/B 级参数超过下次复核日</td><td>WARN + 降级</td><td><span class="tag tag-soft">软</span></td><td>—</td><td>自动退出硬门禁，降为提示并生成复核任务</td></tr>
+  <tr><td>R-GOV-003</td><td>同一规则混用不同站点参数</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>—</td><td>台湾站与马来站参数隔离</td></tr>
+  <tr><td>R-SEL-001</td><td>候选品含品牌/IP/卡通</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>D</td><td>图片侵权是封店主因</td></tr>
+  <tr><td>R-SEL-002</td><td>易碎 / 服装鞋帽 / 需认证</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>D</td><td>退货与合规风险不可控</td></tr>
+  <tr><td>R-SEL-003</td><td>命中违禁品类词库</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>E</td><td><strong>词库为 E 级时降级为 WARN</strong></td></tr>
+  <tr><td>R-SEL-004</td><td>竞品前排 ≥3 个同款 ≤5 折</td><td>WARN</td><td><span class="tag tag-soft">软</span></td><td>D</td><td>提示跳过，人工决定</td></tr>
+  <tr><td>R-SUP-001</td><td>候选品可用供应商 &lt; 3 家</td><td>WARN</td><td><span class="tag tag-soft">软</span></td><td>D</td><td>含主供应商 + ≥2 备选</td></tr>
+  <tr><td>R-SUP-002</td><td>主供应商年限 &lt;3 年或近 90 天无交易</td><td>WARN</td><td><span class="tag tag-soft">软</span></td><td>D</td><td>—</td></tr>
+  <tr><td>R-SUP-003</td><td>三家备选全部无货</td><td>TASK</td><td><span class="tag tag-soft">软</span></td><td>D</td><td>生成下架任务，记录断货事件</td></tr>
+  <tr><td>R-DATA-001</td><td>实际重量未录</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>C</td><td>缺数据，结果 INCOMPLETE</td></tr>
+  <tr><td>R-DATA-002</td><td>采购实付未录</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>C</td><td>缺数据，结果 INCOMPLETE</td></tr>
+  <tr><td>R-COST-001</td><td>SLS 运费缺失</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>E→B</td><td><strong>参数为 E 时只标 INCOMPLETE，不得判 REJECT</strong></td></tr>
+  <tr><td>R-COST-002</td><td>净利润率 &lt; 10%</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>D</td><td>阈值降级时自动转 WARN</td></tr>
+  <tr><td>R-COST-003</td><td>10% ≤ 净利润率 &lt; 15%</td><td>WARN</td><td><span class="tag tag-soft">软</span></td><td>D</td><td>观察，补选或调价</td></tr>
+  <tr><td>R-COST-004</td><td>售价字段包含买家运费</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>—</td><td>结构性错误，直接拒绝</td></tr>
+  <tr><td>R-COST-005</td><td>净运费成本 ≠ max(SLS − 买家实付, 0)</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>—</td><td>引擎内置，不允许手工覆盖</td></tr>
+  <tr><td>R-COST-006</td><td>免佣窗口内佣金未记 0，或手续费被一并免除</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>A</td><td>手续费在免佣期内照收 2.5%</td></tr>
+  <tr><td>R-COST-007</td><td>提现费率留空</td><td>AUTO_FILL</td><td><span class="tag tag-soft">软</span></td><td>D</td><td>按区间上沿填入并标注</td></tr>
+  <tr><td>R-LIST-001</td><td>主图来源 ≠ 自拍</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>D</td><td>禁止 1688 原图</td></tr>
+  <tr><td>R-RISK-001</td><td>标题/描述含品牌词或违禁词</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>E</td><td><strong>词库为 E 级时降级为 WARN + 人工复核</strong></td></tr>
+  <tr><td>R-ORDER-001</td><td>未记录「库存已确认」即安排发货</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>D</td><td>发货计时起点保护</td></tr>
+  <tr><td>R-ORDER-002</td><td>地址来源 ≠ 当单页面</td><td>BLOCK</td><td><span class="tag tag-hard">硬</span></td><td>E</td><td><strong>字段结构待核实</strong>，但「来源必须是当单页面」为硬约束</td></tr>
+  <tr><td>R-ORDER-003</td><td>临近发货截止仍未到仓</td><td>ALERT</td><td><span class="tag tag-soft">软</span></td><td>E</td><td>DTS 参数为 E 时不启用</td></tr>
+  <tr><td>R-LOG-001..008</td><td>见 10.4 物流校验函数</td><td>INCOMPLETE/WARN</td><td><span class="tag tag-soft">软</span></td><td>E</td><td><strong>E 级不产生 REJECT</strong>；未核实数值经 <code>unverified_claim</code> 读取，规则标记 <code>advisory_only</code>，只能输出 WARN / INCOMPLETE</td></tr>
+  <tr><td>R-FIN-001</td><td>可用周转金 &lt; 未来 7 天采购需求</td><td>ALERT</td><td><span class="tag tag-adv">建议</span></td><td>D</td><td>P1 告警</td></tr>
+  <tr><td>R-FIN-002</td><td>订单完成 &gt;25 天未到账</td><td>ALERT</td><td><span class="tag tag-adv">建议</span></td><td>D</td><td>阈值实测后收紧</td></tr>
+  <tr><td>R-KPI-001</td><td>估算值超期未用实测替换</td><td>TASK</td><td><span class="tag tag-adv">建议</span></td><td>—</td><td>生成校准任务（第 18 章）</td></tr>
+</table>
+
+<div class="box sys">
+  <strong class="sysh">→ 实现要点</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li>规则用<strong>声明式条件</strong>（字段/运算符/阈值）而非代码，便于运营在受控范围内维护。</li>
+    <li><strong>降级是自动的</strong>：当依赖参数等级下降或过期，规则自动从硬门禁降为软门禁，并在 UI 说明原因。绝不因为参数不可靠而悄悄放行或悄悄拦截。</li>
+    <li>每条规则的命中率应被统计：长期 0 命中的硬规则要复盘是否需要；高频命中的规则要评估是否阈值不合理。</li>
+  </ul>
+</div>
+
+<div class="page-break"></div>
+<h2>16. 状态机规格</h2>
+<h3>16.1 商品生命周轴</h3>
+<pre>candidate(候选)
+  └─(R-SEL 通过)─► accepted(已采纳)
+        └─(样品到手 & 称重)─► measured(已实测)
+              └─(核算完成)─► costed(已核算)
+                    ├─ PASS ──────► listed(已上架) ──► 出单
+                    ├─ WARN ──────► observe(观察) ──► 补选/调价 ──► costed
+                    ├─ REJECT ────► dropped(砍掉)
+                    └─ INCOMPLETE ► measured(补数据)
+任意状态 ──(命中一票否决)──► rejected(否决，不可回退)</pre>
+
+<h3>16.2 订单履约状态机（强制顺序）</h3>
+<pre>created(已下单)
+  └─► stock_checked(库存已确认)          [前置: 供应商确认有货]
+        └─► ship_arranged(已安排发货)     [前置: stock_checked]
+              └─► address_captured(地址已抄录)[前置: ship_arranged, 来源=当单页面]
+                    └─► po_created(采购单已提交)[前置: address_captured]
+                          └─► supplier_shipped(供应商已发货)
+                                └─► warehouse_scanned(到仓已扫描)
+                                      └─► in_transit(跨境运输中)
+                                            └─► delivered(已签收)
+                                                  └─► completed(订单完成)
+                                                        └─► payable(进入待打款)
+                                                              └─► paid(已到账)
+
+异常分支:
+  stock_check → all_out  ──► listing_paused(商品下架) + 订单取消流程
+  ship_arranged 后 24h 未 po_created ──► 告警 P1
+  warehouse_scanned 超期 ──► 迟发风险告警（DTS 参数为 A/B 时启用）</pre>
+
+<h3>16.3 核实任务状态机</h3>
+<pre>todo ──► doing ──► done(结论已记录) ──► upgraded(参数已升级并发布)
+  ▲                    │
+  └────────────────────┘ 结论与来源不完整则退回</pre>
+
+<h3>16.4 参数生命周期</h3>
+<pre>draft(拟定) ──► to_verify(E 级，不可用于门禁) ──► active(可用于门禁)
+                                                      │
+                                        (超期未复核) ──┴──► stale(自动退出硬门禁)
+                                                              │
+                                                    复核完成 ──┘─► active</pre>
+<div class="box note">
+  <strong>状态机是「闭环」的载体：</strong>没有状态机，手册只是建议；有了状态机，流程才可能被系统守住。所有状态变更写 <code>AuditLog</code>，并记录触发规则。</div>
+
+<div class="page-break"></div>
+<h2>17. 事件、告警与任务 SLA</h2>
+<h3>17.1 事件清单</h3>
+<table>
+  <tr><th style="width:26%;">事件</th><th style="width:18%;">触发</th><th>系统动作</th></tr>
+  <tr><td><code>candidate.rejected</code></td><td>命中一票否决</td><td>记录原因，禁止进入核算</td></tr>
+  <tr><td><code>measurement.missing</code></td><td>提交核算但缺重量/实付</td><td>返回 INCOMPLETE + 缺失字段清单</td></tr>
+  <tr><td><code>cost.incomplete</code></td><td>SLS 运费缺失</td><td>标记缺数据，不判 REJECT</td></tr>
+  <tr><td><code>cost.rejected</code></td><td>净利润率 &lt;10%</td><td>标记砍掉，记录 trace 供复盘</td></tr>
+  <tr><td><code>order.created</code></td><td>平台新订单</td><td>创建履约状态机 + 生成采购待办</td></tr>
+  <tr><td><code>stock.all_out</code></td><td>三家供应商无货</td><td>下架任务 + 断货事件记录</td></tr>
+  <tr><td><code>address.source_invalid</code></td><td>地址来源 ≠ 当单页面</td><td>拒绝提交采购单（P0）</td></tr>
+  <tr><td><code>ship.overdue_risk</code></td><td>临近到仓截止</td><td>告警（需 DTS 参数 A/B）</td></tr>
+  <tr><td><code>payout.received</code></td><td>款项到账</td><td>关闭回款跟踪，计算真实回款天数</td></tr>
+  <tr><td><code>payout.overdue</code></td><td>超期未到账</td><td>告警 P2</td></tr>
+  <tr><td><code>cash.shortage</code></td><td>周转金不足</td><td>告警 P1，建议控速</td></tr>
+  <tr><td><code>param.expired</code></td><td>A/B 参数超期</td><td>降级 + 生成复核任务</td></tr>
+  <tr><td><code>task.verification_overdue</code></td><td>核实任务逾期</td><td>看板置顶 + 催办</td></tr>
+</table>
+
+<h3>17.2 告警优先级与 SLA</h3>
+<table>
+  <tr><th style="width:10%;">级别</th><th style="width:30%;">场景</th><th style="width:18%;">响应时效</th><th>通知方式</th></tr>
+  <tr><td>P0</td><td>可能造成直接损失或封店：地址来源非法、发货前未确认库存</td><td>立即（系统硬拦）</td><td>界面阻断 + 记录</td></tr>
+  <tr><td>P1</td><td>影响履约或现金流：发货超时风险、周转金不足、断货</td><td>当天处理</td><td>站内待办 + 置顶</td></tr>
+  <tr><td>P2</td><td>影响体验或账目：回款超期、订单异常</td><td>2 个工作日内</td><td>站内提醒</td></tr>
+  <tr><td>P3</td><td>优化类：参数待复核、KPI 待校准</td><td>按复核周期</td><td>周报汇总</td></tr>
+</table>
+<div class="box warn">
+  <strong>告警设计原则：</strong>宁可少而准，不可多而废。<strong>E 级参数一律不产生时效类告警</strong>（避免用未核实规则吓唬用户），只产生「待核实」任务。这是本手册「不写死费率」原则在告警层的延伸。
+</div>
+
+<div class="page-break"></div>
+<h2>18. 复盘与 KPI 闭环（含参数校准）</h2>
+<h3>18.1 核心 KPI</h3>
+<table>
+  <tr><th style="width:24%;">指标</th><th style="width:34%;">定义</th><th>校准目标</th></tr>
+  <tr><td>选品存活率</td><td>净利润率 ≥15% 的候选数 ÷ 完成核算的候选数</td><td>校准选品方向，阈值 P-KPI-SURVIVAL-TH</td></tr>
+  <tr><td>第一单周期</td><td>激活日期 → 首单出单日期</td><td>衡量启动效率</td></tr>
+  <tr><td>采购到仓时长</td><td>采购单提交 → 到仓扫描（中位数）</td><td>校准发货截止预警提前量</td></tr>
+  <tr><td>迟发率</td><td>迟发订单数 ÷ 发货订单数</td><td>校准 DTS 参数与供应商评分</td></tr>
+  <tr><td>退款/退货率</td><td>退款订单数 ÷ 完成订单数</td><td><strong>替换 D 级退货率预留 3%-5%</strong></td></tr>
+  <tr><td>回款天数</td><td>订单完成 → 到账（中位数）</td><td><strong>替换 D 级 15-25 天</strong></td></tr>
+  <tr><td>估算 vs 实测利润偏差</td><td>(估算净利润率 − 实测净利润率) 的分布</td><td>校准提现费、汇损、运费估算</td></tr>
+  <tr><td>单位经济</td><td>单均净利润、单均采购、单均运费</td><td>判断是否具备放量条件</td></tr>
+  <tr><td>断货率</td><td>断货事件数 ÷ 出单 SKU 数</td><td>校准供应商备选数量</td></tr>
+</table>
+
+<h3>18.2 校准机制（闭环的关键一环）</h3>
+<table>
+  <tr><th style="width:22%;">估算值</th><th style="width:22%;">实测来源</th><th style="width:16%;">替换时机</th><th>替换后的影响</th></tr>
+  <tr><td>SLS 运费（分档估算）</td><td>当单页面实际运费</td><td>每单出单后</td><td>更新该重量档位的实际值，修正后续核算</td></tr>
+  <tr><td>提现费率（D 级上沿）</td><td>收款商实际扣费</td><td>首次提现后</td><td>参数升级为 C，核算更准</td></tr>
+  <tr><td>退货率（D 级 3%-5%）</td><td>真实退款/退货记录</td><td>累计 ≥20 单后</td><td>参数升级为 C，按类目细化</td></tr>
+  <tr><td>回款天数（D 级 15-25 天）</td><td>实际到账时间</td><td>累计 ≥5 笔后</td><td>参数升级为 C，现金流预测更准</td></tr>
+  <tr><td>采购到仓时长（估）</td><td>采购单时间戳</td><td>累计 ≥10 单后</td><td>提前量自动调整，减少迟发</td></tr>
+  <tr><td>平台费（按商品价估算基数）</td><td>平台账单实际金额</td><td>首单账单后</td><td>交易手续费基数问题被真实数据消解</td></tr>
+</table>
+
+<h3>18.3 复盘节奏</h3>
+<table>
+  <tr><th style="width:16%;">周期</th><th style="width:36%;">看什么</th><th>产出</th></tr>
+  <tr><td>每单</td><td>估算 vs 实测差异</td><td>校准任务（若偏差超阈值）</td></tr>
+  <tr><td>每周</td><td>迟发率、断货、告警清单</td><td>供应商评分更新、下架/换供应商决定</td></tr>
+  <tr><td>每月</td><td>存活率、单位经济、现金流</td><td>类目方向调整、预算决策</td></tr>
+  <tr><td>每季度</td><td>费率参数复核、E 级任务清账</td><td>参数版本发布（第 19 章）</td></tr>
+</table>
+<div class="box ok">
+  <strong>闭环的判据（自检）：</strong>系统里任意一个数字，都能回答三个问题——<strong>它从哪来</strong>（来源与证据等级）、<strong>谁在用它</strong>（被哪些规则引用）、<strong>它准不准</strong>（是否已被实测校准）。三个问题都答得上，闭环成立。
+</div>
+
+<div class="page-break"></div>
+<h2>19. 手册与参数治理</h2>
+<h3>19.1 参数条目必备字段</h3>
+<table>
+  <tr><th style="width:20%;">字段</th><th style="width:12%;">必填</th><th>说明</th></tr>
+  <tr><td><code>param_id</code></td><td>是</td><td>稳定标识，规则引用它而非中文名</td></tr>
+  <tr><td><code>scope</code></td><td>是</td><td>站点/类目/订单类型，禁止跨站复用</td></tr>
+  <tr><td><code>value</code></td><td>是</td><td>允许 <code>null</code>（表示未核实），禁止用 0 冒充未知</td></tr>
+  <tr><td><code>evidence_level</code></td><td>是</td><td>A/B/C/D/E，决定门禁资格</td></tr>
+  <tr><td><code>source_url</code></td><td>A/B 必填</td><td>原始页面地址</td></tr>
+  <tr><td><code>checked_at</code></td><td>A/B 必填</td><td>查询日期</td></tr>
+  <tr><td><code>recheck_status</code></td><td>是</td><td><code>machine_ok</code> / <code>manual_only</code> / <code>blocked</code></td></tr>
+  <tr><td><code>snapshot_ref</code></td><td>A 级必填</td><td>页面快照或登录复核记录的文件引用</td></tr>
+  <tr><td><code>next_review_at</code></td><td>是</td><td>费率类季度；政策类随政策；实测类随数据量</td></tr>
+  <tr><td><code>state</code></td><td>是</td><td><code>draft/to_verify/active/stale</code></td></tr>
+</table>
+
+<h3>19.2 证据升级路径</h3>
+<table>
+  <tr><th style="width:22%;">升级</th><th style="width:24%;">条件</th><th>动作</th></tr>
+  <tr><td>E → B/C</td><td>卖家中心抄录或自己实测</td><td>填写 value、来源、日期；<code>to_verify → active</code>；关联核实任务置 <code>upgraded</code></td></tr>
+  <tr><td>D → C</td><td>累计足够实测样本（见 18.2）</td><td>用实测值替换经验值，并保留旧值到历史</td></tr>
+  <tr><td>A/B → stale</td><td>超过 <code>next_review_at</code> 未复核</td><td>自动退出硬门禁，生成复核任务，UI 标注「已过期」</td></tr>
+  <tr><td>任何 → 降级</td><td>来源失效、政策变更、发现冲突</td><td>立即降级并记录原因，禁止静默保留旧值</td></tr>
+</table>
+
+<h3>19.3 版本与发布</h3>
+<ul>
+  <li>手册与参数表<strong>同版本发布</strong>：手册 <code>vX.Y</code> 对应参数集 <code>params-vX.Y</code>。</li>
+  <li>每次发布写入第 21 章变更记录：改了哪些参数、依据什么证据、影响哪些规则。</li>
+  <li>参数变更<strong>不回溯</strong>历史订单：旧订单使用旧参数快照，避免账目漂移。</li>
+  <li>发布前自检：<code>R-GOV-001</code>（无 E 级参数进硬门禁）、<code>R-GOV-003</code>（无跨站混用）必须通过，否则拒绝发布。</li>
+</ul>
+<div class="box warn">
+  <strong>本次复核暴露的治理缺口（必须闭环）：</strong>手册原有的 A 级参数用「来源 URL + 查询日期」表示可信，但 <strong>URL 的可机读性并未被验证</strong>。2026-10-03 复核发现 shopee.cn/edu 两页为 JS 空壳、help.shopee.tw 不可达。因此新增第 12 章第 40、41 项任务，并把 <code>recheck_status</code> 与 <code>snapshot_ref</code> 设为 A 级参数的强制字段。<strong>没有快照的 A 级参数，视为无证据。</strong>
+</div>
+
+<div class="page-break"></div>
+<h2>20. 实施路线图</h2>
+<table>
+  <tr><th style="width:12%;">阶段</th><th style="width:12%;">周期</th><th style="width:38%;">交付</th><th>验收标准</th></tr>
+  <tr><td>MVP</td><td>2 周</td><td>参数表（含证据等级）+ 核算引擎 + G1/G2/G3 门禁 + 候选品与快照表</td><td>任意候选品可算出净利润率与 trace；缺数据返回 INCOMPLETE；E 级参数无法进入硬门禁</td></tr>
+  <tr><td>V1</td><td>6 周</td><td>供应商库 + 上架校验 + 履约状态机 + 证据中心（核实任务）</td><td>未确认库存无法点发货；地址来源非当单页面无法提交采购单；核实任务完成后参数自动升级</td></tr>
+  <tr><td>V2</td><td>12 周</td><td>资金台账与现金流预测 + 复盘 KPI + 告警与 SLA + 参数复核日历</td><td>周转金不足提前告警；回款天数与退货率被实测替换；季度复核自动生成任务</td></tr>
+</table>
+<div class="box note">
+  <strong>先做门禁，后做看板。</strong>门的价值在于防止损失，看板的价值在于优化效率；起步阶段防损失优先。第一版不要做花哨的仪表盘，先把 G1–G4 四道门守住。
+</div>
+
+<div class="page-break"></div>
+<h2>21. 变更记录</h2>
+<table class="chg">
+  <tr><th style="width:9%;">版本</th><th style="width:12%;">日期</th><th style="width:12%;">变更人</th><th>变更内容</th></tr>
+  <tr><td>v1.0</td><td>—</td><td>—</td><td>初稿，方法论收敛，待核实项已标注</td></tr>
+  <tr><td>v1.1</td><td>—</td><td>—</td><td>修正 6.3 履约地址错误；补充主图来源；马来站/台湾站参数隔离；存活率定义明确；重量 500g 移出一票否决</td></tr>
+  <tr><td>v1.2</td><td>—</td><td>—</td><td>6.3 履约顺序改为「先安排发货 → 抄当单地址 → 再拍单」；利润公式修正净运费成本与平台费规则；2.1 节拆等级；执行顺序补「先买样品」</td></tr>
+  <tr><td>v1.3</td><td>—</td><td>—</td><td>6.3 履约顺序再调为「先查 1688 库存 → 再安排发货」；补充三家无货处理；利润表售价只录商品价、买家运费单列；免运活动费归属二选一；广告成交计本单广告费</td></tr>
+  <tr><td>v1.4</td><td>—</td><td>—</td><td>6.3 供应商地址确认挪至安排发货之前；第 5 章补上架前估算口径；退货损耗口径改为「退货率 ×（采购价 + 国内段运费）」</td></tr>
+  <tr><td>v1.5</td><td>—</td><td>—</td><td>补充个体户首站限制；补审核材料要求、保证金与佣金时间线、收款费率区间；新增违禁品类清单、知识产权侵权边界、罚分规则、商品审核机制；新增税务合规、台湾站物流与时效、资金回款与现金流三章；待核实清单扩充至 26 项</td></tr>
+  <tr><td>v1.6</td><td>2026-10-03</td><td>—</td><td>修正等级内部矛盾；封面副标题调整；FHR 与不良包装降级；新增待核实第27项；变更记录编号更正</td></tr>
+  <tr><td>v1.7</td><td>2026-10-03</td><td>—</td><td>统一来源声明行；第 5 章主模型切换台湾站；9.1 前置引用进 3.1；新增待核实第30项</td></tr>
+  <tr><td>v1.8</td><td>2026-10-03</td><td>—</td><td>液体一票否决对齐；9.3 降为 E；2.3 佣金降为 D；第 5 章台账默认站点切换台湾站</td></tr>
+  <tr><td>v1.9</td><td>2026-10-03</td><td>—</td><td>多处 A 降 E：站点选择、流水、保证金、免佣、违禁品、税务、店配、液体；关税补充两条；闭环规则更新</td></tr>
+  <tr><td>v2.0</td><td>2026-10-03</td><td>—</td><td>关税起征点和频繁进口升级 A；3.1 移除液体一票否决；2.2 三行降 E；8.2 罚分标 E；第 12 章第 26 项改 D；新增第 6 章闭环判断规则</td></tr>
+  <tr><td>v2.1</td><td>2026-10-03</td><td>—</td><td>① 第 6 章闭环规则重写；② 第 10.2 节按帮助中心 80088 改写；③ 修复交叉引用；④ 第 5.2 节售价不标 B；⑤ 第 5 章、第 1 章来源行去掉未打开的页面；⑥ 第 7.2 节 1-3 天、5-7 天降 E；⑦ 第 2.2 节补回手机号行标 E；⑧ 待核实清单扩充至 35 项</td></tr>
+  <tr><td>v2.2</td><td>2026-10-03</td><td>—</td><td>① 2.3 节免佣格只留 E；② 2.3 节佣金格删除旧经验值 4%–6%；③ 第 12 章第 9 项更新结论为检索摘要并附 URL；④ 第 12 章第 35 项补 URL 和摘要；⑤ 3.1 节黄框改为「没称重才停下」；⑥ 5.2 节买家实付运费/净运费成本/退货损耗去掉 B 标；⑦ 第 5 章来源行改为「无」；⑧ 10.2 节 EZ WAY 只保留 80084 已打开的原文，来源行补上完整 URL</td></tr>
+  <tr><td>v2.3</td><td>2026-10-03</td><td>—</td><td>① 免佣期从 E 升为 A；② 佣金费率从 E 升为 A；③ 第 6 章第 3 条改为按 A 值算；④ 第 5.2 节佣金和交易手续费行升为 A 级；⑤ 第 2.1 节申请渠道从 A 降为 E；⑥ 第 10.2 节频繁进口去掉未打开的关务署；⑦ 第 3.1 节宅配 20kg 改为「有来源称」；⑧ 第 12 章新增第 36 项</td></tr>
+  <tr><td>v2.4</td><td>2026-10-03</td><td>—</td><td>① 5.5 节删掉「佣金 14%、手续费 2.5% 可直接使用」，只留在 5.3 节；② 5.1 节补佣金基数；③ 提现费按 D 级区间预留，不留空；没开广告记 0；退货率 D 级预留；④ 第 2 节执行顺序第 3 步改为佣金和手续费现在就填；⑤ 2.2 节营业执照状态整行不标 A，新增第 37 项；⑥ 第 12 章第 10 项来源补 26620；⑦ 2.3 节新增预售服务费行标 A；⑧ 5.2 节新增预售服务费行标 A</td></tr>
+  <tr><td>v2.5</td><td>2026-10-03</td><td>—</td><td>① 5.2 节广告费行改正：没开广告记 0 不标等级；只有已开广告、未抄到本单金额时才标 E；② 5.2 节退货损耗行删掉「退货率空着就是缺数据」，改为「卡住上架的只有 SLS 运费档为空」；③ 第 6 章第 3 条等级改回 D；④ 5.2 节交易手续费行补基数说明；⑤ 5.1 节平台费项补交易手续费基数说明；⑥ 5.5 节使用要点删掉「14% 和 2.5% 可直接使用」；⑦ 2.4 节提现费改为取区间上沿预留再加汇损；连连 0.7%-0.8% 标 D；⑧ 第 2 章来源行去掉公示系统；⑨ 第 12 章新增第 38 项</td></tr>
+  <tr><td>v2.6</td><td>2026-10-03</td><td>—</td><td>① 5.2 节 SLS 运费行的「唯一卡住上架的条件」删掉，改为完整表述：重量没称、采购实付没录，也要先停下；已开广告未抄到本单金额，只卡住那一单；SLS 为空只是费率项里剩下的那一个门禁；② 2.2 节入口从 A 降为 E（入驻须知正文未打开，无查询日期），新增第 12 章第 39 项；③ 第 5 章来源行删掉「广告费为 E」</td></tr>
+  <tr><td><strong>v3.0</strong></td><td>2026-10-03</td><td>智能体</td><td>
+    <strong>定位升级：</strong>从「人读行动手册」升级为「人机双读底座」，新增第二部分第 13–20 章，作为智能卖家后台的需求与规则来源。<br>
+    <strong>内容完善：</strong>① 新增 1.5「系统门禁五原则」（只有 A/B/C 能硬拦、缺数据≠不可做、门禁可解释、参数可追溯、估算可校准）；② 新增 1.3 核实渠道可达性表；③ 新增 3.5 选品评分卡、4.3 断货降级链路、5.6 计算引擎规格、5.7 三态语义、7.5 履约强制顺序校验、10.4 物流校验函数、11.5 现金流预测模型；④ 第 6 章重写为「八关门禁」并新增系统门禁矩阵；⑤ 第 12 章从「待核实清单」升级为「证据采集任务」，新增阻塞第一单、复核通道、写入参数、状态四列，新增第 40–44 项。<br>
+    <strong>新增章节：</strong>13 总体架构、14 数据模型与字段字典、15 规则引擎与门禁矩阵（36 条规则）、16 状态机规格、17 事件告警与 SLA、18 复盘与 KPI 闭环、19 手册与参数治理、20 实施路线图。<br>
+    <strong>关键治理发现（本次复核）：</strong>2026-10-03 实测 shopee.cn/edu/article/26619 与 26620 返回 JS 空壳、help.shopee.tw/portal/4/article/80088 与 80084 不可达，<strong>原 A 级参数无法机器复核</strong>。据此：① 新增 <code>recheck_status</code> 与 <code>snapshot_ref</code> 为 A 级参数强制字段；② 新增规则 R-GOV-002「A/B 级参数超期自动退出硬门禁」；③ 新增第 12 章第 40、41 项；④ 明确「没有快照的 A 级参数视为无证据」。<br>
+    <strong>⑥ 未核实数值的存放（本轮自查修正）：</strong>原先有几个 E 级参数直接携带未核实数值（店配 10kg/5kg、液体 100ml、包裹上限 20000 TWD、配送 4-8 天），与「E 级 value 必须为 null」自相矛盾。现改为 <code>value: null</code> + 新增 <code>unverified_claim</code> 字段存放候选值（第 5.8 节），并新增不变量 INV-011：读取 <code>unverified_claim</code> 的规则必须 <code>advisory_only=true</code>、不得为硬门禁、只能输出 WARN 或 INCOMPLETE。同时把两个 SLS 运费档参数从 B 降为 E（尚无实测值，不得标 B），新增 <code>intended_level</code> 记录「拿到实测后升级为 B」。<br>
+    <strong>⑦ 来源交叉验证（本轮新增）：</strong>因 A 级官方页面无法机器复核，改用独立行业媒体做交叉验证。结果显示：台湾站 14% 佣金 + 2.5% 交易手续费 + 3% 预售服务费 + 免运并入基础服务，以及首店 3 个月免佣 / 每月 500 单 / 当月 19 日激活规则，与独立报道<strong>逐字一致</strong>——「编造」风险基本排除。新增附录 C；5 个参数写入 <code>verification_status: "cross_verified"</code> 与 <code>corroboration</code> 数组（含 url、发布日期、匹配强度、原文引用），校验器新增格式检查。<strong>但明确保留边界：</strong>交叉验证不替代官方页面快照，INV-003 与 R-GOV-002 继续生效。<br>
+    <strong>版本号说明：</strong>v2.6 → v3.0 为结构性升级，故取大版本。
+  </td></tr>
+</table>
+
+<div class="page-break"></div>
+<h2>附录 A 术语表</h2>
+<table>
+  <tr><th style="width:18%;">术语</th><th>含义</th></tr>
+  <tr><td>SLS</td><td>Shopee 官方跨境物流链路（含国内中转仓与跨境段）</td></tr>
+  <tr><td>DTS</td><td>备货工作日，发货时效的起算基准</td></tr>
+  <tr><td>门禁 / Gate</td><td>流程中一道必须通过才能继续的检查点</td></tr>
+  <tr><td>硬门禁 / 软门禁 / 建议</td><td>分别对应：阻止操作 / 允许但需确认留痕 / 仅提示</td></tr>
+  <tr><td>三态语义</td><td><code>null</code>（未填）/ <code>0</code>（确认为零）/ <code>N/A</code>（不适用）</td></tr>
+  <tr><td>INCOMPLETE</td><td>因缺数据无法判定，<strong>不等于不可做</strong></td></tr>
+  <tr><td>快照 / Snapshot</td><td>一次核算的完整输入输出与参数版本，只增不改</td></tr>
+  <tr><td>trace</td><td>计算结果中每个中间量的取值与来源说明</td></tr>
+  <tr><td>stale</td><td>参数超期未复核，自动退出硬门禁的状态</td></tr>
+</table>
+
+<h2>附录 B 来源复核记录（2026-10-03）</h2>
+<table>
+  <tr><th style="width:34%;">来源</th><th style="width:16%;">机器复核结果</th><th>结论与后续动作</th></tr>
+  <tr><td>https://shopee.cn/edu/article/26619</td><td>HTTP 200，内容为 JS 空壳（"Seller Education Hub"）</td><td>正文不可机读；A 级参数（免佣期）需人工登录复核并截图存档 → 任务 40</td></tr>
+  <tr><td>https://shopee.cn/edu/article/26620</td><td>HTTP 200，内容为 JS 空壳</td><td>同上；佣金 14%、交易手续费 2.5%、预售服务费 3% 的 A 级依据需人工复核存档 → 任务 40</td></tr>
+  <tr><td>https://help.shopee.tw/portal/4/article/80088</td><td>fetch failed（不可达）</td><td>关税起征点、频繁进口、预收关税三条 A 级参数需换网络环境复核 → 任务 41</td></tr>
+  <tr><td>https://help.shopee.tw/portal/4/article/80084</td><td>fetch failed（不可达）</td><td>EZ WAY 实名认证与预先委任需复核 → 任务 41</td></tr>
+</table>
+<div class="box note">
+  <strong>复核方法的局限：</strong>本次复核只能证明「在本次网络环境下、以机器抓取方式不可获得正文」，<strong>不能证明原结论错误</strong>。因此本版<strong>保留原有 A 级标记</strong>，但同时把它们标记为「需人工复核」并纳入 19.2 的过期降级机制，而不是直接降级为 E——直接降级会丢失已有信息，且会让原本可用的费率参数无法参与核算。
+</div>
+
+<h2>附录 C 来源交叉验证记录（2026-10-03）</h2>
+<p>A 级参数的官方页面当前无法机器读取（见附录 B）。为降低「结论是否被编造」的风险，改用<strong>独立第三方交叉验证</strong>：找同一次 Shopee 政策公告的其他报道，逐条比对细节。</p>
+<table>
+  <tr><th style="width:22%;">手册 A 级声称</th><th style="width:38%;">独立来源原文</th><th style="width:11%;">匹配强度</th><th>结论</th></tr>
+  <tr>
+    <td>台湾跨境直邮佣金 14%、交易手续费 2.5%、预售服务费 3%</td>
+    <td>「中国台湾站将免运服务并入基础服务并取消相关活动优惠，同时跨境直邮佣金调整为14%，交易手续费为2.5%，预售服务费为3%。」<span class="footer-note">智象出海 2025-12-24 · https://zxchuhai.com/202512/45523.html</span></td>
+    <td><strong>逐字一致</strong></td>
+    <td>三项费率与「免运并入」互为印证</td>
+  </tr>
+  <tr>
+    <td>首店前 3 个月免佣、每月前 500 单、当月 19 日激活规则</td>
+    <td>「……自动获得前三个月免佣激励……每月免佣订单上限为500单……若在当月19日及之前激活，则次月生效；若19日后激活，则在下下月生效。」<span class="footer-note">智象出海 2026-02-12 · https://zxchuhai.com/202602/45974.html</span></td>
+    <td><strong>逐字一致</strong></td>
+    <td>19 日规则属非常规细节，一致即基本排除编造</td>
+  </tr>
+  <tr>
+    <td>巴西 / 墨西哥为 10% 佣金直减（非免佣）</td>
+    <td>「（或在巴西、墨西哥的跨境直邮店享10%佣金直减）」<span class="footer-note">同上</span></td>
+    <td>逐字一致</td>
+    <td>与手册「不是台湾这条」一致</td>
+  </tr>
+  <tr>
+    <td>2026 年多站点费率整体大幅上调</td>
+    <td>「Shopee2026年大幅上调多站点商家佣金及服务费率，上调最高达20.33%」<span class="footer-note">正观新闻（仅见标题，未读正文）</span></td>
+    <td>背景一致</td>
+    <td>20.33% 对应同批公告中的泰国商城店铺，佐证公告批次真实</td>
+  </tr>
+  <tr>
+    <td>新加坡 6 个月、其他站点 3 个月（分层免佣）</td>
+    <td>「从『3个月测款』到『6个月深耕』：Shopee 分层免佣……新加坡是战略市场」<span class="footer-note">Ksher（仅见标题）</span></td>
+    <td>背景一致</td>
+    <td>支持手册「新加坡 6 个月与台湾无关」</td>
+  </tr>
+</table>
+<div class="box ok">
+  <strong>交叉验证的效力边界（必须写清楚）：</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li><strong>能证明：</strong>该政策公告真实存在，且手册转述的费率与免佣规则与公告一致 → 「编造」风险基本排除。</li>
+    <li><strong>不能证明：</strong>官方页面的当前版本、已被后续修订与否、以及未披露项（如交易手续费计算基数）。</li>
+    <li><strong>因此：</strong>证据等级仍为 A，但 <code>recheck_status</code> 仍是 <code>manual_only</code>、<code>snapshot_ref</code> 仍为空 → 继续受 <code>R-GOV-002</code>（超期降级）与 <code>INV-003</code>（无快照视为无证据）约束。<strong>交叉验证是加分项，不是免死金牌。</strong></li>
+  </ul>
+</div>
+<p class="footer-note">已写入机器可读配置：上述参数带 <code>verification_status: "cross_verified"</code> 与 <code>corroboration</code> 数组（含 url / 发布日期 / 查询日期 / 匹配强度 / 原文引用），校验器会检查其格式完整性。</p>
+
+<div class="footer-note" style="margin-top:30px; text-align:center; border-top:1px solid #ddd; padding-top:10px;">
+  本手册为起步阶段行动纲领，非官方文件。费率与政策以 Shopee 卖家中心及收款商当期公示为准。<br>
+  机器可读副本：<code>spec/manual-core.json</code> · 使用说明：<code>README.md</code> · 版本 v3.0 · 2026-10-03
+</div>
+
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智能卖家后台 · 总体架构 v1.0</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif; color:#1a1a1a; line-height:1.7; font-size:10.5pt; margin:0; padding:0; }
+  h1 { font-size:22pt; margin:0 0 6px; color:#1F4E78; }
+  h2 { font-size:15pt; color:#1F4E78; margin:26px 0 10px; border-bottom:2px solid #1F4E78; padding-bottom:5px; }
+  h3 { font-size:12pt; margin:18px 0 8px; color:#2c3e50; }
+  p { margin:6px 0; }
+  ul,ol { margin:6px 0 6px 20px; padding:0; }
+  li { margin:3px 0; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:9.5pt; page-break-inside:avoid; }
+  th,td { border:1px solid #ccc; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#1F4E78; color:#fff; font-weight:600; }
+  tr:nth-child(even) td { background:#f7f9fc; }
+  code { background:#f0f2f5; padding:1px 5px; border-radius:3px; font-family:"JetBrains Mono",Consolas,monospace; font-size:9.5pt; }
+  pre { background:#f4f6f9; border:1px solid #dde3ea; border-radius:4px; padding:10px 12px; font-family:"JetBrains Mono",Consolas,monospace; font-size:9pt; line-height:1.5; overflow-x:auto; white-space:pre-wrap; }
+  .cover { text-align:center; padding:50px 0 32px; border-bottom:3px solid #1F4E78; margin-bottom:26px; }
+  .cover .sub { font-size:12pt; color:#555; margin-top:10px; }
+  .cover .small { font-size:9.5pt; color:#888; margin-top:8px; }
+  .cover .meta { font-size:9.5pt; color:#888; margin-top:26px; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:3px; font-size:8.5pt; font-weight:600; color:#fff; margin-right:4px; white-space:nowrap; }
+  .tag-A{background:#1F7A3D;} .tag-B{background:#2E86C1;} .tag-C{background:#B9770E;} .tag-D{background:#7D3C98;} .tag-E{background:#C0392B;}
+  .tag-mvp{background:#1F7A3D;} .tag-v1{background:#2E86C1;} .tag-v2{background:#B9770E;} .tag-plan{background:#7F8C8D;}
+  .box { border-left:4px solid #C0392B; background:#fdf3f2; padding:10px 14px; margin:12px 0; border-radius:0 4px 4px 0; }
+  .box.note { border-left-color:#2E86C1; background:#f0f7fd; }
+  .box.warn { border-left-color:#C0392B; background:#fdf3f2; }
+  .box.ok { border-left-color:#1F7A3D; background:#f0f9f3; }
+  .box.sys { border-left-color:#7D3C98; background:#f8f4fd; }
+  .toc { background:#f7f9fc; border:1px solid #dde3ea; padding:14px 20px; border-radius:6px; }
+  .toc ol { margin-left:18px; }
+  .page-break { page-break-before:always; }
+  .footer-note { font-size:8.5pt; color:#888; margin-top:4px; }
+  .src { font-size:8.5pt; color:#1F7A3D; background:#f0f9f3; padding:6px 10px; border-left:3px solid #1F7A3D; margin:10px 0 18px; border-radius:0 3px 3px 0; }
+  .mono { font-family:"JetBrains Mono",Consolas,monospace; font-size:9pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>智能卖家后台 · 总体架构</h1>
+  <div class="sub">横向能力 + 正交维度 + 业务模块</div>
+  <div class="sub" style="color:#1F4E78; font-weight:600;">无货源不是后台，只是履约模式之一</div>
+  <div class="small" style="max-width:660px; margin-left:auto; margin-right:auto;">
+    本文件定义平台级设计。原《Shopee 无货源跨境起步手册 v3.0》在本架构中降级为
+    <strong>「模块 · 履约 · 无货源（DROPSHIP）」</strong>的一份实现说明，其业务内容继续有效，
+    但参数、成本模型、证据分级与门禁已上提为平台级能力。
+  </div>
+  <div class="meta">版本 v1.0 &nbsp;|&nbsp; 2026-10-03 &nbsp;|&nbsp; 取代 spec/manual-core.json (v3.0)</div>
+</div>
+
+<div class="toc">
+  <h3 style="margin-top:0;">目录</h3>
+  <ol>
+    <li>为什么要重构：三个把产品做小的错误</li>
+    <li>一条架构原则</li>
+    <li>三层结构</li>
+    <li>正交维度：平台 × 市场 × 履约模式 × 店铺</li>
+    <li>市场可行性：无货源不是只限台湾</li>
+    <li>九个业务模块</li>
+    <li>履约模式插件化与边界规则</li>
+    <li>参数分层与文件结构</li>
+    <li>平台级能力清单</li>
+    <li>证据分级与门禁（沿用 A–E）</li>
+    <li>迁移映射（v3.0 → v4.0）</li>
+    <li>路线图（按模块重排）</li>
+    <li>已知空白与风险</li>
+  </ol>
+</div>
+
+<div class="page-break"></div>
+<h2>1. 为什么要重构：三个把产品做小的错误</h2>
+
+<h3>错误一：把一个会过期的政策窗口固化进架构</h3>
+<p>v3.0 里到处是 <code>scope: "site:TW"</code>，利润公式、门禁、状态机全部绑在「Shopee 台湾 + 无货源直发」上。但台湾之所以能跑通无货源，靠的是<strong>低值免税门槛仍在</strong>——这是一条会变的政策，不是一条不会变的平台规则。</p>
+<p>泰国就是已经发生的反例：1500 铢免税取消后，所有进口商品统一征关税 + 7% VAT，行业报道的原话是「低价铺货模式加速退场」「本地仓从可选项变必选项」。同一个无货源模式，换个市场，经济性直接归零。</p>
+<div class="box warn">
+  <strong>结论：</strong>如果「台湾」写在代码里，那么泰国政策一变，你要改的是架构；如果市场是参数维度，你要改的是一个 JSON 文件。
+</div>
+
+<h3>错误二：把履约模式当成了产品本身</h3>
+<p>无货源只是「不持有库存、靠上游代发」这一种履约方式。同一个人在同一家店，明天可能改成备货到海外仓（税负上升时更划算），或者接一个全托管的供货单。这三种模式的差别在<strong>履约与资金节奏</strong>，不在选品逻辑、成本科目框架、证据纪律。</p>
+<p>把它们写成三套系统，会有三套参数表、三套证据标准、三套门禁——然后互相漂移。</p>
+
+<h3>错误三：把平台的横向能力私有化</h3>
+<p>证据分级、参数生命周期、门禁服务、成本核算、审计留痕、KPI 校准——这六件事在任何模式、任何平台、任何市场都一模一样。它们不该属于任何一个模块，更不该属于某一个模式。</p>
+
+<h2>2. 一条架构原则</h2>
+<div class="box ok" style="font-size:12pt;">
+  <strong>不变的能力上提为平台级，会变的模式下沉为插件。</strong>
+</div>
+<p>判断标准很简单，问三句：</p>
+<table>
+  <tr><th style="width:30%;">问题</th><th style="width:16%;">答案</th><th>归宿</th></tr>
+  <tr><td>换平台/换市场/换模式后，这东西还一样吗？</td><td>一样</td><td><strong>横向能力</strong>（平台级）</td></tr>
+  <tr><td>它是一个会随政策、平台、季节变化的值吗？</td><td>是</td><td><strong>参数</strong>（带 scope 与复核日期）</td></tr>
+  <tr><td>只有某种履约方式才需要它吗？</td><td>是</td><td><strong>模式插件</strong>（modes/&lt;id&gt;）</td></tr>
+</table>
+
+<div class="page-break"></div>
+<h2>3. 三层结构</h2>
+<pre>┌──────────────────────────────────────────────────────────────┐
+│ 横向能力（平台级，任何模式都复用）                            │
+│   ParamRegistry  EvidenceCenter  GateService                  │
+│   CostEngine     AuditLog        KpiCalibrator                │
+└──────────────────────────────────────────────────────────────┘
+                            ▲
+┌──────────────────────────────────────────────────────────────┐
+│ 正交维度（可组合，不是模块）                                  │
+│   平台 Shopee | Lazada | TikTok Shop | Temu                   │
+│   × 市场 TW | MY | TH | PH | VN | BR | MX                     │
+│   × 履约模式 DROPSHIP | STOCK | PLATFORM_MANAGED              │
+│   × 店铺                                                      │
+└──────────────────────────────────────────────────────────────┘
+                            ▲
+┌──────────────────────────────────────────────────────────────┐
+│ 业务模块（用户看得见的九个）                                  │
+│   M1 主体与店铺   M2 选品与商品   M3 供应链与采购             │
+│   M4 履约         M5 定价与利润   M6 流量与增长               │
+│   M7 资金与结算   M8 风控与合规   M9 复盘与决策               │
+└──────────────────────────────────────────────────────────────┘</pre>
+<p>关键点：<strong>无货源出现在第三层的 M4 里，而且只是 M4 的一个可插拔实现</strong>，它不拥有 M1/M2/M5/M6/M7/M8/M9 的任何逻辑。</p>
+
+<h2>4. 正交维度</h2>
+<table>
+  <tr><th style="width:14%;">维度</th><th style="width:26%;">取值</th><th>作用</th></tr>
+  <tr><td>平台</td><td>shopee（种子）/ lazada / tiktok_shop / temu</td><td>决定费率包、物流产品（SLS/LGS）、开放接口能力</td></tr>
+  <tr><td>市场</td><td>TW / MY / TH / PH / VN / BR / MX</td><td>决定关税与免税门槛、VAT、时效、物流限制、汇率</td></tr>
+  <tr><td>履约模式</td><td>dropship（已实现）/ stock（待实现）/ platform_managed（待实现）</td><td>决定履约状态机、资金节奏、库存风险</td></tr>
+  <tr><td>店铺</td><td>多店</td><td>决定数据隔离与多租户边界</td></tr>
+</table>
+<div class="box note">
+  <strong>参数寻址：</strong>每个参数带 <code>scope: {platform, market, mode}</code>，取值 <code>"*"</code> 表示通用。引擎按四维寻址取值，而不是靠命名约定。
+</div>
+
+<div class="page-break"></div>
+<h2>5. 市场可行性：无货源不是只限台湾</h2>
+<p>「无货源只限台湾」这个说法，起点是一条 <span class="tag tag-E">E</span> 级待核实规则（个体户执照<strong>首站</strong>可能仅限台湾）。它有三个错位：① 它是 E 级，按本架构自己的纪律不得用于决策；② 它约束的是首店，不是永久站点范围；③ 它管的是入驻，与履约模式无因果关系。</p>
+<p>真实情况是：<strong>无货源到处都能做，但「中国小包直发 + 低值免税」这个打法正在被逐国关闭。</strong></p>
+<table>
+  <tr><th style="width:10%;">市场</th><th style="width:22%;">低值免税现状</th><th style="width:14%;">无货源可行性</th><th>依据</th></tr>
+  <tr>
+    <td><strong>TW</strong></td><td>门槛仍在（2000 TWD 起征）</td>
+    <td><span class="tag tag-A">viable</span></td>
+    <td>SLS 时效 4-8 天、地理距离最近、免税窗口未关。注意：这是<strong>窗口</strong>，不是特权——窗口会关</td>
+  </tr>
+  <tr>
+    <td><strong>TH</strong></td><td>已取消（2026-01-01 起 1 铢起征）</td>
+    <td><span class="tag tag-E">degraded</span></td>
+    <td>关税 + 增值税合计<strong>不低于 17%</strong>（低值关税 10% 起、VAT 7%）；<strong>但税由平台在买家下单时代收</strong>（2025-12-22 五平台协议），冲击落在买家端价格与转化，而非卖家毛利。来源：国家税务总局转述泰王国海关署（政府二手）</td>
+  </tr>
+  <tr>
+    <td><strong>MY</strong></td><td>LVG 10% 销售税且强化执行</td>
+    <td><span class="tag tag-E">degraded</span></td>
+    <td>500 令吉以下征 10%；50 令吉商品被征 5 令吉，叠加佣金与物流后利润可能归零；2026-10-09 预算案是关键节点</td>
+  </tr>
+  <tr><td><strong>BR</strong></td><td>20% 关税体系</td><td><span class="tag tag-E">not_viable</span></td><td>长时效 + 高税负，直发模型不可行</td></tr>
+  <tr><td><strong>MX</strong></td><td>监管收紧</td><td><span class="tag tag-E">not_viable</span></td><td>同批公告中与巴西一并调整</td></tr>
+</table>
+<div class="box warn">
+  <strong>三条纪律：</strong>
+  <ul style="margin-top:4px; margin-bottom:0;">
+    <li><code>dropship_viability</code> 是 <strong>advisory</strong>，只能提示（<code>R-MKT-001</code>），<strong>不得自动停售或拦截</strong>。</li>
+    <li>该字段<strong>由参数驱动</strong>（免税门槛、VAT、时效），不来自人工判断；参数一变，可行性结论跟着变。</li>
+    <li>当市场不再是 <code>intact</code> 时，核算模型<strong>必须</strong>计入关税与进口 VAT，否则会系统性高估利润（<code>R-MKT-002</code>）。</li>
+  </ul>
+</div>
+<div class="src">市场结论来源：泰国 <a href="https://www.ksher.cn/news/post/kjzx26091603/">ksher 2026-09-16</a>；马来西亚 <a href="https://www.ksher.cn/news/post/wmb2b26091704/">ksher 2026-09-17</a>。均为行业媒体，故标 E 级 + <code>unverified_claim</code>，并生成 VT-045 / VT-046 待官方原文升级为 A。</div>
+
+<div class="page-break"></div>
+<h2>6. 九个业务模块</h2>
+<table>
+  <tr><th style="width:6%;">ID</th><th style="width:14%;">模块</th><th style="width:10%;">阶段</th><th style="width:34%;">能力</th><th>核心实体</th></tr>
+  <tr><td>M1</td><td>主体与店铺</td><td><span class="tag tag-mvp">MVP</span></td><td>材料清单、入驻状态机、激活日期 → 免佣窗口</td><td>OnboardingCase</td></tr>
+  <tr><td>M2</td><td>选品与商品</td><td><span class="tag tag-mvp">MVP</span></td><td>候选品、一票否决扫描、评分卡、上架校验</td><td>ProductCandidate / Sample / Measurement / Listing</td></tr>
+  <tr><td>M3</td><td>供应链与采购</td><td><span class="tag tag-v1">V1</span></td><td>供应商档案、报价历史、断货降级链路</td><td>Supplier / SupplierQuote / PurchaseOrder</td></tr>
+  <tr><td>M4</td><td>履约</td><td><span class="tag tag-v1">V1</span></td><td>按模式插件化的订单状态机、地址来源校验、时效计时</td><td>Order / Shipment / StockCheck</td></tr>
+  <tr><td>M5</td><td>定价与利润</td><td><span class="tag tag-mvp">MVP</span></td><td>成本核算引擎、快照与 trace、平台账单对账</td><td>CostSnapshot / FeeRecord</td></tr>
+  <tr><td>M6</td><td>流量与增长</td><td><span class="tag tag-v1">骨架</span></td><td>商品卡六要素、CTR 基线、免运门槛（2026 全站大免运 199/490）、上新节奏、A/B 测试窗口；广告与关键词待建</td><td>AdSpend / Listing 指标</td></tr>
+  <tr><td>M7</td><td>资金与结算</td><td><span class="tag tag-v2">V2</span></td><td>资金台账、现金流预测、回款跟踪、税务日历</td><td>Payout / CashLedger</td></tr>
+  <tr><td>M8</td><td>风控与合规</td><td><span class="tag tag-v1">V1</span></td><td>违禁词库、品牌词库、类目黑名单、罚分跟踪</td><td>RiskHit</td></tr>
+  <tr><td>M9</td><td>复盘与决策</td><td><span class="tag tag-v2">V2</span></td><td>KPI 看板、估算 vs 实测偏差、阈值建议、复核日历</td><td>—（复用 KPI）</td></tr>
+</table>
+<div class="box warn">
+  <strong>M6 是当前最大结构性空白。</strong>v3.0 的八道门里七道在讲「别做错」，没有一道在讲「怎么被看见」；KPI 里也没有曝光、访客、加购、转化。对无货源铺货来说，成败主要在曝光——这不是补一个报表的事，是要把一条完整的链路建模出来。
+</div>
+
+<h2>7. 履约模式插件化与边界规则</h2>
+<table>
+  <tr><th style="width:16%;">模式</th><th style="width:10%;">状态</th><th style="width:32%;">模式独占能力（owns）</th><th>资金/库存特征</th></tr>
+  <tr>
+    <td><strong>dropship</strong><br>无货源一件代发</td><td><span class="tag tag-mvp">已实现</span></td>
+    <td>库存前置检查、代发地址格式校验、货代贴单、采购垫付与回款周期、断货降级链路</td>
+    <td>无库存风险；出单后垫付；对周转金极敏感</td>
+  </tr>
+  <tr>
+    <td><strong>stock</strong><br>备货 / 海外仓</td><td><span class="tag tag-plan">待实现</span></td>
+    <td>补货计划、库存周转、批量清关、仓储成本摊销</td>
+    <td>有库存风险；批量清关摊薄税费；市场政策收紧时的主路径</td>
+  </tr>
+  <tr>
+    <td><strong>platform_managed</strong><br>平台全托管</td><td><span class="tag tag-plan">待实现</span></td>
+    <td>供货价、审版图审、备货到国内仓</td>
+    <td>几乎无运营风险；定价权与利润空间被锁定</td>
+  </tr>
+</table>
+<div class="box note">
+  <strong>边界规则（INV-013 / R-GOV-004，硬门禁）：</strong>履约模式<strong>不得</strong>实现自己的参数注册表、成本模型、证据分级或门禁服务，也<strong>不得</strong>定义选品（G1）与核算（G3）门禁。模式专属参数（<code>mode_params</code>）只是带 <code>scope.mode</code> 的登记，仍由平台 <code>ParamRegistry</code> 统一校验。
+  <div class="footer-note">这条规则是在重构过程中自查发现的：最初我把 <code>mode_params</code> 放进模式文件，同时又写了「模式不得拥有参数表」，自相矛盾。现在二者已对齐。</div>
+</div>
+
+<div class="page-break"></div>
+<h2>8. 参数分层与文件结构</h2>
+<pre>spec/
+├── registry.json                 项目定位、平台/市场/模式/模块注册表、证据与门禁枚举
+├── entities.json                 全部实体与字段字典（layer 标注归属）
+├── governance.json               不变量 INV-001..013、告警策略、事件、KPI、校准、复核日历
+├── params/
+│   ├── platform.shopee.json      Shopee 平台级：费率、免佣窗口、入驻、平台规则
+│   ├── market.tw.json            台湾市场：关税、EZ WAY、物流限制、时效、结算
+│   ├── market.th.json            泰国市场：免税取消、7% VAT（新增）
+│   ├── market.my.json            马来西亚市场：LVG 10% 销售税（新增）
+│   └── assumptions.json          平台无关假设（D 级经验值）与治理待核实项（E 级）
+├── rules/
+│   ├── platform.json             横向规则：治理 / 选品 / 供应商 / 取证 / 成本 / 上架 / 风控 / 资金 / 复盘
+│   └── modes/
+│       └── dropship.json         无货源专属：库存前置、地址来源、物流直发、断货降级、市场可行性
+├── modes/
+│   ├── dropship.json             模式定义 + 专属参数 + 订单状态机（已实现）
+│   ├── stock.json                骨架（待实现）
+│   └── platform_managed.json     骨架（待实现）
+├── evidence/
+│   └── verification-tasks.json   46 条证据采集任务 + 第一单最小取证集
+├── validate.py                   分层校验器（跨文件、不变量、引用完整性）
+└── manual-core.json              ⚠ 已废弃的路标文件，请删除</pre>
+<table>
+  <tr><th style="width:22%;">文件</th><th style="width:16%;">数量</th><th>职责</th></tr>
+  <tr><td>params/*.json</td><td>52 个参数</td><td>唯一事实来源；<code>value: null</code> 表示未核实</td></tr>
+  <tr><td>rules/*.json</td><td>45 条规则</td><td>横向 31（含 M6 流量 4 条）+ 无货源专属 14</td></tr>
+  <tr><td>modes/*.json</td><td>3 个模式</td><td>1 个已实现 + 2 个骨架</td></tr>
+  <tr><td>entities.json</td><td>22 个实体</td><td>含 3 个只增不改的不可变实体</td></tr>
+  <tr><td>governance.json</td><td>14 条不变量</td><td>平台级治理</td></tr>
+  <tr><td>evidence/*.json</td><td>48 条任务 + 快照目录</td><td>其中 6 条阻塞第一单</td></tr>
+</table>
+
+<h2>9. 平台级能力清单</h2>
+<table>
+  <tr><th style="width:20%;">能力</th><th style="width:22%;">文件</th><th>职责与边界</th></tr>
+  <tr><td>ParamRegistry</td><td>params/*.json</td><td>参数唯一来源；按四维 scope 寻址；未核实必须为 <code>null</code></td></tr>
+  <tr><td>EvidenceCenter</td><td>evidence/*.json</td><td>证据等级、来源、快照、复核日历、核实任务；任务完成触发参数升级</td></tr>
+  <tr><td>GateService</td><td>rules/*.json</td><td>统一 <code>check()</code>，返回 <code>{rule_id, result, evidence_level, next_action}</code>；禁止只返回布尔值</td></tr>
+  <tr><td>CostEngine</td><td>—</td><td>纯函数；费率包按 平台 × 市场 插件化；三态语义（null / 0 / N/A）</td></tr>
+  <tr><td>AuditLog</td><td>—</td><td>只增不改；含被跳过步骤的留痕</td></tr>
+  <tr><td>KpiCalibrator</td><td>governance.json#kpis</td><td>估算 → 实测 → 阈值更新；回答「数字从哪来 / 谁在用 / 准不准」</td></tr>
+</table>
+
+<h2>10. 证据分级与门禁（沿用 A–E）</h2>
+<table>
+  <tr><th style="width:8%;">等级</th><th style="width:26%;">含义</th><th style="width:18%;">能否硬拦</th><th>系统行为</th></tr>
+  <tr><td><span class="tag tag-A">A</span></td><td>官方硬规则</td><td>可以（未过期）</td><td>硬拦；必须有来源 + 查询日期 + <strong>快照</strong>（无快照视为无证据）</td></tr>
+  <tr><td><span class="tag tag-B">B</span></td><td>卖家后台实测</td><td>可以</td><td>硬拦，绑定平台/市场</td></tr>
+  <tr><td><span class="tag tag-C">C</span></td><td>自己实测</td><td>可以</td><td>单条记录级硬拦</td></tr>
+  <tr><td><span class="tag tag-D">D</span></td><td>经验启发</td><td><strong>不可以</strong></td><td>只能 WARN / AUTO_FILL</td></tr>
+  <tr><td><span class="tag tag-E">E</span></td><td>待验证</td><td><strong>不可以</strong></td><td>只能生成任务或 advisory 提示；未核实数值放 <code>unverified_claim</code></td></tr>
+</table>
+<p>配套新增两条不变量：</p>
+<ul>
+  <li><code>INV-012</code> 参数 scope 必须与其所在文件的层级一致——否则市场之间会串用参数。</li>
+  <li><code>INV-013</code> 履约模式不得越权（见第 7 节）。</li>
+</ul>
+<p class="footer-note">完整清单见 <code>governance.json#invariants</code>，共 13 条；<code>validate.py</code> 会检查其中可静态判定的部分。</p>
+
+<div class="page-break"></div>
+<h2>11. 迁移映射（v3.0 → v4.0）</h2>
+<table>
+  <tr><th style="width:32%;">v3.0</th><th>v4.0</th></tr>
+  <tr><td>manual-core.json（单文件）</td><td>拆为 registry / entities / governance / params / rules / modes / evidence 共 14 个文件；原文件降为废弃路标</td></tr>
+  <tr><td>params[].scope: "site:TW"</td><td>scope: {platform, market, mode} 四维寻址</td></tr>
+  <tr><td>参数混在一个数组里</td><td>平台参数 / 市场参数 / 假设参数 / 模式参数分层</td></tr>
+  <tr><td>36 条规则混在一起</td><td>横向 24 条 + 无货源专属 14 条</td></tr>
+  <tr><td>order_fulfillment 状态机</td><td>移入 modes/dropship.json（它是无货源独有的顺序）</td></tr>
+  <tr><td>《Shopee 无货源跨境起步手册》</td><td>降级为「模块 · 履约 · 无货源」实现说明；本架构文档在其之上</td></tr>
+  <tr><td>无市场维度</td><td>新增 TW / TH / MY 市场参数文件 + 可行性字段</td></tr>
+  <tr><td>39 参数 / 36 规则 / 44 任务 / 11 不变量</td><td>52 参数 / 45 规则 / 48 任务 / 14 不变量</td></tr>
+</table>
+<div class="box ok">
+  <strong>没有丢失任何已验证内容：</strong>佣金 14% 与免佣窗口的交叉验证、三态语义、A–E 分级、门禁四元组、不可变表、KPI 与校准机制全部原样保留，只是挂到了正确的层级。
+</div>
+
+<h2>12. 路线图（按模块重排）</h2>
+<table>
+  <tr><th style="width:10%;">阶段</th><th style="width:10%;">周期</th><th style="width:38%;">模块</th><th>验收标准</th></tr>
+  <tr>
+    <td>MVP</td><td>3 周</td>
+    <td>M1 主体与店铺 + M2 选品与商品 + M5 定价与利润<br>（横向能力：ParamRegistry / CostEngine / GateService G1–G3）</td>
+    <td>任意候选品可算出净利润率与 trace；缺数据返回 INCOMPLETE；E 级参数无法进入硬门禁；INV-001..006 通过</td>
+  </tr>
+  <tr>
+    <td>V1</td><td>6 周</td>
+    <td>M3 供应链 + M4 履约（dropship 插件）+ M8 风控<br>（横向能力：EvidenceCenter / AuditLog）</td>
+    <td>未确认库存无法点发货；地址来源非当单页面无法提交采购单；核实任务完成后参数自动升级；INV-007..013 通过</td>
+  </tr>
+  <tr>
+    <td>V2</td><td>12 周</td>
+    <td>M7 资金 + M9 复盘 + <strong>M6 流量与增长</strong></td>
+    <td>周转金不足提前告警；回款天数与退货率被实测替换；M6 能回答「曝光从哪来、转化卡在哪」；季度复核自动生成任务</td>
+  </tr>
+  <tr>
+    <td>V3</td><td>待定</td>
+    <td>modes/stock + modes/platform_managed + 第二个平台</td>
+    <td>新增一个履约模式或平台时，只加模式/市场文件，不改横向能力</td>
+  </tr>
+</table>
+<div class="box note">
+  <strong>顺序建议：</strong>先做门禁（防止亏钱），再做看板（优化效率）；但 <strong>M6 不能无限期推后</strong>——没有流量模块，前三个模块只是在保证你「不亏得很惨」，而不是「能赚到钱」。
+</div>
+
+<h2>13. 已知空白与风险</h2>
+<table>
+  <tr><th style="width:26%;">项目</th><th style="width:12%;">等级</th><th>说明</th></tr>
+  <tr><td>M6 流量与增长</td><td><span class="tag tag-v1">骨架</span></td><td>已有 6 个参数 + 4 条规则（商品卡六要素、CTR 基线、免运门槛、上新节奏）；仍缺广告投放与关键词的完整模型，且 Shopee 官方 PDF 资料在本环境无法获取</td></tr>
+  <tr><td>净利润率阈值 15%</td><td><span class="tag tag-D">D</span></td><td>对无货源铺货可能过严；若存活率 &lt;30% 应先怀疑阈值（<code>P-TW-MARGIN-TH.risk_note</code>）</td></tr>
+  <tr><td>市场可行性结论</td><td><span class="tag tag-E">E</span></td><td>泰国/马来西亚来自行业媒体，需官方原文升级（VT-045 / VT-046）</td></tr>
+  <tr><td>A 级参数快照</td><td><span class="tag tag-E">待补</span></td><td>9 个 A 级参数 <code>snapshot_ref</code> 为空；交叉验证不能替代快照</td></tr>
+  <tr><td>stock / platform_managed</td><td><span class="tag tag-plan">骨架</span></td><td>只有模式定义与待办，无参数、规则、状态机</td></tr>
+  <tr><td>开放接口</td><td><span class="tag tag-E">待核实</span></td><td>Shopee Open Platform 权限范围决定数据是自动同步还是手工录入（VT-021）</td></tr>
+</table>
+
+<div class="footer-note" style="margin-top:30px; text-align:center; border-top:1px solid #ddd; padding-top:10px;">
+  本文件为设计文档，非官方文件。参数与政策以平台卖家中心当期公示为准。<br>
+  机器可读配置：<code>spec/</code> · 校验：<code>spec/validate.py</code> · 模块手册：<code>Shopee无货源跨境起步手册_v3.0.html</code> · v1.0 · 2026-10-03
+</div>
+
+</body>
+</html>

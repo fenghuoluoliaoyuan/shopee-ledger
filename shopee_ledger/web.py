@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from shopee_ledger.desk import listing_gate, survival_advice
 from shopee_ledger.fulfillment import STEPS
 from shopee_ledger.profit import Decision
+from shopee_ledger.spec import default_spec
 from shopee_ledger.store import PARAM_HELP, Ledger
 from shopee_ledger.veto import VETO_FLAGS
 
@@ -34,6 +35,7 @@ NAV = (
     ("/orders", "订单"),
     ("/books", "账本"),
     ("/params", "参数"),
+    ("/spec", "配置"),
     ("/suppliers", "供应商"),
     ("/checklist", "待核实"),
 )
@@ -94,6 +96,7 @@ class Handler(BaseHTTPRequestHandler):
         pages = {
             "/": lambda: today(ledger),
             "/params": lambda: params_page(ledger),
+            "/spec": lambda: spec_page(ledger),
             "/suppliers": lambda: suppliers_page(ledger),
             "/products": lambda: products_page(ledger),
             "/candidates": lambda: products_page(ledger),
@@ -252,12 +255,19 @@ button.slim {{ padding: 4px 8px; font-size: 12px; }}
 
 
 def today(ledger: Ledger) -> str:
+    """市场来自 registry（不再写死 MY/TW）——加一个市场只需要改 spec。"""
+    spec = default_spec()
     cards = []
-    for site, title in (("MY", "马来站存活率"), ("TW", "台湾站存活率")):
-        passed, complete, rate = ledger.survival(site)
+    for market in spec.registry.get("markets") or []:
+        code = market.get("code")
+        viability = market.get("dropship_viability", "unknown")
+        passed, complete, rate = ledger.survival(code)
         shown = "—" if rate is None else f"{rate:.0%}"
+        title = f"{market.get('name', code)}站存活率"
+        badge = "" if viability == "viable" else f'<div class="k">直发可行性：{escape(viability)}</div>'
         cards.append(
-            f'<article class="card"><div class="k">{title}</div><div class="v">{shown}</div><div class="k">{escape(survival_advice(rate))}</div></article>'
+            f'<article class="card"><div class="k">{escape(title)}</div><div class="v">{shown}</div>'
+            f'<div class="k">{escape(survival_advice(rate))}</div>{badge}</article>'
         )
     actions = []
     for row in ledger.list_candidates():
@@ -281,12 +291,13 @@ def _gate(ledger: Ledger, row) -> str:
     result = ledger.quote(row["id"])
     return listing_gate(
         result,
-        len(ledger.supplier_ids(row["id"])),
-        bool(row["sample_bought"]),
-        row["weight_g"] is not None,
-        bool(row["photo_ready"]),
-        bool((row["title_text"] or "").strip()),
-        bool(row["detail_ready"]),
+        supplier_count=len(ledger.supplier_ids(row["id"])),
+        sample_bought=bool(row["sample_bought"]),
+        weighed=row["weight_g"] is not None,
+        purchase_price_cny=row["purchase_cny"],
+        photo_ready=bool(row["photo_ready"]),
+        title_ready=bool((row["title_text"] or "").strip()),
+        detail_ready=bool(row["detail_ready"]),
     )
 
 
@@ -350,8 +361,11 @@ def _fetch_public_notes(ledger: Ledger) -> None:
 
 
 def params_page(ledger: Ledger) -> str:
+    """运行期费率（存 DB）。市场清单来自 registry，不再写死 MY/TW。"""
+    spec = default_spec()
+    codes = [m.get("code") for m in (spec.registry.get("markets") or []) if m.get("params_file")]
     blocks = []
-    for site in ("MY", "TW"):
+    for site in codes:
         rows = []
         current = ledger.params(site)
         for key, help_text in PARAM_HELP.items():
@@ -362,15 +376,86 @@ def params_page(ledger: Ledger) -> str:
         options = "".join(f'<option value="{escape(key)}">{escape(key)}</option>' for key in PARAM_HELP)
         grades = "".join(f'<option>{grade}</option>' for grade in "ABCDE")
         blocks.append(
-            f"""<section class="card"><h2>{site}</h2><table>{''.join(rows)}</table>
+            f"""<section class="card"><h2>{escape(site)}</h2><table>{''.join(rows)}</table>
 <form class="stack" method="post" action="/params" style="margin-top:12px">
-<input type="hidden" name="site" value="{site}">
+<input type="hidden" name="site" value="{escape(site)}">
 <label>参数<select name="key">{options}</select></label>
 <label>值<input name="value" required></label>
 <label>等级<select name="grade">{grades}</select></label>
 <button>保存</button></form></section>"""
         )
-    return f'<h1>参数</h1><p class="lead">马来站和台湾站分开填。空着的费率不会按 0 计算。</p><div class="row">{blocks[0]}{blocks[1]}</div>'
+    return (f'<h1>参数</h1><p class="lead">各市场分开填，市场清单来自 registry；'
+            f'空着的费率不会按 0 计算。完整的 52 个参数与证据等级见 <a href="/spec">配置</a>。</p>'
+            f'<div class="row">{"".join(blocks)}</div>')
+
+
+def spec_page(ledger: Ledger) -> str:
+    """配置页：完全由 spec 驱动——市场、参数、证据等级、复核日、核实任务。"""
+    from shopee_ledger.storage import Storage
+
+    spec = default_spec()
+    storage = Storage(ledger.path, spec)
+    fingerprint = storage.fingerprint()
+
+    market_rows = "".join(
+        "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td><td class='k'>%s</td></tr>" % (
+            escape(m.get("code", "")), escape(m.get("name", "")), escape(m.get("currency", "")),
+            escape(m.get("dropship_viability", "")), escape((m.get("viability_basis") or "")[:70]),
+        )
+        for m in (spec.registry.get("markets") or [])
+    )
+
+    param_rows = []
+    for pid, param in sorted(spec.params.items()):
+        if param.value is None:
+            shown = '<span class="k">未核实</span>'
+        elif isinstance(param.value, (dict, list)):
+            shown = escape(json.dumps(param.value, ensure_ascii=False)[:48])
+        else:
+            shown = escape(str(param.value))
+        state = param.effective_state()
+        flag = "" if param.hard_eligible() else ' <span class="k">（不可硬拦）</span>'
+        param_rows.append(
+            "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td><td>%s%s</td><td>%s</td></tr>" % (
+                escape(pid), escape(param.name[:22]), shown,
+                escape(param.evidence_level), escape(state), flag,
+                escape(param.next_review_at or "—"),
+            )
+        )
+
+    task_rows = []
+    for tid, task in sorted(spec.tasks.items()):
+        blocking = task.get("blocks_first_order")
+        task_rows.append(
+            "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+                escape(tid), "**是**" if blocking else "否",
+                escape(task.get("module", "")), escape(task.get("item", "")[:40]),
+                escape(task.get("status", "")),
+            )
+        )
+
+    modules = "".join(
+        '<li><code>%s</code> %s <span class="k">[%s]</span></li>' % (
+            escape(m.get("id", "")), escape(m.get("name", "")), escape(m.get("status", "")))
+        for m in (spec.registry.get("modules") or [])
+    )
+    blocking_count = len([t for t in spec.tasks.values() if t.get("blocks_first_order")])
+
+    return f"""<h1>配置</h1>
+<p class="lead">本页全部读自 <code>spec/</code>，改 JSON 即改判定。配置指纹 <code>{escape(fingerprint)}</code>；
+参数 {len(spec.params)} · 规则 {len(spec.rules)} · 任务 {len(spec.tasks)}（其中 {blocking_count} 条阻塞第一单）。</p>
+
+<section class="card"><h2>市场</h2><table>
+<tr><th>代码</th><th>名称</th><th>币种</th><th>直发可行性</th><th>依据</th></tr>{market_rows}</table></section>
+
+<section class="card" style="margin-top:12px"><h2>模块</h2><ul>{modules}</ul></section>
+
+<section class="card" style="margin-top:12px"><h2>参数与证据等级</h2>
+<p class="k">「不可硬拦」= 该证据等级不能参与硬门禁（INV-001/010）。</p>
+<table><tr><th>ID</th><th>名称</th><th>值</th><th>等级</th><th>状态</th><th>下次复核</th></tr>{''.join(param_rows)}</table></section>
+
+<section class="card" style="margin-top:12px"><h2>核实任务</h2>
+<table><tr><th>ID</th><th>阻塞第一单</th><th>模块</th><th>事项</th><th>状态</th></tr>{''.join(task_rows)}</table></section>"""
 
 
 def suppliers_page(ledger: Ledger) -> str:

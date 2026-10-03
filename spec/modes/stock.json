@@ -1,0 +1,22 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "mode",
+  "id": "stock",
+  "name": "备货 / 海外仓",
+  "status": "planned",
+  "platform_scope": ["shopee", "lazada", "tiktok_shop"],
+  "market_scope": [],
+  "summary": "批量采购备货到平台官方仓或第三方海外仓，批量清关摊薄单票税费，本地配送提升时效。当低值免税收紧时，本模式是直发的替代路径。",
+  "owns": ["补货计划", "库存周转", "批量清关", "仓储成本摊销"],
+  "does_not_own": ["参数注册表", "成本模型实现", "证据分级实现", "门禁服务实现", "审计实现", "选品与定价规则"],
+  "why_it_matters": "泰国免税取消后，本地仓由「可选项」变「必选项」；马来西亚税负透明化后同理。本模式不是备用方案，而是市场政策变化时的主路径。",
+  "implementation_status": "not_implemented",
+  "open_items": [
+    "需要新增成本科目：头程、仓储费、长期仓储费、弃置费、资金占用",
+    "需要新增实体：ReplenishmentPlan / InventoryBatch / ClearanceRecord",
+    "需要新增状态机：补货（预计 → 采购 → 头程 → 入仓 → 在售 → 清库）",
+    "需要新增规则：库存周转天数门禁、滞销预警、仓租成本占比上限"
+  ],
+  "depends_on_params": ["P-RETURN-RATE", "P-CASH-CYCLE", "P-TW-WITHDRAW"],
+  "reuses": ["ParamRegistry", "EvidenceCenter", "GateService", "CostEngine", "AuditLog"]
+}

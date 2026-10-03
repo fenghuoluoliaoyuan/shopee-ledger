@@ -1,0 +1,66 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "param",
+  "file_scope": { "market": "MY" },
+  "market": {
+    "code": "MY",
+    "name": "马来西亚",
+    "currency": "MYR",
+    "low_value_tax_policy": "lvg_tax",
+    "dropship_viability": "degraded",
+    "viability_basis": "500 令吉以下 LVG 征 10% 销售税且在强化执行；50 令吉商品叠加佣金与物流后利润可能归零",
+    "viability_evidence": "E",
+    "viability_updated_at": "2026-10-03"
+  },
+  "params": [
+    {
+      "id": "P-MY-LVG-TAX",
+      "name": "马来西亚低价值商品（LVG）销售税",
+      "scope": { "platform": "*", "market": "MY", "mode": "*" },
+      "value": null,
+      "unverified_claim": { "rate": 0.10, "threshold_myr": 500, "registration_threshold_myr": 500000, "filing": "quarterly", "since": "2024-01-01", "enforcement_trend": "tightening" },
+      "basis": "行业媒体报道：500 令吉及以下低价值商品须严格执行 10% 销售税；过去 12 个月对马销售 LVG 超 50 万令吉须注册代收并按季申报；MRCA 正施压强化执行",
+      "evidence_level": "E",
+      "intended_level": "A",
+      "state": "to_verify",
+      "gate_eligible": false,
+      "source": { "url": "https://www.ksher.cn/news/post/wmb2b26091704/", "published_at": "2026-09-17", "checked_at": "2026-10-03", "recheck_status": "manual_only", "snapshot_ref": null },
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "task_ref": "VT-046",
+      "impact": "一件 50 令吉商品被征 5 令吉，叠加平台佣金与物流后利润可能归零"
+    },
+    {
+      "id": "P-MY-SLS-TIERS",
+      "name": "马来站 SLS 运费分档表",
+      "scope": { "platform": "shopee", "market": "MY", "mode": "*" },
+      "value": null,
+      "unit": "MYR by weight tier",
+      "evidence_level": "E",
+      "intended_level": "B",
+      "level_note": "当前无任何实测值，按 E 级处理；从卖家中心抄到运费档后升级为 B",
+      "state": "to_verify",
+      "gate_eligible": false,
+      "source": { "url": null, "checked_at": null, "recheck_status": "blocked", "snapshot_ref": null },
+      "review_cycle": "quarterly",
+      "next_review_at": "2027-01-03",
+      "task_ref": "VT-013"
+    },
+    {
+      "id": "P-MY-MARKET-BUDGET-DATE",
+      "name": "马来西亚 2027 预算案（LVG 政策可能变动）",
+      "scope": { "platform": "*", "market": "MY", "mode": "*" },
+      "value": null,
+      "unverified_claim": { "budget_date": "2026-10-09", "may_change": "LVG 执行细则或税率" },
+      "basis": "报道提到 2026-10-09 提交 2027 年预算案，可能公布 LVG 最新执行细则",
+      "evidence_level": "E",
+      "state": "to_verify",
+      "gate_eligible": false,
+      "source": { "url": "https://www.ksher.cn/news/post/wmb2b26091704/", "published_at": "2026-09-17", "checked_at": "2026-10-03", "recheck_status": "manual_only", "snapshot_ref": null },
+      "review_cycle": "on_policy_change",
+      "next_review_at": "2026-11-15",
+      "task_ref": "VT-046",
+      "note": "关键时间点，届时需复核该市场可行性"
+    }
+  ]
+}

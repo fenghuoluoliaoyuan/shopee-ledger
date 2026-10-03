@@ -1,0 +1,228 @@
+{
+  "schema_version": "4.0.0",
+  "layer": "rule",
+  "file_scope": {
+    "layer": "mode",
+    "mode": "dropship"
+  },
+  "note": "仅属于「无货源一件代发」履约模式的规则。这里只放模式独有的东西：库存前置检查、地址来源、物流直发可行性、断货降级。选品、成本、风控、资金等规则全部上提到 rules/platform.json。",
+  "rules": [
+    {
+      "id": "R-ORDER-001",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "未确认库存即安排发货",
+      "gate": "G5",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "order.stock_checked_at == null",
+      "depends_on": [],
+      "evidence_level": "D",
+      "message": "必须先确认库存，否则发货时效已开始计"
+    },
+    {
+      "id": "R-ORDER-002",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "收货地址来源非法",
+      "gate": "G5",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "po.address_source != 'order_page'",
+      "depends_on": [
+        "P-TW-WH-ADDR-FMT"
+      ],
+      "evidence_level": "E",
+      "on_degrade": "字段结构为 E 级，但「来源必须是当单页面」为硬约束，故本规则保持 hard",
+      "message": "收货地址必须抄自当单页面，禁止手工录入或网上抄来的通用仓地址"
+    },
+    {
+      "id": "R-ORDER-003",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "临近发货截止",
+      "gate": "G5",
+      "level": "soft",
+      "action": "ALERT",
+      "condition": "now > order.warehouse_deadline - lead_time",
+      "depends_on": [
+        "P-TW-DTS"
+      ],
+      "evidence_level": "E",
+      "on_degrade": "P-TW-DTS 为 E 级时不启用告警，只记录时间戳",
+      "message": "存在迟发风险"
+    },
+    {
+      "id": "R-SUP-003",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "全部供应商断货",
+      "gate": "G5",
+      "level": "soft",
+      "action": "TASK",
+      "condition": "stock_check.result == 'all_out'",
+      "depends_on": [],
+      "evidence_level": "D",
+      "effect": "生成下架任务 T-LISTING-PAUSE；记录断货事件到供应商评分",
+      "message": "全部备选供应商无货"
+    },
+    {
+      "id": "R-LOG-001",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "尺寸缺失",
+      "gate": "G2",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "dims == null",
+      "depends_on": [],
+      "evidence_level": "E",
+      "result": "INCOMPLETE",
+      "message": "缺三边尺寸，不做物流限制判断"
+    },
+    {
+      "id": "R-LOG-002",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "重量缺失（与 G2 同源）",
+      "gate": "G2",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "weight_g == null",
+      "depends_on": [],
+      "evidence_level": "C",
+      "result": "INCOMPLETE",
+      "message": "缺重量数据"
+    },
+    {
+      "id": "R-LOG-003",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "店配重量落在冲突区间",
+      "gate": "G2",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "P-TW-SHOPEE-SHIP-W.unverified_claim.safe_max_g < weight_g <= P-TW-SHOPEE-SHIP-W.unverified_claim.loose_max_g",
+      "reads_unverified_claim": true,
+      "advisory_only": true,
+      "depends_on": [
+        "P-TW-SHOPEE-SHIP-W"
+      ],
+      "evidence_level": "E",
+      "result": "WARN",
+      "message": "重量处于冲突区间（5kg-10kg），需人工确认店配是否可走；依据不足，不得判 REJECT"
+    },
+    {
+      "id": "R-LOG-004",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "超过店配宽松上限",
+      "gate": "G2",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "weight_g > P-TW-SHOPEE-SHIP-W.unverified_claim.loose_max_g",
+      "reads_unverified_claim": true,
+      "advisory_only": true,
+      "depends_on": [
+        "P-TW-SHOPEE-SHIP-W"
+      ],
+      "evidence_level": "E",
+      "result": "WARN",
+      "message": "超过店配宽松上限，建议改用宅配"
+    },
+    {
+      "id": "R-LOG-005",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "液体容量缺失",
+      "gate": "G2",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "is_liquid == true && liquid_ml == null",
+      "depends_on": [],
+      "evidence_level": "E",
+      "result": "INCOMPLETE",
+      "message": "液体品缺容量数据"
+    },
+    {
+      "id": "R-LOG-006",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "液体超过参考上限",
+      "gate": "G2",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "is_liquid == true && liquid_ml > P-TW-LIQUID-ML.unverified_claim",
+      "reads_unverified_claim": true,
+      "advisory_only": true,
+      "depends_on": [
+        "P-TW-LIQUID-ML"
+      ],
+      "evidence_level": "E",
+      "result": "WARN",
+      "message": "超过液体参考限制，需人工复核"
+    },
+    {
+      "id": "R-LOG-007",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "单包裹价值超参考上限",
+      "gate": "G2",
+      "level": "soft",
+      "action": "WARN",
+      "condition": "order_value_local > P-TW-PARCEL-CAP.unverified_claim",
+      "reads_unverified_claim": true,
+      "advisory_only": true,
+      "depends_on": [
+        "P-TW-PARCEL-CAP"
+      ],
+      "evidence_level": "E",
+      "result": "WARN",
+      "message": "单包裹价值超过参考上限"
+    },
+    {
+      "id": "R-LOG-008",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "E 级不产生 REJECT（引擎自检）",
+      "gate": "G2",
+      "level": "hard",
+      "action": "BLOCK",
+      "condition": "rule.depends_on.evidence_level.all == 'E' && rule.result == 'REJECT'",
+      "depends_on": [],
+      "target": "规则引擎自身",
+      "message": "E 级参数不得产生 REJECT（工程不变量）",
+      "evaluated_by": "validate.py",
+      "runtime": false
+    },
+    {
+      "id": "R-MKT-001",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "目标市场直发可行性提示",
+      "gate": "G1",
+      "level": "advisory",
+      "action": "WARN",
+      "condition": "market.dropship_viability in ['degraded','not_viable']",
+      "depends_on": [],
+      "evidence_level": "E",
+      "advisory_only": true,
+      "message": "该市场低值免税收紧，小包直发经济性下降：建议改用本地仓/备货模式或更换市场"
+    },
+    {
+      "id": "R-MKT-002",
+      "layer": "mode",
+      "mode": "dropship",
+      "name": "该市场税负推高买家到手价",
+      "gate": "G3",
+      "level": "advisory",
+      "action": "WARN",
+      "condition": "import_tax_treatment == 'buyer_uplift'",
+      "depends_on": [],
+      "evidence_level": "E",
+      "advisory_only": true,
+      "result": "WARN",
+      "message": "该市场已取消低值免税且由平台代收：税不进卖家成本，但买家到手价上移会压制转化——核算时既不要当成本，也不要忽略"
+    }
+  ]
+}

@@ -12,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shopee_ledger.api import sign
 from shopee_ledger.escrow import map_escrow
 from shopee_ledger.fulfillment import Fulfillment, arrange_ship, copy_address, mark_stock
-from shopee_ledger.desk import listing_gate
+from shopee_ledger.desk import listing_gate, listing_warnings
 from shopee_ledger.profit import Decision, ProfitInput, evaluate
 from shopee_ledger.store import Ledger
-from shopee_ledger.veto import veto_reasons
+from shopee_ledger.veto import veto_advisories, veto_reasons
 from shopee_ledger.web import Handler
 
 
@@ -81,9 +81,17 @@ class ProfitTest(unittest.TestCase):
 
 
 class VetoTest(unittest.TestCase):
-    def test_apparel_blocks_weight_does_not(self):
-        self.assertEqual(veto_reasons(["apparel"]), ["服装、鞋帽"])
+    def test_apparel_veto_comes_from_spec(self):
+        """否决判定已从写死的 VETO_FLAGS 迁到 spec/rules/platform.json (R-SEL-002)。"""
+        reasons = veto_reasons(["apparel"])
+        self.assertTrue(reasons)
+        self.assertIn("服装", reasons[0])
         self.assertEqual(veto_reasons([]), [])
+
+    def test_restricted_material_is_advisory_not_hard_veto(self):
+        """液体/粉末/电池在 v1.4 是硬否决；词库为 E 级后只能软提示（INV-001/011）。"""
+        self.assertEqual(veto_reasons(["liquid_powder_battery"]), [])
+        self.assertTrue(veto_advisories(["liquid_powder_battery"]))
 
 
 class FulfillmentTest(unittest.TestCase):
@@ -169,13 +177,38 @@ class StoreTest(unittest.TestCase):
 
 
 class DeskTest(unittest.TestCase):
-    def test_go_still_needs_sample_and_three_suppliers(self):
-        result = evaluate(sample())
-        self.assertEqual(result.decision, Decision.GO)
-        text = listing_gate(result, 1, False, True, False, False, False)
-        self.assertEqual(text, "先买样品再称重")
-        ready = listing_gate(result, 3, True, True, True, True, True)
-        self.assertEqual(ready, "可上架")
+    def test_sample_blocks_before_listing(self):
+        text = listing_gate(
+            None, supplier_count=3, sample_bought=False, weighed=True,
+            purchase_price_cny=20.0, photo_ready=True,
+        )
+        self.assertTrue(text.startswith("先买样品再称重"), text)
+
+    def test_missing_purchase_price_blocks(self):
+        text = listing_gate(
+            None, supplier_count=3, sample_bought=True, weighed=True, photo_ready=True,
+        )
+        self.assertIn("采购", text)
+
+    def test_supplier_shortage_is_a_warning_not_a_block(self):
+        """供应商 <3 在 v4.0 是软门禁（R-SUP-001 WARN），不再硬拦上架。"""
+        text = listing_gate(
+            None, supplier_count=1, sample_bought=True, weighed=True,
+            purchase_price_cny=20.0, photo_ready=True,
+        )
+        self.assertEqual(text, "可上架")
+        notes = " ".join(listing_warnings(
+            None, supplier_count=1, sample_bought=True, weighed=True,
+            purchase_price_cny=20.0, photo_ready=True,
+        ))
+        self.assertIn("供应商", notes)
+
+    def test_ready_when_everything_done(self):
+        text = listing_gate(
+            None, supplier_count=3, sample_bought=True, weighed=True, purchase_price_cny=20.0,
+            photo_ready=True, title_ready=True, detail_ready=True,
+        )
+        self.assertEqual(text, "可上架")
 
 
 class WebTest(unittest.TestCase):
@@ -188,7 +221,9 @@ class WebTest(unittest.TestCase):
             port = httpd.server_address[1]
             try:
                 home = urlopen(f"http://127.0.0.1:{port}/").read().decode()
-                self.assertIn("马来站存活率", home)
+                self.assertIn("站存活率", home, "今日页应渲染各市场存活率卡片（市场来自 registry）")
+                self.assertIn("台湾站存活率", home)
+                self.assertIn("配置", home)
                 body = urlencode({"site": "MY", "key": "local_per_cny", "value": "0.6", "grade": "C"}).encode()
                 saved = urlopen(Request(f"http://127.0.0.1:{port}/params", data=body)).read().decode()
                 self.assertIn("0.6", saved)

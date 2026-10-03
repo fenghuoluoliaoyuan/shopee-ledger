@@ -1,0 +1,27 @@
+{
+  "deprecated": true,
+  "deprecated_since": "2026-10-03",
+  "deprecated_by": "spec/registry.json + spec/entities.json + spec/governance.json + spec/params/* + spec/rules/* + spec/modes/* + spec/evidence/*",
+  "reason": "v3.0 的单文件结构把「平台能力」「市场参数」「履约模式」混在一处，导致一个会过期的市场政策窗口（台湾低值免税仍在）被固化进架构。v4.0 按「横向能力上提为平台级、履约模式下沉为插件、市场作为正交维度」重新分层。",
+  "migration_map": {
+    "params[]": "platform.*.json / market.<code>.json / assumptions.json / modes.<id>.mode_params",
+    "rules[]": "rules/platform.json（横向） + rules/modes/<id>.json（模式专属）",
+    "entities[]": "entities.json（layer 字段标注归属）",
+    "state_machines.product / verification_task / param_lifecycle": "governance.json",
+    "state_machines.order_fulfillment": "modes/dropship.json → order_state_machine",
+    "invariants / alert_policy / events / kpis / calibration": "governance.json",
+    "verification_tasks": "evidence/verification-tasks.json",
+    "manual / schema_version": "registry.json"
+  },
+  "content_summary": {
+    "params": "39 → 52（泰国 5、马来西亚 2、M6 流量 6）",
+    "rules": "36 → 45（v4.0 新增 R-GOV-004、R-MKT-001/002、R-DATA-003、R-LIST-002；M6 新增 4 条流量规则；横向 31 + 无货源 14）",
+    "tasks": "44 → 48（VT-045 泰国、VT-046 马来西亚、VT-047/048 M6 流量）",
+    "invariants": "11 → 14（新增 INV-012 分层一致性、INV-013 模式不得越权、INV-014 任务与参数反向一致）",
+    "modules": 9,
+    "entities": 22,
+    "count_correction": "v4.0 初稿曾把规则数写成 38（漏数 R-GOV-004）。独立校验发现后更正为 39，M6 扩充后为 43。"
+  },
+  "action_required": "请删除本文件，或保留作为迁移路标但不得再被任何代码引用。校验器 spec/validate.py 会检查是否存在对本文件的引用。",
+  "do_not_edit": true
+}
