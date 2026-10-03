@@ -369,9 +369,10 @@ def params_page(ledger: Ledger) -> str:
         rows = []
         current = ledger.params(site)
         for key, help_text in PARAM_HELP.items():
-            value = current.get(key) or ""
+            value = current.get(key)
+            shown = "—" if value in (None, "") else str(value)
             rows.append(
-                f"<tr><td><code>{escape(key)}</code><div class='k'>{escape(help_text)}</div></td><td>{escape(value) or '—'}</td></tr>"
+                f"<tr><td><code>{escape(key)}</code><div class='k'>{escape(help_text)}</div></td><td>{escape(shown)}</td></tr>"
             )
         options = "".join(f'<option value="{escape(key)}">{escape(key)}</option>' for key in PARAM_HELP)
         grades = "".join(f'<option>{grade}</option>' for grade in "ABCDE")

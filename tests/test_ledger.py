@@ -1,3 +1,4 @@
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -143,27 +144,34 @@ class EscrowTest(unittest.TestCase):
 
 
 class StoreTest(unittest.TestCase):
-    def test_quote_stays_incomplete_until_rates_exist(self):
+    def test_my_quote_incomplete_when_spec_has_no_rates(self):
+        """MY 在 spec 里没有佣金/手续费参数 → 必须 INCOMPLETE，绝不把缺失费率当 0。"""
         with tempfile.TemporaryDirectory() as folder:
             ledger = Ledger(Path(folder) / "ledger.sqlite")
             ledger.init()
             candidate = ledger.add_candidate("MY", "杯垫", 80, 10, 2, 20, 5, True)
             ledger.set_return_rate(candidate, 0.05)
-            self.assertEqual(ledger.quote(candidate).decision, Decision.INCOMPLETE)
-            for key, value in (
-                ("local_per_cny", "0.6"),
-                ("commission_rate", "0.08"),
-                ("transaction_rate", "0.02"),
-                ("service_fee_kind", "service"),
-                ("service_fee_rate", "0.025"),
-                ("withdrawal_rate", "0.01"),
-                ("fx_loss_rate", "0.01"),
-            ):
-                ledger.set_param("MY", key, value, "E")
-            result = ledger.quote(candidate)
-            self.assertEqual(result.decision, Decision.GO)
-            passed, complete, rate = ledger.survival("MY")
+            view = ledger.quote(candidate)
+            self.assertEqual(view.decision, Decision.INCOMPLETE)
+            self.assertIn("commission_rate", view.missing)
+            ledger.close()
+
+    def test_tw_quote_go_with_measured_overrides(self):
+        """台湾站制度性费率来自 spec，本机只覆盖实测值（汇率 C 级）。"""
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger.init()
+            ledger.set_param("TW", "local_per_cny", "4.5", "C")
+            candidate = ledger.add_candidate("TW", "杯垫", 80, 20, 1.5, 350, 60, True)
+            ledger.set_return_rate(candidate, 0.05)
+            view = ledger.quote(candidate)
+            self.assertEqual(view.cost.status, "COMPUTED")
+            self.assertEqual(view.decision, Decision.GO)
+            self.assertAlmostEqual(view.cost.components["commission"], 350 * 0.14, places=6)
+
+            passed, complete, rate = ledger.survival("TW")
             self.assertEqual((passed, complete, rate), (1, 1, 1.0))
+
             order = ledger.open_order(candidate)
             supplier = ledger.add_supplier("甲", "https://example.test", 3, True, True, 10)
             ledger.apply_stock(order, supplier, True, False)
@@ -172,7 +180,29 @@ class StoreTest(unittest.TestCase):
             ledger.apply_purchase(order)
             ledger.apply_inbound(order)
             self.assertEqual(ledger.load_order(order).status, "done")
-            self.assertEqual(len(ledger.checklist_rows()), 22)
+            self.assertEqual(len(ledger.checklist_rows()), 48, "核实任务来自 spec（48 条）")
+            ledger.close()
+
+    def test_override_layer_rejects_unverified_grade(self):
+        """覆盖层只接受 A/B/C；D/E 必须走核实任务升级路径，不能直接写进覆盖值。"""
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger.init()
+            with self.assertRaises(ValueError):
+                ledger.set_param("TW", "local_per_cny", "4.5", "E")
+            ledger.close()
+
+    def test_override_is_append_only(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ledger = Ledger(Path(folder) / "ledger.sqlite")
+            ledger.init()
+            ledger.set_param("TW", "local_per_cny", "4.5", "C")
+            second = Ledger(Path(folder) / "ledger.sqlite")
+            second.storage.connect()
+            with self.assertRaises(sqlite3.IntegrityError):
+                second.storage.connect().execute(
+                    "UPDATE param_override SET value = 9.9 WHERE param_id = 'P-TW-FX'")
+            second.close()
             ledger.close()
 
 
@@ -224,9 +254,9 @@ class WebTest(unittest.TestCase):
                 self.assertIn("站存活率", home, "今日页应渲染各市场存活率卡片（市场来自 registry）")
                 self.assertIn("台湾站存活率", home)
                 self.assertIn("配置", home)
-                body = urlencode({"site": "MY", "key": "local_per_cny", "value": "0.6", "grade": "C"}).encode()
+                body = urlencode({"site": "TW", "key": "local_per_cny", "value": "4.5", "grade": "C"}).encode()
                 saved = urlopen(Request(f"http://127.0.0.1:{port}/params", data=body)).read().decode()
-                self.assertIn("0.6", saved)
+                self.assertIn("4.5", saved)
                 self.assertIn("参数已保存", saved)
             finally:
                 httpd.shutdown()

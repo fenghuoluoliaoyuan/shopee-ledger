@@ -115,10 +115,15 @@ def main(argv: list[str] | None = None) -> int:
 def _run(ledger: Ledger, args: argparse.Namespace) -> int:
     if args.cmd == "init":
         ledger.init()
-        print(f"已建库 {args.db}。马来站阈值 15%/10% 标为 D，费率未填。")
+        print(f"已建库 {args.db}。参数来自 spec/，本机只存实测覆盖；费率未填时选品停在「缺数据」。")
         return 0
     if args.cmd == "param-set":
-        ledger.set_param(args.site, args.key, args.value, args.grade)
+        try:
+            ledger.set_param(args.site, args.key, args.value, args.grade)
+        except ValueError as exc:
+            print("参数未保存：%s" % exc)
+            print("提示：制度性费率由 spec/params 提供；本机覆盖层只接受 A/B/C 级。")
+            return 1
         print(f"{args.site} {args.key} = {args.value} [{args.grade}]")
         return 0
     if args.cmd == "param-list":

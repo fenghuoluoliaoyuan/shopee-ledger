@@ -12,11 +12,12 @@
 
 from __future__ import annotations
 
+import copy
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 DEFAULT_SPEC_ROOT = Path(__file__).resolve().parent.parent / "spec"
 
@@ -100,6 +101,28 @@ class Param:
             "hard_eligible": self.hard_eligible(today),
             "name": self.name,
         }
+
+    def overridden(self, row: dict[str, Any]) -> "Param":
+        """用实测/后台抄录的值覆盖 spec 值（覆盖层只允许 A/B/C，见 ParamOverride 实体）。"""
+        level = row.get("evidence_level") or self.evidence_level
+        if level not in HARD_OK_LEVELS:
+            raise SpecError("参数覆盖只能用 A/B/C 级，收到 %r（%s）" % (level, self.id))
+        source = dict(self.source)
+        for key, src_key in (("url", "source_url"), ("checked_at", "checked_at"),
+                             ("snapshot_ref", "snapshot_ref")):
+            if row.get(src_key) is not None:
+                source[key] = row[src_key]
+        source["override"] = True
+        source.setdefault("recheck_status", "machine_ok")
+        return replace(
+            self,
+            value=row.get("value"),
+            evidence_level=level,
+            state="active",
+            gate_eligible=True,
+            source=source,
+            raw=dict(self.raw, overridden=True),
+        )
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "Param":
@@ -348,6 +371,26 @@ class Spec:
             len(self.registry.get("markets") or []),
             len(self.entities),
         )
+
+    def with_overrides(self, overrides: Iterable[dict[str, Any]]) -> "Spec":
+        """返回合并了覆盖层的新 Spec。
+
+        覆盖层（ParamOverride 表）是「参数升级路径」的载体：
+        用户在卖家中心抄到真实费率后写进覆盖层，而不是复制 spec 的制度性参数（INV-009）。
+        """
+        rows = [row for row in overrides if row.get("param_id")]
+        if not rows:
+            return self
+        # 覆盖层只增不改：同一参数可能有多条历史记录，按 id 升序应用 → 最新的覆盖生效
+        rows.sort(key=lambda row: row.get("id") or 0)
+        clone = copy.copy(self)
+        clone.params = dict(self.params)
+        for row in rows:
+            base = clone.params.get(row["param_id"])
+            if base is None:
+                continue  # 未知参数忽略，避免脏数据污染
+            clone.params[row["param_id"]] = base.overridden(row)
+        return clone
 
 
 _CACHE: dict[str, Spec] = {}

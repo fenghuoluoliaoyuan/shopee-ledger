@@ -1,4 +1,11 @@
-"""第 5 章利润公式。缺费率时返回 incomplete，不用 0 冒充已核实。"""
+"""【遗留 / 参考实现】v1.4 的利润公式。缺费率时返回 incomplete，不用 0 冒充已核实。
+
+⚠️ 现行路径已换成 ``cost_engine.CostEngine``（参数来自 spec、含进口税负承担方、产出证据链）。
+本模块现在只剩两处用途：
+1. 对外暴露 ``Decision`` 枚举（CLI / 网页仍在用）；
+2. 作为公式口径的参考实现，由 ``tests/test_ledger.py::ProfitTest`` 锁住语义。
+请勿在业务代码里再调用 ``evaluate``。
+"""
 
 from __future__ import annotations
 
