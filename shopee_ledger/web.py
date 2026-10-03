@@ -953,6 +953,27 @@ def orders_page(ledger: Ledger) -> str:
 
 def checklist_page(ledger: Ledger) -> str:
     today_text = date.today().isoformat()
+
+    # 待读数的留档：登录门禁页面抓回来、但没有配方可提取的那些。
+    # 显示在这里是因为**用户的动作只到"登录后点一下"为止**，
+    # 之后该由系统（我）去读正文，不该让他再抄一遍字。
+    manual = ledger.manual_queue()
+    manual_block = ""
+    if manual:
+        items = "".join(
+            "<tr><td><code>%s</code></td><td>%s</td><td class='k'>%s</td><td class='k'>%s</td></tr>"
+            % (escape(item["param_id"]),
+               escape(str(ledger.spec.params.get(item["param_id"]).name
+                          if item["param_id"] in ledger.spec.params else "—")),
+               escape(item["url"][:60] or "—"), escape(item["snapshot_ref"]))
+            for item in manual)
+        manual_block = (
+            "<section class='card'><h2>待读数（%d）</h2>"
+            "<p class='k'>这些页面配方写不出来（入驻须知、当单页字段这些都是散文不是数字），"
+            "但**正文已经留档**。不用你抄字——读数由系统来做。</p>"
+            "<table><tr><th>参数</th><th>名称</th><th>页面</th><th>正文留档</th></tr>%s</table>"
+            "</section>" % (len(manual), items))
+
     rows = []
     for row in ledger.checklist_rows():
         grades = "".join(
@@ -991,6 +1012,7 @@ def checklist_page(ledger: Ledger) -> str:
     return f"""<h1>待核实</h1>
 <p class="lead">阻塞第一单的排在最前（还剩 {remaining} 条）。A 级必须有可打开的 URL——没有凭据的 A 级等于自述。
 这条任务若绑定了解锁参数，填「抄到的值」会在保存的同时把它升到该等级，对应功能随即启用。</p>
+{manual_block}
 <section class="card"><table>{''.join(rows)}</table></section>"""
 
 

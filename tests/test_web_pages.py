@@ -16,6 +16,38 @@ from shopee_ledger.store import Ledger
 from shopee_ledger.web import landed_page, orders_page, products_page
 
 
+class ManualQueuePageTest(unittest.TestCase):
+    """待读数区块：没有内容时不该出现，有内容时要让用户看清下一步不用他做。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.ledger = Ledger(Path(self.tmp.name) / "ledger.sqlite", verified_path=None)
+        self.ledger.init()
+
+    def tearDown(self):
+        self.ledger.close()
+        self.tmp.cleanup()
+
+    def test_no_block_when_queue_is_empty(self):
+        from shopee_ledger.web import checklist_page
+
+        self.assertNotIn("待读数", checklist_page(self.ledger))
+
+    def test_block_lists_the_archived_page_and_says_the_reading_is_not_on_you(self):
+        from shopee_ledger.sources import ingest_text
+        from shopee_ledger.web import checklist_page
+
+        capture = ingest_text("入驻须知正文。" * 40, param_id="P-ONB-ENTRY",
+                              url="https://seller.shopee.cn/portal/webform/entry",
+                              sources=[], snapshot_dir=Path(self.tmp.name) / "snaps")
+        self.ledger.record_capture(capture)
+        html = checklist_page(self.ledger)
+        self.assertIn("待读数", html)
+        self.assertIn("P-ONB-ENTRY", html)
+        self.assertIn("seller.shopee.cn", html)
+        self.assertIn("不用你抄字", html, "要明确告诉用户读数不是他的活")
+
+
 class LandedPageTest(unittest.TestCase):
     """落地对比页。选品页能带参跳过来，所以两种入口都要能用。"""
 
