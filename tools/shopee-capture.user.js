@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shopee 台账 · 参数采集
 // @namespace    shopee-ledger
-// @version      0.3.1
+// @version      0.4.0
 // @description  在 Shopee 页面上把渲染后的正文送回本机台账，产出「候选值」等人工确认。本脚本不会直接修改任何参数。
 // @author       shopee-ledger
 // @match        https://shopee.cn/edu/*
@@ -45,7 +45,7 @@
 
   const APP = 'http://127.0.0.1:8765';
   const PANEL_ID = 'shopee-ledger-capture';
-  const VERSION = '0.3.1';   // 改脚本就改这里：console 一眼看出装的是哪版
+  const VERSION = '0.4.0';   // 改脚本就改这里：console 一眼看出装的是哪版
 
   function log(...args) {
     console.log('[台账采集 v' + VERSION + ']', ...args);
@@ -88,9 +88,27 @@
     return JSON.parse(res.responseText);
   }
 
-  // 列表页：把 <a> 和它所在条目的文字（含日期）一起送回去。
-  // 链接和日期只存在于 DOM 里，innerText 拿不到——所以列表要走结构化通道。
-  function collectLinks() {
+  // 列表条目：选择器来自用户保存的真实页面（tests/fixtures/listing-page.html），不是猜的。
+  //   <li class="article-item"> > <a class="article-a" href> + .article-title + .bottom-time
+  // 日期在 <a> **外面**，所以要按 li 逐个取，不能只扫 a。
+  function collectItems() {
+    const found = [];
+    document.querySelectorAll('li.article-item').forEach((li) => {
+      const anchor = li.querySelector('a.article-a') || li.querySelector('a[href*="/article/"]');
+      if (!anchor) return;
+      const title = li.querySelector('.article-title');
+      const time = li.querySelector('.bottom-time');
+      found.push({
+        href: anchor.href,
+        text: ((title && title.innerText) || '').trim(),
+        date: ((time && time.innerText) || '').trim(),
+      });
+    });
+    if (found.length) return found;
+    return collectLinksGeneric();   // 站点改版时的兜底
+  }
+
+  function collectLinksGeneric() {
     const found = [];
     document.querySelectorAll('a[href*="/article/"]').forEach((anchor) => {
       const box = anchor.closest('li, tr, article, div') || anchor.parentElement;
@@ -101,6 +119,49 @@
       });
     });
     return found;
+  }
+
+  function activePage() {
+    const el = document.querySelector('li.shopee-pager__page.active');
+    return el ? el.innerText.trim() : null;
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function waitForPageChange(before, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await sleep(250);
+      const now = activePage();
+      if (now && now !== before) return now;
+    }
+    return null;
+  }
+
+  // 翻完所有页。选择器同样是真实的：li.shopee-pager__page / button.shopee-pager__button-next。
+  // 会把页面翻到最后再翻回第 1 页——所以做成单独按钮，不放进自动报送。
+  async function walkPages(maxPages) {
+    const all = new Map();
+    const collect = () => collectItems().forEach((item) => all.set(item.href, item));
+    const firstPage = activePage();
+    collect();
+    let pages = 1;
+    for (let i = 0; i < maxPages; i += 1) {
+      const next = document.querySelector('button.shopee-pager__button-next');
+      if (!next || next.disabled) break;
+      const before = activePage();
+      next.click();
+      const now = await waitForPageChange(before, 8000);
+      if (!now) break;
+      collect();
+      pages += 1;
+    }
+    const back = Array.from(document.querySelectorAll('li.shopee-pager__page'))
+      .find((el) => el.innerText.trim() === (firstPage || '1'));
+    if (back && !back.classList.contains('active')) back.click();
+    return { items: Array.from(all.values()), pages: pages };
   }
 
   async function loadWatches() {
@@ -162,16 +223,16 @@
     }
   }
 
-  async function sendListing() {
+  async function sendListing(items, extra) {
     const res = await request({
       method: 'POST',
       url: APP + '/ingest',
       headers: { 'Content-Type': 'application/json' },
-      data: JSON.stringify({
+      data: JSON.stringify(Object.assign({
         url: location.href,
-        links: collectLinks(),
+        links: items || collectItems(),
         api_calls: discoverApiCalls(),
-      }),
+      }, extra || {})),
     });
     return JSON.parse(res.responseText);
   }
@@ -196,6 +257,7 @@
       <div style="color:#a1a1aa;margin-bottom:8px">默认发整页正文；按住 <b>Alt</b> 再点只发选中部分。</div>
       <button id="sl-send" style="width:100%;padding:8px;border:0;border-radius:6px;background:#1d4ed8;color:#fff;cursor:pointer">抓这一页</button>
       <button id="sl-list" style="width:100%;margin-top:6px;padding:6px;border:1px solid #3f3f46;border-radius:6px;background:transparent;color:#d4d4d8;cursor:pointer">这是列表页 → 只看有哪些新文档</button>
+      <button id="sl-walk" style="width:100%;margin-top:6px;padding:6px;border:1px solid #3f3f46;border-radius:6px;background:transparent;color:#d4d4d8;cursor:pointer">翻完所有页再报送（页面会自己翻）</button>
       <pre id="sl-out" style="white-space:pre-wrap;margin:8px 0 0;color:#a1a1aa;max-height:180px;overflow:auto"></pre>
       <div id="sl-toggle" style="margin-top:6px;color:#52525b;cursor:pointer;text-align:right">收起</div>
     `;
@@ -204,35 +266,47 @@
     const out = box.querySelector('#sl-out');
     const button = box.querySelector('#sl-send');
     const listButton = box.querySelector('#sl-list');
+    const walkButton = box.querySelector('#sl-walk');
     const select = box.querySelector('#sl-param');
 
     function show(text) {
       out.textContent = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
     }
 
+    function renderListing(result) {
+      const fresh = (result.new || [])
+        .map((item) => '  · ' + (item.published_at || '日期未知') + '  ' + item.title)
+        .join('\n');
+      return '📄 共 ' + result.total + ' 篇' +
+        (result.pager && result.pager.page_count ? '（本页 ' + result.pager.current +
+          '，页码 ' + result.pager.page_count + ' 个）' : '') + '\n' +
+        (result.new && result.new.length ? '🆕 新出现 ' + result.new.length + ' 篇：\n' + fresh
+                                         : '（没有新文档）') +
+        (result.gone && result.gone.length ? '\n⚠️ 消失 ' + result.gone.length + ' 篇' : '') +
+        (result.api_calls && result.api_calls.length
+          ? '\n\n🔌 顺手记下 ' + result.api_calls.length + ' 个数据请求：\n' +
+            result.api_calls.slice(0, 3).map((u) => '  ' + u.slice(0, 76)).join('\n') + '\n'
+          : '') +
+        '\n只发现，不取值。要取值就点进文章，切到对应参数再点「抓这一页」。';
+    }
+
+    walkButton.addEventListener('click', async () => {
+      show('正在翻页…页面会自己翻，请不要操作');
+      try {
+        const walked = await walkPages(12);
+        const result = await sendListing(walked.items);
+        show(result.ok ? ('翻了 ' + walked.pages + ' 页\n' + renderListing(result))
+                       : ('❌ ' + (result.error || result.status)));
+      } catch (err) {
+        show('❌ ' + err.message);
+      }
+    });
+
     listButton.addEventListener('click', async () => {
       show('读取列表…');
       try {
         const result = await sendListing();
-        if (!result.ok) {
-          show('❌ ' + (result.error || result.status || '未解析出条目'));
-          return;
-        }
-        const fresh = (result.new || [])
-          .map((item) => '  · ' + (item.published_at || '日期未知') + '  ' + item.title)
-          .join('\n');
-        show(
-          '📄 这个列表共 ' + result.total + ' 篇（已有记录 ' + (result.total - (result.new || []).length) + ' 篇）\n' +
-          (result.new && result.new.length
-            ? '🆕 新出现 ' + result.new.length + ' 篇：\n' + fresh
-            : '（没有新文档）') +
-          (result.gone && result.gone.length ? '\n⚠️ 消失 ' + result.gone.length + ' 篇（可能翻页变化）' : '') +
-          (result.api_calls && result.api_calls.length
-            ? '\n\n🔌 顺手记下 ' + result.api_calls.length + ' 个数据接口（可用于服务端翻页）：\n' +
-              result.api_calls.slice(0, 3).map((u) => '  ' + u.slice(0, 78)).join('\n')
-            : '') +
-          '\n\n只发现，不取值。要取值就点进文章，切到对应参数再点「抓这一页」。'
-        );
+        show(result.ok ? renderListing(result) : ('❌ ' + (result.error || result.status || '未解析出条目')));
       } catch (err) {
         show('❌ ' + err.message);
       }
@@ -268,6 +342,7 @@
       out.style.display = hidden ? 'block' : 'none';
       button.style.display = hidden ? 'block' : 'none';
       listButton.style.display = hidden ? 'block' : 'none';
+      walkButton.style.display = hidden ? 'block' : 'none';
       select.style.display = hidden ? 'block' : 'none';
       box.querySelector('#sl-toggle').textContent = hidden ? '收起' : '展开';
     });

@@ -25,6 +25,7 @@ from shopee_ledger.watch import (  # noqa: E402
     load_watches,
     normalize_date,
     parse_api_calls,
+    parse_listing_html,
 )
 from shopee_ledger.web import Handler, _ingest_payload  # noqa: E402
 
@@ -268,6 +269,64 @@ class WatchHttpTest(unittest.TestCase):
         self.assertAlmostEqual(result["value"], 0.14)
 
 
+FIXTURE = Path(__file__).resolve().parent / "fixtures" / "listing-page.html"
+
+
+class ListingHtmlParserTest(unittest.TestCase):
+    """对用户保存的**真实页面**写解析器——不再猜选择器。
+
+    固件来自 https://shopee.cn/edu/category?sub_cat_id=1066 的「网页另存为」结果：
+    Chrome 存的是渲染后的 DOM，所以里面有真实链接与分页控件。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = FIXTURE.read_text(encoding="utf-8")
+
+    def test_parses_every_item(self):
+        entries, _ = parse_listing_html(self.html,
+                                        base_url="https://shopee.cn/edu/category?sub_cat_id=1066")
+        self.assertEqual(len(entries), 15)
+        self.assertEqual(entries[0].article_id, "28402")
+        self.assertEqual(entries[0].published_at, "2026-09-30")
+        self.assertIn("泰国站点优选", entries[0].title)
+
+    def test_title_and_date_are_paired_per_item(self):
+        """日期在 <a> 外面（article-title-bottom > bottom-time），最容易串行。"""
+        entries, _ = parse_listing_html(self.html)
+        pairs = {entry.article_id: (entry.published_at, entry.title) for entry in entries}
+        self.assertEqual(pairs["28203"][0], "2026-09-04")
+        self.assertIn("买家自提渠道重量限制", pairs["28203"][1])
+        self.assertEqual(pairs["26619"][0], "2026-09-03")
+        self.assertIn("免佣政策", pairs["26619"][1])
+        self.assertEqual(pairs["27730"][0], "2026-08-03")
+
+    def test_reads_the_pager(self):
+        _, pager = parse_listing_html(self.html)
+        self.assertEqual(pager["current"], "1")
+        self.assertTrue(pager["has_next"], "第 1 页的 next 按钮应当可用")
+        self.assertIn("9", pager["pages"])
+        self.assertNotIn("...", pager["pages"], "省略号不算页码")
+
+    def test_unrelated_html_yields_nothing(self):
+        entries, pager = parse_listing_html("<html><body>这里没有列表</body></html>")
+        self.assertEqual(entries, [])
+        self.assertIsNone(pager["current"])
+        self.assertFalse(pager["has_next"])
+
+    def test_endpoint_accepts_rendered_html(self):
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        db = str(Path(tmp.name) / "l.sqlite")
+        body = json.dumps({"url": "https://shopee.cn/edu/category?sub_cat_id=1066",
+                           "html": self.html}).encode()
+        result = _ingest_payload(body, db, snapshot_dir=Path(tmp.name) / "s")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["total"], 15)
+        self.assertEqual(result["watch_id"], "WATCH-EDU-POLICY")
+        self.assertEqual(result["pager"]["current"], "1")
+        tmp.cleanup()
+
+
 class ApiDiscoveryTest(unittest.TestCase):
     """列表页是 SPA，接口藏在混淆 JS 里。让浏览器把真实请求报回来。"""
 
@@ -407,5 +466,30 @@ class UserscriptHeaderTest(unittest.TestCase):
         text = path.read_text(encoding="utf-8")
         self.assertIn("sl-list", text)
         self.assertIn("这是列表页", text)
+
+    def test_every_panel_element_referenced_exists(self):
+        """加了按钮却忘了取元素（或反过来），运行时就炸——没有 node 只能这样静态查。"""
+        path = Path(__file__).resolve().parents[1] / "tools" / "shopee-capture.user.js"
+        text = path.read_text(encoding="utf-8")
+        declared = set(re.findall(r'id="(sl-[a-z]+)"', text))
+        queried = set(re.findall(r"querySelector\('#(sl-[a-z]+)'\)", text))
+        self.assertTrue(declared, "面板里没找到任何 sl- 元素")
+        self.assertEqual(queried - declared, set(), "引用了不存在的面板元素")
+
+    def test_uses_real_selectors_from_the_saved_page(self):
+        """选择器必须来自真实 DOM，不能再靠猜。"""
+        path = Path(__file__).resolve().parents[1] / "tools" / "shopee-capture.user.js"
+        text = path.read_text(encoding="utf-8")
+        for selector in ("li.article-item", "a.article-a", ".article-title", ".bottom-time",
+                         "shopee-pager__page", "shopee-pager__button-next"):
+            self.assertIn(selector, text, "缺少真实选择器 %s" % selector)
+
+    def test_braces_and_parens_balance(self):
+        path = Path(__file__).resolve().parents[1] / "tools" / "shopee-capture.user.js"
+        text = path.read_text(encoding="utf-8")
+        body = text.split("==/UserScript==", 1)[-1]
+        for opener, closer in (("{", "}"), ("(", ")"), ("[", "]")):
+            self.assertEqual(body.count(opener), body.count(closer),
+                             "%s%s 不配对——JS 里大概率语法错误" % (opener, closer))
 if __name__ == "__main__":
     unittest.main()

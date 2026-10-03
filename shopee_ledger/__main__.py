@@ -118,6 +118,9 @@ def main(argv: list[str] | None = None) -> int:
     watch = sub.add_parser("watch", help="列表页监控：列出已记录的文档")
     watch.add_argument("--new", action="store_true", help="只看还没看过的新文档")
     watch.add_argument("--seen", type=int, metavar="ENTRY_ID", help="把某条标记为已读")
+    watch.add_argument("--from-file", metavar="HTML",
+                       help="导入一个 Ctrl+S 存下来的列表页（渲染后的 HTML）")
+    watch.add_argument("--url", help="配合 --from-file：这页的地址（用于对上 watch 配置）")
     appr = sub.add_parser("approve", help="确认候选值 → 写进覆盖层")
     appr.add_argument("--id", type=int, required=True)
     appr.add_argument("--grade", required=True, choices=("A", "B", "C"))
@@ -134,6 +137,45 @@ def main(argv: list[str] | None = None) -> int:
         return _run(ledger, args)
     finally:
         ledger.close()
+
+
+def _watch_from_file(ledger, args) -> int:
+    """导入一个 Ctrl+S 存下来的列表页。
+
+    这是不依赖油猴脚本的兜底通路：保存的页面是**渲染后的 DOM**，里面有真实链接。
+    """
+    from pathlib import Path as _Path
+
+    from shopee_ledger.sources import page_key
+    from shopee_ledger.watch import load_watches, parse_listing_html
+
+    path = _Path(args.from_file)
+    if not path.exists():
+        print("找不到文件：%s" % path)
+        return 1
+    html = path.read_text(encoding="utf-8", errors="replace")
+    url = args.url or ""
+    known = next((item for item in load_watches() if url and page_key(item.url) == page_key(url)),
+                 None)
+    watch_id = known.id if known else "WATCH-MANUAL"
+    entries, pager = parse_listing_html(html, base_url=url or "https://shopee.cn")
+    if not entries:
+        print("没解析出条目——这页可能不是列表页（或保存时没等渲染完）")
+        return 1
+    ledger.init()
+    result = ledger.record_listing(watch_id, entries, page_url=url)
+    print("导入 %s" % path.name)
+    print("  条目 %d 条；分页 当前 %s / 共 %s 个页码 / 有下一页 %s"
+          % (result["total"], pager["current"] or "?", pager["page_count"], pager["has_next"]))
+    if result["new"]:
+        print("  🆕 新出现 %d 篇：" % len(result["new"]))
+        for item in result["new"]:
+            print("     %s  %s" % (item["published_at"] or "日期未知", item["title"]))
+    else:
+        print("  （没有新文档）")
+    if watch_id == "WATCH-MANUAL":
+        print("  提示：加了 --url 才能对上 spec/sources.json 里的 watch 配置")
+    return 0
 
 
 def _run(ledger: Ledger, args: argparse.Namespace) -> int:
@@ -287,6 +329,8 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
               % (len(todo) - failed, failed, len(pending)))
         return 1 if failed else 0
     if args.cmd == "watch":
+        if args.from_file:
+            return _watch_from_file(ledger, args)
         if args.seen:
             ledger.mark_watch_seen(args.seen)
             print("已标记 #%s 为已读" % args.seen)

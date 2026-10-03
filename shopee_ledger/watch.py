@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlsplit
@@ -82,8 +83,91 @@ def normalize_date(text: str) -> str:
     return "%s-%02d-%02d" % (year, int(month), int(day))
 
 
+class _ListingHTMLParser(HTMLParser):
+    """从**渲染后的 HTML** 里抽列表条目与分页控件。
+
+    选择器不是猜的——来自用户保存的真实页面（tests/fixtures/listing-page.html）：
+        li.article-item > a.article-a[href]
+                        + .article-title
+                        + .article-title-bottom > .bottom-time
+        .shopee-pagination > .shopee-pager__pages > li.shopee-pager__page(.active)
+                           + button.shopee-pager__button-next
+    用 stdlib 的 HTMLParser，不引第三方依赖。
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.entries: list[dict[str, str]] = []
+        self.pages: list[str] = []
+        self.current_page: str | None = None
+        self.has_next = False
+        self._entry: dict[str, str] | None = None
+        self._grab: str | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrib = dict(attrs)
+        classes = (attrib.get("class") or "").split()
+        disabled = "disabled" in attrib
+
+        if tag == "li" and "article-item" in classes:
+            self._entry = {"href": "", "title": "", "date": ""}
+            return
+        if self._entry is not None:
+            if tag == "a" and "article-a" in classes:
+                self._entry["href"] = attrib.get("href") or ""
+                return
+            if "article-title" in classes and "article-title-bottom" not in classes:
+                self._grab = "title"
+                return
+            if "bottom-time" in classes:
+                self._grab = "date"
+                return
+
+        if "shopee-pager__button-next" in classes:
+            self.has_next = not disabled
+            self._grab = None
+        elif "shopee-pager__page" in classes and "shopee-pager__dot" not in classes:
+            self._grab = "active_page" if "active" in classes else "page"
+
+    def handle_data(self, data: str) -> None:
+        if self._entry is not None and self._grab in ("title", "date"):
+            self._entry[self._grab] += data
+        elif self._grab in ("page", "active_page"):
+            text = data.strip()
+            if text:
+                self.pages.append(text)
+                if self._grab == "active_page":
+                    self.current_page = text
+                self._grab = None
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "li" and self._entry is not None:
+            if self._entry["href"]:
+                self.entries.append(self._entry)
+            self._entry = None
+            self._grab = None
+            return
+        if tag in ("div", "li", "span") and self._grab in ("title", "date", "page", "active_page"):
+            self._grab = None
+
+
+def parse_listing_html(html: str, base_url: str = "") -> tuple[list[WatchEntry], dict[str, Any]]:
+    """解析**渲染后的 HTML**（用户 Ctrl+S 存下来的，或脚本发回来的 outerHTML）。
+
+    拿到真实 DOM 之后就不必再猜选择器了；这个函数就是"先取样本再写规则"的产物。
+    返回 (条目, 分页信息)。
+    """
+    parser = _ListingHTMLParser()
+    parser.feed(html or "")
+    links = [{"href": item["href"], "text": item["title"], "date": item["date"]}
+             for item in parser.entries]
+    entries = entries_from_links(links, base_url=base_url)
+    pager = {"current": parser.current_page, "pages": parser.pages,
+             "has_next": parser.has_next, "page_count": len(parser.pages)}
+    return entries, pager
+
+
 def entries_from_links(links: list[dict[str, Any]], base_url: str = "") -> list[WatchEntry]:
-    """把脚本抓到的 <a> 列表变成条目。只认文章链接，去重，按文章号首次出现顺序。"""
     out: list[WatchEntry] = []
     seen: set[str] = set()
     for link in links:

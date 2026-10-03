@@ -875,8 +875,8 @@ def _ingest_payload(raw_body: bytes, db_path: str,
     except (ValueError, UnicodeDecodeError) as exc:
         return {"ok": False, "error": "请求体不是合法 JSON：%s" % exc}
 
-    # 列表页：脚本送回的是结构化条目（链接 + 标题 + 日期），不是正文
-    if payload.get("links"):
+    # 列表页：脚本送回的可能是结构化条目，也可能是渲染后的 HTML
+    if payload.get("html") or payload.get("links"):
         return _ingest_listing(payload, db_path)
 
     text = payload.get("text") or ""
@@ -918,12 +918,17 @@ def _ingest_listing(payload: dict, db_path: str) -> dict:
     费率变更通常是**新发一篇通知**，不是改旧文章。
     """
     from shopee_ledger.sources import page_key
-    from shopee_ledger.watch import entries_from_links, load_watches
+    from shopee_ledger.watch import entries_from_links, load_watches, parse_listing_html
 
     url = payload.get("url") or ""
     known = next((item for item in load_watches() if page_key(item.url) == page_key(url)), None)
     watch_id = payload.get("watch_id") or (known.id if known else "WATCH-MANUAL")
-    entries = entries_from_links(payload.get("links") or [], base_url=url)
+    pager: dict = {}
+    if payload.get("html"):
+        # 渲染后的 HTML：解析器对真实样本写过测试，比脚本端猜选择器可靠
+        entries, pager = parse_listing_html(payload["html"], base_url=url)
+    else:
+        entries = entries_from_links(payload.get("links") or [], base_url=url)
     if not entries:
         return {"ok": False, "error": "没解析出任何条目；请确认这是列表页（链接里要含 /article/ 编号）"}
     ledger = Ledger(db_path)
@@ -932,7 +937,7 @@ def _ingest_listing(payload: dict, db_path: str) -> dict:
         result = ledger.record_listing(watch_id, entries, page_url=url,
                                        api_calls=payload.get("api_calls") or [])
         result.update({"ok": True, "watch_id": watch_id,
-                       "known_watch": bool(known),
+                       "known_watch": bool(known), "pager": pager,
                        "hint": "列表页只做发现。正文要另点一次「抓这一页」，且仍需你确认"})
         return result
     finally:
