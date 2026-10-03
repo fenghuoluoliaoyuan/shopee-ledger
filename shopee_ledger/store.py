@@ -23,9 +23,21 @@ from pathlib import Path
 from typing import Any
 
 from shopee_ledger.cost_engine import COMPUTED, CostEngine, CostInputs, CostResult
+from shopee_ledger.fulfillment import (
+    Fulfillment,
+    advance,
+    arrange_ship,
+    confirm_address_format,
+    copy_address,
+    mark_inbound,
+    mark_purchased,
+    mark_stock,
+    order_context,
+)
 from shopee_ledger.gates import REJECT, GateResult, GateService
 from shopee_ledger.profit import Decision
 from shopee_ledger.spec import Spec, default_spec
+from shopee_ledger.statemachine import OrderMachine
 from shopee_ledger.storage import DEFAULT_DB, Storage
 from shopee_ledger.veto import evaluate_flags, veto_reasons
 
@@ -346,88 +358,107 @@ class Ledger:
                 return band["fee"]
         return None
 
-    # ---- 订单 -----------------------------------------------------------
-    def open_order(self, candidate_id: int) -> int:
-        from shopee_ledger.fulfillment import Fulfillment
+    # ---- 订单（状态机 + 守卫规则） --------------------------------------
+    def _gates(self) -> GateService:
+        return GateService(self.spec)
 
-        state = Fulfillment()
+    def _order_context(self, state: Fulfillment) -> dict[str, Any]:
+        """守卫规则的上下文由 fulfillment 统一提供，store 不再自己映射一遍。"""
+        return order_context(state)
+
+    def open_order(self, candidate_id: int) -> int:
         candidate = self._candidate(candidate_id) or {}
         return self.storage.insert("Order", {
             "platform": "shopee", "market": candidate.get("market", "TW"),
             "mode": "dropship", "listing_id": str(candidate_id), "candidate_id": str(candidate_id),
-            "state": state.status, "steps": _dump_steps(state), "block_reason": "",
-            "created_at": "2026-10-03T00:00:00+00:00",
+            "state": "created", "steps": "", "block_reason": "", "created_at": _now(),
         })
 
-    def load_order(self, order_id: int) -> Any:
-        from shopee_ledger.fulfillment import Fulfillment
-
+    def load_order(self, order_id: int) -> Fulfillment:
         row = self.storage.get("Order", order_id)
         if row is None:
             raise ValueError("找不到订单 %s" % order_id)
-        state = Fulfillment(status=row.get("state") or "open")
+        state = Fulfillment(machine=OrderMachine(self.spec, state=row.get("state") or None))
         state.supplier_id = int(row["supplier_id"]) if row.get("supplier_id") else None
-        done = set(filter(None, (row.get("steps") or "").split(",")))
-        for step in state.steps:
-            state.steps[step] = step in done
         state.warehouse_address = row.get("warehouse_address") or ""
         state.address_source = row.get("address_source") or ""
         state.block_reason = row.get("block_reason") or ""
         return state
 
-    def save_order(self, order_id: int, state: Any) -> None:
+    def save_order(self, order_id: int, state: Fulfillment) -> None:
+        """落盘同时把状态机**本次走过的每一步**记进审计。
+
+        放在唯一出口，而不是每个调用点各记一遍。按 machine.history 逐条记（不是对比前后状态）：
+        order-inbound 一次会走"供应商发货→到仓扫描"两步，只记净变化的话，
+        审计看上去就像从 po_created 直接跳到了 warehouse_scanned——恰恰制造了"疑似跳步"的假象。
+        """
         self.storage.update("Order", order_id, {
-            "state": state.status,
-            "steps": _dump_steps(state),
+            "state": state.state,
+            "steps": ",".join(name for name, done in state.steps.items() if done),
             "supplier_id": str(state.supplier_id) if state.supplier_id else None,
             "warehouse_address": state.warehouse_address,
             "address_source": state.address_source,
             "block_reason": state.block_reason,
         })
+        for record in state.machine.history:
+            self.storage.record_audit("order.transition", "order", order_id, result="PASS",
+                                      detail=dict(record))
 
-    def apply_stock(self, order_id: int, supplier_id: int, in_stock: bool, exhausted: bool) -> Any:
-        from shopee_ledger.fulfillment import mark_stock
+    def advance_order(self, order_id: int, to_state: str) -> Fulfillment:
+        """通用推进：顺序不对报错，守卫规则不过也报错。留痕由 save_order 统一负责。"""
+        state = self.load_order(order_id)
+        record = advance(state, to_state, gates=self._gates(), context=self._order_context(state))
+        self.save_order(order_id, state)
+        self.storage.record_audit("order.guard", "order", order_id, result="PASS",
+                                  detail=dict(record, rules=state.machine.transition_rules(to_state)))
+        return state
 
+    def order_next(self, order_id: int) -> list[str]:
+        return self.load_order(order_id).next_states()
+
+    def apply_stock(self, order_id: int, supplier_id: int, in_stock: bool, exhausted: bool) -> Fulfillment:
         state = self.load_order(order_id)
         mark_stock(state, supplier_id, in_stock, self.supplier_address_ok(supplier_id), exhausted)
         self.save_order(order_id, state)
         self.audit(order_id, "order.stock", result="WARN" if exhausted else "PASS",
-                   detail={"in_stock": in_stock, "exhausted": exhausted})
+                   detail={"in_stock": in_stock, "exhausted": exhausted, "state": state.state})
         return state
 
-    def _step(self, order_id: int, action: str, func) -> None:
+    def _step(self, order_id: int, action: str, func) -> Fulfillment:
         state = self.load_order(order_id)
-        func(state)
+        func(state, gates=self._gates(), context=self._order_context(state))
         self.save_order(order_id, state)
-        self.audit(order_id, action)
+        self.audit(order_id, action, detail={"state": state.state})
+        return state
 
-    def apply_confirm_address(self, order_id: int) -> None:
-        from shopee_ledger.fulfillment import confirm_address_format
-
-        self._step(order_id, "order.confirm_address", confirm_address_format)
-
-    def apply_arrange(self, order_id: int) -> None:
-        from shopee_ledger.fulfillment import arrange_ship
-
-        self._step(order_id, "order.arrange_ship", arrange_ship)
-
-    def apply_copy(self, order_id: int, address: str) -> None:
-        from shopee_ledger.fulfillment import copy_address
-
+    def apply_confirm_address(self, order_id: int) -> Fulfillment:
         state = self.load_order(order_id)
-        copy_address(state, address, "order_page")
+        confirm_address_format(state)
         self.save_order(order_id, state)
-        self.audit(order_id, "order.copy_address", detail={"address_len": len(address)})
+        self.audit(order_id, "order.confirm_address", detail={"state": state.state})
+        return state
 
-    def apply_purchase(self, order_id: int) -> None:
-        from shopee_ledger.fulfillment import mark_purchased
+    def apply_arrange(self, order_id: int) -> Fulfillment:
+        return self._step(order_id, "order.arrange_ship", arrange_ship)
 
-        self._step(order_id, "order.purchase", mark_purchased)
+    def apply_copy(self, order_id: int, address: str) -> Fulfillment:
+        state = self.load_order(order_id)
+        copy_address(state, address, "order_page",
+                     gates=self._gates(), context=self._order_context(state))
+        self.save_order(order_id, state)
+        self.audit(order_id, "order.copy_address",
+                   detail={"address_len": len(address), "state": state.state})
+        return state
 
-    def apply_inbound(self, order_id: int) -> None:
-        from shopee_ledger.fulfillment import mark_inbound
+    def apply_purchase(self, order_id: int) -> Fulfillment:
+        return self._step(order_id, "order.purchase", mark_purchased)
 
-        self._step(order_id, "order.inbound", mark_inbound)
+    def apply_inbound(self, order_id: int) -> Fulfillment:
+        state = self.load_order(order_id)
+        mark_inbound(state)
+        self.save_order(order_id, state)
+        self.audit(order_id, "order.inbound", detail={"state": state.state})
+        return state
 
     def set_deadline(self, order_id: int, deadline: str) -> None:
         self.storage.update("Order", order_id, {"deadline": deadline})
@@ -441,7 +472,9 @@ class Ledger:
             candidate = self._candidate(int(row["candidate_id"])) if row.get("candidate_id") else None
             item = dict(row)
             item["status"] = row.get("state")
+            item["site"] = row.get("market")
             item["candidate_name"] = (candidate or {}).get("title", "—")
+            item["next_states"] = OrderMachine(self.spec, state=row.get("state") or None).allowed()
             out.append(item)
         return out
 
@@ -506,3 +539,9 @@ def _as_float(value: Any) -> float | None:
 
 def _dump_steps(state: Any) -> str:
     return ",".join(name for name, done in state.steps.items() if done)
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")

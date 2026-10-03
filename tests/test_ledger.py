@@ -179,7 +179,17 @@ class StoreTest(unittest.TestCase):
             ledger.apply_copy(order, "当单中转仓 订单号SN1")
             ledger.apply_purchase(order)
             ledger.apply_inbound(order)
-            self.assertEqual(ledger.load_order(order).status, "done")
+            self.assertEqual(ledger.load_order(order).state, "warehouse_scanned")
+
+            # 状态机把关顺序：不能跳过跨境运输直接到账
+            with self.assertRaises(ValueError):
+                ledger.advance_order(order, "paid")
+            self.assertEqual(ledger.advance_order(order, "in_transit").state, "in_transit")
+
+            # 每次转移都要留痕（跳步尝试本身就是审计线索）
+            self.assertIn("order.transition",
+                          [row["action"] for row in ledger.storage.list("AuditLog", limit=100)])
+
             self.assertEqual(len(ledger.checklist_rows()), 48, "核实任务来自 spec（48 条）")
             ledger.close()
 

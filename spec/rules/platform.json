@@ -100,6 +100,7 @@
       ],
       "evidence_level": "E",
       "on_degrade": "P-SLS-BANNED 为 E 级时降级为 soft + 人工复核",
+      "degrade_policy": "soft",
       "message": "疑似违禁品类，需人工确认"
     },
     {
@@ -193,6 +194,7 @@
       ],
       "evidence_level": "E",
       "on_degrade": "参数为 E 时只输出 INCOMPLETE，禁止输出 REJECT",
+      "degrade_policy": "incomplete",
       "result": "INCOMPLETE",
       "message": "运费档为空，无法判定是否可上架"
     },
@@ -209,6 +211,7 @@
       ],
       "evidence_level": "D",
       "on_degrade": "阈值为 D 级，参数降级时自动转 WARN",
+      "degrade_policy": "soft",
       "result": "REJECT",
       "message": "净利润率低于下限，砍掉"
     },
@@ -320,6 +323,7 @@
       ],
       "evidence_level": "E",
       "on_degrade": "词库为 E 级时降级为 soft + 人工复核",
+      "degrade_policy": "soft",
       "message": "命中品牌词/违禁词"
     },
     {
@@ -415,6 +419,7 @@
       "evidence_level": "E",
       "advisory_only": true,
       "on_degrade": "P-TW-FREESHIP-2026 为 E 级，只提示不拦截",
+      "degrade_policy": "soft",
       "message": "未达免运门槛的商品在搜索结果里缺少免运标签，点击率与曝光均受影响（阈值待官方原文确认）"
     },
     {

@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from shopee_ledger.desk import listing_gate, survival_advice
-from shopee_ledger.fulfillment import STEPS
+from shopee_ledger.fulfillment import STEP_LABEL, STEPS
 from shopee_ledger.profit import Decision
 from shopee_ledger.spec import default_spec
 from shopee_ledger.store import PARAM_HELP, Ledger
@@ -20,14 +20,6 @@ DECISION_LABEL = {
     Decision.CUT: "砍掉",
     Decision.INCOMPLETE: "缺数据",
     Decision.THRESHOLD_UNSET: "阈值未设",
-}
-STEP_LABEL = {
-    "stock_checked": "查库存",
-    "address_format_ok": "地址格式",
-    "ship_arranged": "安排发货",
-    "address_copied": "抄当单地址",
-    "purchased": "1688 拍单",
-    "handed_to_warehouse": "交仓",
 }
 NAV = (
     ("/", "今日"),
@@ -277,7 +269,7 @@ def today(ledger: Ledger) -> str:
     for row in ledger.list_orders():
         if row["status"] == "done":
             continue
-        nxt = _next_step(row["steps"], row["status"], row["block_reason"])
+        nxt = _next_step(row)
         deadline = row["deadline"] or "未填发货截止"
         actions.append(f"<li>订单 #{row['id']} {escape(row['candidate_name'])}：{escape(nxt)} · {escape(deadline)}</li>")
     if not actions:
@@ -301,16 +293,15 @@ def _gate(ledger: Ledger, row) -> str:
     )
 
 
-def _next_step(steps: str, status: str, reason: str) -> str:
-    if status == "all_oos":
-        return reason or "三家都无货，先下架"
-    if status == "done":
-        return "已交仓"
-    done = set(filter(None, (steps or "").split(",")))
-    for step in STEPS:
-        if step not in done:
-            return "下一步：" + STEP_LABEL[step]
-    return "已完成"
+def _next_step(row) -> str:
+    """下一步提示改为按状态机的**允许转移**给出，不再靠"哪一步没打勾"。"""
+    status = row.get("status")
+    if status == "cancelled":
+        return row.get("block_reason") or "三家都无货，先下架"
+    next_states = row.get("next_states") or []
+    if not next_states:
+        return "已到终态（%s）" % STEP_LABEL.get(status, status)
+    return "下一步：" + " 或 ".join(STEP_LABEL.get(state, state) for state in next_states)
 
 
 def _save_product(ledger: Ledger, form: dict) -> str:

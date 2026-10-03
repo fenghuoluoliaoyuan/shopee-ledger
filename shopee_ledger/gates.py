@@ -147,7 +147,13 @@ class GateService:
 
     # ---- 等级判定 -------------------------------------------------------
     def effective_level(self, rule: Rule) -> tuple[str, str | None]:
-        """返回 (生效等级, 降级原因)。生效等级只可能是 hard / soft / advisory。"""
+        """返回 (生效等级, 降级说明)。生效等级只可能是 hard / soft / incomplete / advisory。
+
+        ``degrade_policy`` 是**机器可读**的降级指令（``on_degrade`` 只是给人看的说明）：
+          * ``keep_hard``  —— E 级依赖不放宽本规则的硬性（如「地址必须抄自当单页面」）
+          * ``incomplete`` —— 只输出 INCOMPLETE，禁止输出 REJECT
+          * ``soft``（缺省）—— 降级为 WARN
+        """
         if rule.level != "hard":
             return rule.level, None
 
@@ -164,11 +170,17 @@ class GateService:
 
         if not blockers:
             return "hard", None
-        if rule.on_degrade:
-            return "soft", "降级：%s（已声明 on_degrade）" % "; ".join(blockers)
-        raise ExpressionError(
-            "INV-001 违反：硬规则 %s 依赖 %s 且未声明 on_degrade" % (rule.id, "; ".join(blockers))
-        )
+
+        policy = str(rule.raw.get("degrade_policy") or "soft").strip()
+        if policy == "keep_hard":
+            return "hard", "依赖 %s 未达 A/B/C，但 degrade_policy=keep_hard，硬约束照旧" % "; ".join(blockers)
+        if not rule.on_degrade:
+            raise ExpressionError(
+                "INV-001 违反：硬规则 %s 依赖 %s 且未声明 on_degrade" % (rule.id, "; ".join(blockers))
+            )
+        if policy == "incomplete":
+            return "incomplete", "降级：%s（只出 INCOMPLETE，不出 REJECT）" % "; ".join(blockers)
+        return "soft", "降级：%s（degrade_policy=soft）" % "; ".join(blockers)
 
     # ---- 主入口 ---------------------------------------------------------
     def check(
@@ -190,6 +202,38 @@ class GateService:
             if rule.gate in CONFIG_ONLY_GATES or rule.raw.get("evaluated_by") == "validate.py":
                 continue
             outcomes.append(self._evaluate(rule, ctx))
+        return self._summarise(gate_id, outcomes)
+
+    def check_rules(
+        self,
+        rule_ids: list[str],
+        context: dict[str, Any],
+        *,
+        gate_id: str = "G5",
+        platform: str = "*",
+        market: str = "*",
+        mode: str | None = None,
+    ) -> GateResult:
+        """只跑指定规则。
+
+        状态机转移的守卫用它——避免把整道门的规则都套到一次转移上
+        （例如"地址必须来自当单页面"只该管 address_captured→po_created 这一步）。
+        """
+        ctx = dict(context)
+        if "params" not in ctx:
+            ctx["params"] = self.spec.payload(
+                platform=platform, market=market, mode=mode or "*", today=self.today
+            )
+        outcomes: list[RuleOutcome] = []
+        for rule_id in rule_ids:
+            rule = self.spec.rules.get(rule_id)
+            if rule is None:
+                raise ExpressionError("状态机引用了不存在的规则: %s" % rule_id)
+            outcomes.append(self._evaluate(rule, ctx))
+        return self._summarise(gate_id, outcomes)
+
+    @staticmethod
+    def _summarise(gate_id: str, outcomes: list[RuleOutcome]) -> GateResult:
         result = PASS
         for item in outcomes:
             if SEVERITY[item.result] > SEVERITY[result]:
@@ -214,7 +258,7 @@ class GateService:
 
         if outcome.is_unknown:
             # 硬规则缺数据 → INCOMPLETE（拦住流程）；软/建议规则缺数据 → WARN（提示即可）
-            result = INCOMPLETE if level == "hard" else WARN
+            result = INCOMPLETE if level in ("hard", "incomplete") else WARN
             return RuleOutcome(
                 rule_id=rule.id, name=rule.name, result=result, fired=None, level=level,
                 action=rule.action, message=rule.message, next_action="补齐下列字段",
@@ -248,6 +292,8 @@ class GateService:
         else:  # TASK / ALERT
             base = WARN
         # 降级后不得 REJECT（INV-001 / INV-005 / INV-011 的收敛点）
+        if level == "incomplete" and base == REJECT:
+            return INCOMPLETE
         if level != "hard" and base == REJECT:
             return WARN
         return base

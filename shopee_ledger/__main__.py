@@ -68,6 +68,11 @@ def main(argv: list[str] | None = None) -> int:
     copied = sub.add_parser("order-copy-address")
     copied.add_argument("--order", type=int, required=True)
     copied.add_argument("--address", required=True)
+    adv = sub.add_parser("order-advance", help="推进到指定状态；顺序与守卫由 spec 状态机把关")
+    adv.add_argument("--order", type=int, required=True)
+    adv.add_argument("--to", required=True, help="如 supplier_shipped / warehouse_scanned / in_transit")
+    nxt = sub.add_parser("order-next", help="当前状态允许去哪些状态")
+    nxt.add_argument("--order", type=int, required=True)
 
     sub.add_parser("checklist")
     done = sub.add_parser("checklist-set")
@@ -174,7 +179,7 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         return 0
     if args.cmd == "order-stock":
         state = ledger.apply_stock(args.order, args.supplier, args.in_stock == "yes", args.exhausted == "yes")
-        print(state.status, state.block_reason)
+        print(state.state, state.block_reason)
         return 0
     if args.cmd == "order-confirm-address":
         ledger.apply_confirm_address(args.order)
@@ -186,15 +191,28 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         return 0
     if args.cmd == "order-copy-address":
         ledger.apply_copy(args.order, args.address)
-        print("address_copied")
+        print("address_captured")
         return 0
     if args.cmd == "order-purchase":
         ledger.apply_purchase(args.order)
-        print("purchased")
+        print("po_created")
         return 0
     if args.cmd == "order-inbound":
         ledger.apply_inbound(args.order)
-        print("handed_to_warehouse")
+        print("warehouse_scanned")
+        return 0
+    if args.cmd == "order-advance":
+        try:
+            state = ledger.advance_order(args.order, args.to)
+        except ValueError as exc:
+            print("未推进：%s" % exc)
+            print("当前允许：%s" % "、".join(ledger.order_next(args.order)))
+            return 1
+        print("已推进到 %s" % state.state)
+        return 0
+    if args.cmd == "order-next":
+        state = ledger.load_order(args.order)
+        print("当前 %s；允许：%s" % (state.state, "、".join(state.next_states()) or "（终态）"))
         return 0
     if args.cmd == "checklist":
         for row in ledger.checklist_rows():

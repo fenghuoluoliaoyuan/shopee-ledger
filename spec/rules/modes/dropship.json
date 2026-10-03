@@ -34,6 +34,7 @@
       ],
       "evidence_level": "E",
       "on_degrade": "字段结构为 E 级，但「来源必须是当单页面」为硬约束，故本规则保持 hard",
+      "degrade_policy": "keep_hard",
       "message": "收货地址必须抄自当单页面，禁止手工录入或网上抄来的通用仓地址"
     },
     {
@@ -50,6 +51,7 @@
       ],
       "evidence_level": "E",
       "on_degrade": "P-TW-DTS 为 E 级时不启用告警，只记录时间戳",
+      "degrade_policy": "soft",
       "message": "存在迟发风险"
     },
     {
