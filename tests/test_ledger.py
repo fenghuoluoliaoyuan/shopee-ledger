@@ -14,71 +14,10 @@ from shopee_ledger.api import sign
 from shopee_ledger.escrow import map_escrow
 from shopee_ledger.fulfillment import Fulfillment, arrange_ship, copy_address, mark_stock
 from shopee_ledger.desk import listing_gate, listing_warnings
-from shopee_ledger.profit import Decision, ProfitInput, evaluate
+from shopee_ledger.profit import Decision
 from shopee_ledger.store import Ledger
 from shopee_ledger.veto import veto_advisories, veto_reasons
 from shopee_ledger.web import Handler
-
-
-def sample(**overrides) -> ProfitInput:
-    data = dict(
-        site="MY",
-        price=20.0,
-        purchase_cny=10.0,
-        domestic_cny=2.0,
-        local_per_cny=0.6,
-        sls_fee=5.0,
-        buyer_shipping=None,
-        intends_free_shipping=True,
-        prelist=True,
-        commission=1.6,
-        transaction_fee=0.4,
-        service_fee=0.5,
-        service_fee_kind="service",
-        affiliate=0.0,
-        ads=0.0,
-        withdrawal=0.2,
-        fx_loss=0.2,
-        return_rate=0.05,
-        go_rate=0.15,
-        watch_rate=0.10,
-    )
-    data.update(overrides)
-    return ProfitInput(**data)
-
-
-class ProfitTest(unittest.TestCase):
-    def test_free_shipping_deducts_full_sls_and_both_fees(self):
-        result = evaluate(sample())
-        self.assertEqual(result.net_shipping, 5.0)
-        self.assertEqual(result.platform_fee, 2.5)
-        self.assertAlmostEqual(result.return_reserve, 0.05 * (6.0 + 1.2))
-        self.assertEqual(result.decision, Decision.GO)
-
-    def test_buyer_paid_shipping_only_excess(self):
-        result = evaluate(sample(prelist=False, buyer_shipping=3.0, intends_free_shipping=False))
-        self.assertEqual(result.net_shipping, 2.0)
-
-    def test_buyer_overpay_does_not_add_revenue(self):
-        result = evaluate(sample(prelist=False, buyer_shipping=8.0, intends_free_shipping=False))
-        self.assertEqual(result.net_shipping, 0.0)
-
-    def test_shipping_kind_is_not_charged_twice(self):
-        once = evaluate(sample(service_fee_kind="shipping", service_fee=5.0))
-        self.assertEqual(once.platform_fee, 2.0)
-
-    def test_missing_fee_is_not_zero(self):
-        result = evaluate(sample(commission=None))
-        self.assertEqual(result.decision, Decision.INCOMPLETE)
-        self.assertIn("commission", result.missing)
-
-    def test_tw_without_threshold(self):
-        result = evaluate(sample(site="TW", go_rate=None, watch_rate=None))
-        self.assertEqual(result.decision, Decision.THRESHOLD_UNSET)
-
-    def test_cut_below_ten_percent(self):
-        result = evaluate(sample(price=10.0))
-        self.assertEqual(result.decision, Decision.CUT)
 
 
 class VetoTest(unittest.TestCase):

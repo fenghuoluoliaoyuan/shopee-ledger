@@ -145,6 +145,49 @@ class GovernanceCoverageTest(unittest.TestCase):
                             "%s 放弃了强制却没写清为什么" % invariant)
 
 
+class SingleProfitImplementationTest(unittest.TestCase):
+    """利润算式只许有一处。
+
+    profit.py 里原本还有一套 v1.4 的引擎（ProfitInput/ProfitResult/evaluate），
+    与 CostEngine 并行。生产路径早已不用它，但**两套公式并存本身就是隐患**：
+    改一套忘另一套，两边会悄悄算出不同的数。删除后加这条守着，防止再写第二套。
+    """
+
+    def test_profit_module_no_longer_ships_an_engine(self):
+        import shopee_ledger.profit as profit
+
+        for name in ("ProfitInput", "ProfitResult", "evaluate"):
+            self.assertFalse(hasattr(profit, name),
+                             "profit.py 不该再有 %s——利润算式只有 cost_engine 一处" % name)
+
+    def test_decision_enum_survives(self):
+        from shopee_ledger.profit import Decision
+
+        self.assertEqual({item.value for item in Decision},
+                         {"go", "watch", "cut", "incomplete", "threshold_unset"})
+
+    def test_only_cost_engine_defines_the_platform_fee_formula(self):
+        """在源码里搜"佣金+手续费"这类算式，应当只在 cost_engine 出现。"""
+        package = ROOT / "shopee_ledger"
+        offenders = []
+        for path in sorted(package.glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if "commission_amount + txn_amount" in text and path.name != "cost_engine.py":
+                offenders.append(path.name)
+        self.assertEqual(offenders, [], "利润算式出现在 cost_engine 之外：%s" % offenders)
+
+    def test_no_module_imports_a_second_profit_engine(self):
+        package = ROOT / "shopee_ledger"
+        bad = []
+        for path in sorted(package.glob("*.py")):
+            if path.name == "profit.py":
+                continue
+            text = path.read_text(encoding="utf-8")
+            if "from shopee_ledger.profit import" in text and "Decision" not in text:
+                bad.append(path.name)
+        self.assertEqual(bad, [], "这些模块从 profit 导入了非 Decision 的东西：%s" % bad)
+
+
 class Inv004Test(unittest.TestCase):
     """INV-004 曾经是纸面条款，现在在构造时就拦。"""
 
