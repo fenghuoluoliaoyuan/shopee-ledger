@@ -584,6 +584,10 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
 
         target = fr.REFERENCE_DIR / ("sls-site-config-%s.json" % config["date"])
         target.parent.mkdir(parents=True, exist_ok=True)
+        # 这份快照**要进 git**（先例：b579447 的 10-03 那份）。它是公开接口在某一
+        # 时刻的返回，接口改版后就再也拿不回来，属于原始证据而不是派生物。
+        # 日常巡航请用 `freight --check`（只比对、不写盘，每日任务就是这么跑的）；
+        # 只有确认费率有变、或需要一份新的基准时，才跑不带 --check 的这条并入库。
         target.write_text(json.dumps({"code": 0, "data": config}, ensure_ascii=False) + "\n",
                           encoding="utf-8")
         print("已保存 %s" % target.name)
@@ -818,7 +822,8 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
             print("     %-26s %s" % (item.param_id or "?", item.ref))
             print("        %s" % item.detail)
         if broken:
-            print("\n**引用字符串在 ≠ 证据在**：文件没进版本库的话，clone 出来证据链就是断的。")
+            print("\n**引用字符串在 ≠ 证据在**：文件不在 / 没进版本库 / 内容是拦截页，"
+                  "三种都断了证据链。")
             return 1
         if missing:
             print("\n没写引用的这些是已知缺口（来源本身打不开）。")
@@ -1021,6 +1026,8 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
         print("候选 #%s 已驳回，参数未变" % args.id)
         return 0
     if args.cmd == "alert":
+        from shopee_ledger import dailyrun
+
         alerts = ledger.order_alerts()
         blocking = [row for row in ledger.checklist_rows()
                     if row.get("blocks_first_order") and not row["conclusion"]]
@@ -1035,6 +1042,10 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                     item["message"], stay))
         else:
             print("告警：无")
+        # 监测机制自己还活着吗？任务计划的 LastRunTime/LastTaskResult 不作证
+        # （2026-10-08 实测：显示 10:00:01 / 0，但那天日志里一条记录都没有）。
+        daily_note, daily_stale = dailyrun.describe()
+        print(daily_note)
         if blocking:
             print("阻塞第一单的核实（%d）:" % len(blocking))
             for row in blocking:
@@ -1045,7 +1056,8 @@ def _run(ledger: Ledger, args: argparse.Namespace) -> int:
                 print("  %s（%s 级%s）→ %s" % (
                     item["param_id"], item["level"],
                     "，任务 " + item["task_ref"] if item.get("task_ref") else "", item["feature"]))
-        return 1 if [item for item in alerts if item.get("priority") == "P1"] else 0
+        return 1 if (daily_stale
+                     or [item for item in alerts if item.get("priority") == "P1"]) else 0
     if args.cmd == "spec-info":
         from shopee_ledger.spec import default_spec
 
