@@ -182,11 +182,31 @@ class FreightByWeightTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.spec = Spec.load(SPEC_ROOT)
+        # 用最早那几份快照的生效日，别让 today 跑到运费表快照之后
+        # （参数过期会走降级分支，这些断言只想看"重量+渠道算出运费"）
         cls.engine = CostEngine(cls.spec, today="2026-10-03")
 
     def test_engine_loads_the_freight_table_from_the_repo(self):
+        """仓库里必须有一份可用运费表，且引擎加载的正是**最新**那份。
+
+        这条断言以前写死 "2026-10-03"：只要有人（或某条会写盘的命令）
+        拉了一份新的官方运费表，测试就变红——红的是日期，不是费率。
+        谁是最新一份由 freight.latest_reference() 定义，测试跟它对齐，
+        再单独确认引擎没有加载到旧的那份。
+        """
+        from shopee_ledger import freight as fr
+
+        latest = fr.latest_reference()
+        self.assertIsNotNone(latest, "仓库里应有运费表快照（spec/reference/sls-site-config-*.json）")
+        with latest.open(encoding="utf-8") as handle:
+            expected = json.load(handle)["data"]
+
         self.assertIsNotNone(self.engine.freight_config, "仓库里应有运费表快照")
-        self.assertEqual(self.engine.freight_config.get("date"), "2026-10-03")
+        self.assertEqual(self.engine.freight_config.get("date"), expected["date"],
+                         "引擎加载的不是仓库里最新那份运费表（%s）" % latest.name)
+        self.assertEqual(fr.rate_cards(self.engine.freight_config),
+                         fr.rate_cards(expected),
+                         "引擎加载的运费表内容与 %s 不一致" % latest.name)
 
     def test_weight_and_channel_produce_the_freight(self):
         result = self.engine.quote(tw_inputs(sls_freight=None, weight_g=1200.0,
