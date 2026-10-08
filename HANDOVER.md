@@ -1,7 +1,7 @@
 # 交接说明（shopee-ledger）
 
 写给接手的人（或智能体）。**先读这一份，再看代码。**
-最后更新：2026-10-03。
+最后更新：2026-10-08。
 
 ## 这是什么
 
@@ -24,7 +24,7 @@ chcp 65001 > $null
 cd D:\shopee-ledger
 $env:PYTHONIOENCODING='utf-8'
 
-python -m unittest discover -s tests -t .     # 557 个测试，约 45 秒
+python -m unittest discover -s tests -t .     # 580 个测试，约 60 秒
 python spec\validate.py                        # 分层/引用/不变量校验
 python -m shopee_ledger web --port 8765        # 网页 http://127.0.0.1:8765
 powershell -File tools\daily-check.ps1         # 每日 9 步监测
@@ -32,15 +32,45 @@ powershell -File tools\daily-check.ps1         # 每日 9 步监测
 
 零新依赖（只用标准库）。Python 3.12.10 在 `D:\python\python312\python.exe`。
 
-## 当前状态（2026-10-03）
+## 当前状态（2026-10-08）
 
 | 项 | 值 |
 |---|---|
 | 参数 | 58 个：**A=28 B=9 D=12 E=9** |
 | 核实任务 | 完成 15 / 48 |
-| 文档语料 | 212 篇（115 篇有正文），都在 `data/snapshots/` 且已入库 |
-| 测试 | 557 全绿 |
+| 文档语料 | `data/snapshots/` 227 份快照（ARTICLE 208 / SRC 19），**全部已入库** |
+| 测试 | 580 全绿 |
 | 每日任务 | 9 步全绿 |
+
+### 2026-10-08 这轮改了什么（都可从 git log 复核）
+
+1. **测试曾经自己在写仓库**（`c897006`）。`tests/test_cli.py` 的命令表里有裸
+   `freight`——它真的联网并把返回写进 `spec/reference/`，而文件顶部写着"都只碰本地"。
+   跑一次测试就多一份运费表快照，`CostEngine` 取"仓库里最新那份"，于是测试自己的
+   副作用打红了另一条把日期写死成 `2026-10-03` 的断言。现在 freight 打了桩
+   （固定返回 + `REFERENCE_DIR` 指向临时目录），并加了一条守护测试
+   `test_smoke_run_does_not_touch_the_repo`：跑完这些命令，仓库文件的内容指纹不许变。
+2. **拦截页不算证据**（`7094e1e`）。2026-10-06 `chinatax.gov.cn` 返回 WAF 页
+   （196 字节），被 `save_snapshot` 原样存成快照——文件名、哈希、git 跟踪全正常。
+   `snapshots.looks_like_block_page()`（≤600 字 且 命中 ≥2 个实测标记）现在把住这道闸：
+   `SnapshotHealth.usable`、CLI 的 `check-snapshots`、`spec/validate.py` 的 INV-003
+   三条口径一致。直取与油猴两条抓取路径都在存档前拦下，报失败而不留假证据。
+   **已知盲区**：带内联样式的 HTML 版拦截页若超过 600 字会漏（没有样本，不猜外部形状——
+   见到真样本再补签名）。
+3. **每日任务"跑没跑"能独立作证了**（`618c7e1`）。2026-10-08 那天任务计划显示
+   `LastRunTime=10:00:01 / LastTaskResult=0`，但 `data/daily.log` 里一条记录都没有；
+   能独立作证的任务计划历史日志当时是**关闭的**，所以事后无法证实。现在
+   `alert` 会打印"最近一次运行 N 小时前"，**超过 26 小时就报警并把返回码置 1**；
+   任务计划历史日志也已打开（`wevtutil sl .../Operational /e:true`）。
+   教训记在这里：**任务计划的 `LastRunTime`/`LastTaskResult` 不是"跑过了"的证据**，
+   它们分不清"跑完没事"和"触发了没启动"。
+4. **运费表快照的入库约定**（`59102d5`）。日常巡航用 `freight --check`（只比对、不写盘，
+   每日任务就是这么跑的）；要新基准时才跑不带 `--check` 的并入库。10-08 那份与 10-03
+   逐叶对比只差生效日期，费率一分未动。
+
+仍未解决：`ARTICLE-30001-801c7de4d56c.txt`（905B，Shopee 404 页）与两份登录墙片段
+（`ARTICLE-23760`、`ARTICLE-12860`）是**未被任何 spec 引用的孤儿存档**，不在证据链上，
+尚未清理。
 
 ## 数据来源质量（**说实话**）
 
