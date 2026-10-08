@@ -27,6 +27,8 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qsl, urlsplit
 
+from shopee_ledger.snapshots import looks_like_block_page
+
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SOURCES = ROOT / "spec" / "sources.json"
 DEFAULT_SNAPSHOT_DIR = ROOT / "data" / "snapshots"
@@ -286,6 +288,15 @@ def fetch_source(
         return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
                        message="直取和浏览器渲染都没拿到内容")
 
+    # 拦截页不是正文：**不能存成快照**。存了它就是一个"看起来像证据"的文件
+    # （实测 SRC-TH-VAT 的 WAF 页被存成 196 字节的 .txt，哈希、路径、git 全都正常），
+    # 一旦被引用就是假证据。报 http_error，让每日任务把它当失败说出来。
+    if looks_like_block_page(text):
+        return Capture(source.id, source.param_id, source.url, STATUS_HTTP_ERROR,
+                       raw_length=len(text),
+                       message="来源返回的是拦截页（WAF/风控），不是正文；未存快照，"
+                               "需人工在浏览器里打开核对")
+
     snapshot_ref, digest = save_snapshot(text, source.id, snapshot_dir)
     value = extract_value(source.extract, text)
     if value is None:
@@ -348,6 +359,14 @@ def ingest_text(
     这是油猴脚本的入口：浏览器执行了 JS、带了登录态、有完整证书链，
     而提取规则仍然只在 spec 里定义一次——同一份配方，两个执行环境。
     """
+    # 拦截页在两条 save_snapshot 之前就拦掉：油猴送回的东西会被当成 STATUS_MANUAL
+    # （"人工留档的证据"），拦截页混进来顶着"用户亲眼看过"的名义，比直取路径更危险。
+    if looks_like_block_page(text):
+        return Capture(param_id or "?", param_id or "?", url or "", STATUS_HTTP_ERROR,
+                       channel=channel, raw_length=len(text),
+                       captured_at=captured_at or "",
+                       message="这段文本是拦截页（WAF/风控），不是正文；未留档。"
+                               "请在浏览器里重新打开该页再抓一次")
     items = sources if sources is not None else load_sources()
     source = find_source(items, param_id=param_id, url=url)
     if source is None:

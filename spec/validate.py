@@ -144,6 +144,13 @@ def check_param(bag, param, rel, file_scope):
         if not health.exists:
             err("INV-003 违反: %s 的 snapshot_ref 指向不存在的文件：%s"
                 % (pid, health.ref))
+        elif health.block_page:
+            # 第三层：文件在、也进了库，但里面是 WAF/风控的拦截页。
+            # 2026-10-06 实测过一次（泰国税务那篇的来源被拦），存档后文件名与
+            # 哈希全都正常——"文件在且进了版本库"不等于"里面是正文"。
+            # 与 CLI 的 check-snapshots 用同一个判断，两条口径不许分叉。
+            err("INV-003 违反: %s 的快照 %s 内容是拦截页（WAF/风控），不是正文——不能当证据"
+                % (pid, health.ref))
         elif health.tracked is False:
             err("INV-003 违反: %s 的快照 %s 没进版本库——clone 出来就断了（见 .gitignore）"
                 % (pid, health.ref))
